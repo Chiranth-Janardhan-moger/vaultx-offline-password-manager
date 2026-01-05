@@ -1,13 +1,10 @@
 import Screen from '@/components/Screen';
 import { useTheme } from '@/context/ThemeProvider';
-import { clearAllSecure } from '@/lib/secure';
-import { getVaultFilePath } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import appConfig from '../app.json';
 
 const MASTER_PASSWORD_KEY = 'master_password_v1';
@@ -17,6 +14,7 @@ export default function Settings() {
   const { mode, setMode, colors, enhancedContrast, setEnhancedContrast, showBorders, setShowBorders } = useTheme();
   const [hasMasterPassword, setHasMasterPassword] = React.useState(false);
   const [showThemeOptions, setShowThemeOptions] = React.useState(false);
+  const [showGeneralOptions, setShowGeneralOptions] = React.useState(false);
   const [showAppInfo, setShowAppInfo] = React.useState(false);
 
   useFocusEffect(
@@ -28,17 +26,15 @@ export default function Settings() {
     }, [])
   );
 
-  const getThemeIcon = (themeMode: 'system' | 'light' | 'dark') => {
+  const getThemeIcon = (themeMode: 'light' | 'dark') => {
     switch (themeMode) {
-      case 'system': return 'phone-portrait-outline';
       case 'light': return 'sunny-outline';
       case 'dark': return 'moon-outline';
     }
   };
 
-  const getThemeLabel = (themeMode: 'system' | 'light' | 'dark') => {
+  const getThemeLabel = (themeMode: 'light' | 'dark') => {
     switch (themeMode) {
-      case 'system': return 'System';
       case 'light': return 'Light';
       case 'dark': return 'Dark';
     }
@@ -54,31 +50,6 @@ export default function Settings() {
     }
   };
 
-  const resetApp = () => {
-    Alert.alert(
-      'Reset VaultX',
-      'This will delete ALL data including passwords, PIN, and settings. This action cannot be undone!\n\nUse this if you\'re getting decryption errors after switching from Expo Go to native APK.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset Everything',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearAllSecure();
-              await FileSystem.deleteAsync(getVaultFilePath(), { idempotent: true });
-              Alert.alert('Success', 'All data cleared. Please restart the app.', [
-                { text: 'OK', onPress: () => router.replace('/') }
-              ]);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to reset: ' + (error as Error).message);
-            }
-          }
-        }
-      ]
-    );
-  };
-
   return (
     <Screen>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -89,6 +60,52 @@ export default function Settings() {
           <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
           <View style={styles.backBtn} />
         </View>
+
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => setShowGeneralOptions(!showGeneralOptions)}
+        >
+          <View style={[styles.menuIcon, { backgroundColor: colors.primary }]}>
+            <Ionicons name="settings" size={20} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.menuTitle, { color: colors.text }]}>General</Text>
+            <Text style={[styles.menuSub, { color: colors.mutedText }]}>VPin, Password & Security</Text>
+          </View>
+          <Ionicons 
+            name={showGeneralOptions ? 'chevron-up' : 'chevron-down'} 
+            size={20} 
+            color={colors.mutedText} 
+          />
+        </TouchableOpacity>
+
+        {showGeneralOptions ? (
+          <View style={[styles.optionsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.optionItem}
+              onPress={() => router.push('/change-vpin')}
+            >
+              <Ionicons name="keypad" size={20} color={colors.text} />
+              <Text style={[styles.optionLabel, { color: colors.text }]}>Change VPin</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+            </TouchableOpacity>
+
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+            <TouchableOpacity
+              style={styles.optionItem}
+              onPress={() => router.push('/change-password')}
+            >
+              <Ionicons name="lock-closed" size={20} color={colors.text} />
+              <Text style={[styles.optionLabel, { color: colors.text }]}>Change Password</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <TouchableOpacity
           style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -110,7 +127,7 @@ export default function Settings() {
 
         {showThemeOptions ? (
           <View style={[styles.optionsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {(['system', 'light', 'dark'] as const).map((themeMode) => (
+            {(['light', 'dark'] as const).map((themeMode) => (
               <TouchableOpacity
                 key={themeMode}
                 style={[
@@ -277,42 +294,9 @@ export default function Settings() {
                 </Text>
               </View>
             </View>
-
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.infoItem}>
-              <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.infoLabel, { color: colors.mutedText }]}>Security</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>AES-256 • Offline-first • Open Source</Text>
-              </View>
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.infoItem}>
-              <Ionicons name="heart" size={20} color="#ef4444" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.infoLabel, { color: colors.mutedText }]}>Made with</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>React Native + Expo</Text>
-              </View>
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            <TouchableOpacity
-              style={[styles.infoItem, { backgroundColor: '#fee2e2' }]}
-              onPress={resetApp}
-            >
-              <Ionicons name="trash" size={20} color="#ef4444" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.infoLabel, { color: '#991b1b' }]}>Danger Zone</Text>
-                <Text style={[styles.infoValue, { color: '#dc2626' }]}>Reset All Data</Text>
-              </View>
-              <Ionicons name="warning" size={18} color="#ef4444" />
-            </TouchableOpacity>
           </View>
         ) : null}
+        </ScrollView>
       </View>
     </Screen>
   );
@@ -321,6 +305,7 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 18 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  scrollContent: { paddingBottom: 24 },
   backBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 20, fontWeight: '900' },
   menuItem: {

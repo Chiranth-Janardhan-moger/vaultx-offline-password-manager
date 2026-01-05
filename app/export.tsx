@@ -1,7 +1,6 @@
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { readEncryptedString } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import CryptoJS from 'crypto-js';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -15,7 +14,7 @@ const MASTER_PASSWORD_KEY = 'master_password_v1';
 
 export default function ExportScreen() {
   const router = useRouter();
-  const { unlocked } = useSession();
+  const { unlocked, vault, vaultKey } = useSession();
   const { colors } = useTheme();
 
   const [busy, setBusy] = React.useState(false);
@@ -55,8 +54,16 @@ export default function ExportScreen() {
     
     setBusy(true);
     try {
-      // Get encrypted vault
-      const vaultData = await readEncryptedString();
+      // Get vault key from session
+      if (!unlocked || !vaultKey) {
+        Alert.alert('Error', 'Not logged in. Please unlock your vault first.');
+        router.replace('/login');
+        return;
+      }
+
+      // Decrypt vault to get passwords only
+      const { decryptVaultWithKey } = await import('@/lib/vault');
+      const vaultData = await decryptVaultWithKey(vaultKey);
       
       // Get master password
       const masterPassword = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
@@ -66,22 +73,31 @@ export default function ExportScreen() {
         ? CryptoJS.AES.encrypt(masterPassword, backupPassword).toString()
         : null;
       
+      // Create backup with ONLY passwords (no phone, no password hash)
+      const passwordsOnly = {
+        passwords: vaultData.passwords,
+      };
+      
+      // Encrypt the passwords with backup password
+      const encryptedPasswords = CryptoJS.AES.encrypt(JSON.stringify(passwordsOnly), backupPassword).toString();
+      
       // Create complete backup
       const completeBackup = {
-        vault: vaultData,
+        passwords: encryptedPasswords,
         encryptedMasterPassword,
-        version: '1.0',
+        version: '2.0', // New version for passwords-only backup
         timestamp: Date.now(),
       };
       
       const base = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory || '';
-      const filePath = `${base}vaultx_backup_${Date.now()}.vxb`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filePath = `${base}vaultx-backup-${timestamp}.vxb`;
       await FileSystem.writeAsStringAsync(filePath, JSON.stringify(completeBackup));
       await ensureShare(filePath, 'application/json');
       
       Alert.alert(
         'Backup Complete!',
-        'Your backup is ready. Remember your backup password - you\'ll need it to restore!',
+        'Your passwords have been backed up. Remember your backup password - you\'ll need it to restore!',
         [{ text: 'OK' }]
       );
       
@@ -93,7 +109,7 @@ export default function ExportScreen() {
     } finally {
       setBusy(false);
     }
-  }, [busy, backupPassword, confirmPassword]);
+  }, [busy, backupPassword, confirmPassword, vaultKey, unlocked, router]);
 
   return (
     <Screen>
@@ -103,7 +119,7 @@ export default function ExportScreen() {
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Export Backup</Text>
-          <View style={styles.iconBtn} />
+          <View style={styles.NoiconBtn} />
         </View>
 
         <View style={[styles.infoCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
@@ -184,6 +200,7 @@ const styles = StyleSheet.create({
   container: { padding: 16, paddingBottom: 40 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 20, fontWeight: '900' },
   infoCard: {
     flexDirection: 'row',

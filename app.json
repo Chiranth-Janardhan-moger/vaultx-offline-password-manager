@@ -8,13 +8,18 @@
     "scheme": "vaultx",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b0b0c"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#3b82f6"
+        "backgroundColor": "#2563EB"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,

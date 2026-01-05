@@ -2,9 +2,8 @@ import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { generateVaultKey, saveBiometricKey, saveMeta, savePasswordWrap, savePinWrap, saveRecoveryWrap } from '@/lib/secure';
-import { createNewVault, hashPassword } from '@/lib/vault';
+import { createNewVault, hashPassword, vaultExists } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
-import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -50,16 +49,22 @@ export default function Setup() {
 
   React.useEffect(() => {
     (async () => {
-      // Check if vault already exists and redirect to login
       const exists = await vaultExists();
       if (exists) {
         router.replace('/login');
         return;
       }
       
-      const hw = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      setBioSupported(hw && enrolled);
+      try {
+        const ReactNativeBiometrics = (await import('react-native-biometrics')).default;
+        const rnBiometrics = new ReactNativeBiometrics({ allowDeviceCredentials: false });
+        const { available, biometryType } = await rnBiometrics.isSensorAvailable();
+        console.log('Biometric sensor available:', available, 'Type:', biometryType);
+        setBioSupported(available && (biometryType === 'Biometrics' || biometryType === 'TouchID' || biometryType === 'FaceID'));
+      } catch (error) {
+        console.error('Biometric check failed:', error);
+        setBioSupported(false);
+      }
     })();
   }, [router]);
 

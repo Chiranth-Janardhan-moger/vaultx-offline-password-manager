@@ -96,7 +96,7 @@ export default function GeneratePassword() {
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Generate Password</Text>
-          <View style={styles.iconBtn} />
+          <View style={styles.NoiconBtn} />
         </View>
 
         {!hasMasterPassword ? (
@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   title: { fontSize: 20, fontWeight: '900' },
+  NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center',borderColor: 'transparent'},
   warningCard: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 12, alignItems: 'center' },
   warningText: { fontSize: 14, fontWeight: '700', flex: 1 },
   card: { borderWidth: 1, borderRadius: 16, padding: 14 },

@@ -76,7 +76,7 @@ export const getServiceIcon = (serviceName: string): string => {
   return 'globe-outline';
 };
 
-export const getServiceColor = (serviceName: string): string => {
+export const getServiceColor = (serviceName: string, isDarkTheme: boolean = false): string => {
   const service = serviceName.toLowerCase().trim();
   
   // Social Media Colors
@@ -85,7 +85,7 @@ export const getServiceColor = (serviceName: string): string => {
   if (service.includes('twitter') || service.includes('x.com')) return '#1DA1F2';
   if (service.includes('linkedin')) return '#0A66C2';
   if (service.includes('youtube')) return '#FF0000';
-  if (service.includes('tiktok')) return '#000000';
+  if (service.includes('tiktok')) return isDarkTheme ? '#FFFFFF' : '#000000';
   if (service.includes('snapchat') || service.includes('snap')) return '#FFFC00';
   if (service.includes('reddit')) return '#FF4500';
   if (service.includes('pinterest')) return '#E60023';
@@ -95,7 +95,7 @@ export const getServiceColor = (serviceName: string): string => {
   if (service.includes('slack')) return '#4A154B';
   
   // Tech & Development
-  if (service.includes('github')) return '#181717';
+  if (service.includes('github')) return isDarkTheme ? '#FFFFFF' : '#181717';
   if (service.includes('gitlab')) return '#FC6D26';
   if (service.includes('stackoverflow') || service.includes('stack overflow')) return '#F58025';
   
@@ -106,7 +106,7 @@ export const getServiceColor = (serviceName: string): string => {
   if (service.includes('microsoft') || service.includes('outlook')) return '#0078D4';
   
   // Apple Services
-  if (service.includes('apple') || service.includes('icloud')) return '#000000';
+  if (service.includes('apple') || service.includes('icloud')) return isDarkTheme ? '#FFFFFF' : '#000000';
   
   // Payment & Finance
   if (service.includes('paypal')) return '#00457C';
@@ -116,7 +116,7 @@ export const getServiceColor = (serviceName: string): string => {
   if (service.includes('netflix')) return '#E50914';
   if (service.includes('spotify')) return '#1DB954';
   if (service.includes('twitch')) return '#9146FF';
-  if (service.includes('steam')) return '#171A21';
+  if (service.includes('steam')) return isDarkTheme ? '#FFFFFF' : '#171A21';
   
   // Default
   return '#6366f1';

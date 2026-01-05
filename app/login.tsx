@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import ReactNativeBiometrics from 'react-native-biometrics';
 
 const maskPhone = (phone: string): string => {
   if (phone.length <= 4) return phone;
@@ -64,7 +65,29 @@ export default function Login() {
         return;
       }
       setCanPin(await hasPinUnlock());
-      setCanBio(await isBiometricEnabled());
+      
+      // Check if biometric is actually available on device
+      const bioEnabled = await isBiometricEnabled();
+      if (bioEnabled) {
+        try {
+          const rnBiometrics = new ReactNativeBiometrics({ allowDeviceCredentials: false });
+          const { available, biometryType } = await rnBiometrics.isSensorAvailable();
+          
+          if (available && (biometryType === 'Biometrics' || biometryType === 'TouchID' || biometryType === 'FaceID')) {
+            // Verify keys exist
+            const { keysExist } = await rnBiometrics.biometricKeysExist();
+            setCanBio(keysExist);
+          } else {
+            setCanBio(false);
+          }
+        } catch (error) {
+          console.error('Biometric check error:', error);
+          setCanBio(false);
+        }
+      } else {
+        setCanBio(false);
+      }
+      
       const meta = await loadMeta();
       setPhoneHint(meta?.phone ? maskPhone(meta.phone) : null);
     })();
@@ -74,10 +97,6 @@ export default function Login() {
     // Auto-focus on mount
     setTimeout(() => inputRef.current?.focus(), 300);
   }, []);
-
-  const openRecovery = React.useCallback(() => {
-    router.push('/recover');
-  }, [router]);
 
   const unlockWithVaultKey = React.useCallback(async (vaultKey: string) => {
     const data = await decryptVaultWithKey(vaultKey);
@@ -120,16 +139,44 @@ export default function Login() {
     if (loading) return;
     setLoading(true);
     try {
+      const rnBiometrics = new ReactNativeBiometrics({
+        allowDeviceCredentials: false,
+      });
+      
+      // Check if biometric is available
+      const { available } = await rnBiometrics.isSensorAvailable();
+      if (!available) {
+        Alert.alert('Biometric Not Available', 'Please use PIN to unlock');
+        return;
+      }
+      
+      const { success, error } = await rnBiometrics.simplePrompt({
+        promptMessage: 'Unlock VaultX',
+        cancelButtonText: 'Cancel',
+      });
+      
+      if (!success) {
+        if (error) {
+          console.error('Biometric error:', error);
+          // Only show error if it's not a user cancellation
+          if (!error.includes('cancel') && !error.includes('Cancel') && !error.includes('User')) {
+            Alert.alert('Biometric Error', 'Authentication failed. Please try again or use PIN');
+          }
+        }
+        return;
+      }
+      
       const vaultKey = await loadBiometricKey();
       await unlockWithVaultKey(vaultKey);
     } catch (e: any) {
+      console.error('Biometric unlock error:', e);
       const errorMsg = e?.message ?? '';
-      // Don't show error if user cancelled
-      if (errorMsg.includes('cancel') || errorMsg.includes('Cancel') || errorMsg.includes('dismissed')) {
-        // User cancelled, do nothing
-      } else {
+      // Don't show alert for user cancellation
+      if (!errorMsg.toLowerCase().includes('cancel') && 
+          !errorMsg.toLowerCase().includes('user') &&
+          !errorMsg.toLowerCase().includes('authentication failed')) {
         registerFailure();
-        Alert.alert('Error', errorMsg || 'Biometric unlock failed');
+        Alert.alert('Biometric Error', 'Please try again or use PIN');
       }
     } finally {
       setLoading(false);
@@ -197,6 +244,7 @@ export default function Login() {
               textContentType="none"
               secureTextEntry={false}
               caretHidden
+              autoFocus={true}
               onFocus={() => setPinFocused(true)}
               onBlur={() => setPinFocused(false)}
             />
@@ -211,20 +259,17 @@ export default function Login() {
                 <Text style={[styles.bioText, { color: colors.text }]}>Use Fingerprint</Text>
               </TouchableOpacity>
             ) : null}
+
+            <TouchableOpacity 
+              onPress={() => router.push('/unlock-password')} 
+              style={styles.forgotLink}
+            >
+              <Text style={[styles.forgotText, { color: colors.mutedText }]}>
+                Forgot PIN? Use password
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : null}
-
-        <View style={styles.forgotLinks}>
-          <TouchableOpacity onPress={() => router.push('/unlock-password')} style={styles.recoveryBtn}>
-            <Text style={[styles.recoveryText, { color: colors.mutedText }]}>Forgot PIN? Use password</Text>
-          </TouchableOpacity>
-          
-          <Text style={[styles.orText, { color: colors.mutedText }]}>or</Text>
-          
-          <TouchableOpacity onPress={openRecovery} style={styles.recoveryBtn}>
-            <Text style={[styles.recoveryText, { color: colors.mutedText }]}>Use security question</Text>
-          </TouchableOpacity>
-        </View>
 
         {!canPin ? (
           <TouchableOpacity onPress={() => router.replace('/setup')} style={{ paddingVertical: 12 }}>
@@ -274,7 +319,8 @@ const styles = StyleSheet.create({
     opacity: 0,
     height: 1,
     width: 1,
-    top: -1000,
+    top: 0,
+    left: 0,
   },
   bioBtn: {
     flexDirection: 'row',
@@ -289,21 +335,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  forgotLinks: {
-    marginTop: 32,
-    alignItems: 'center',
-  },
-  recoveryBtn: { 
+  forgotLink: {
+    marginTop: 24,
     paddingVertical: 8,
-    alignItems: 'center',
+  },
+  forgotText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   recoveryText: { 
     fontSize: 14, 
     fontWeight: '700',
-  },
-  orText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginVertical: 4,
   },
 });

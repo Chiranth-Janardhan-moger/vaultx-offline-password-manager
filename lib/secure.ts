@@ -174,12 +174,27 @@ export const isBiometricEnabled = async () => {
 };
 
 export const saveBiometricKey = async (vaultKey: string) => {
-  await SecureStore.setItemAsync(KEYS.bioKey, vaultKey, { requireAuthentication: true });
-  await setBiometricEnabled(true);
+  try {
+    const rnBiometrics = new (await import('react-native-biometrics')).default({
+      allowDeviceCredentials: false,
+    });
+    
+    // Create biometric key pair
+    const { publicKey } = await rnBiometrics.createKeys();
+    console.log('Biometric keys created:', publicKey);
+    
+    // Save vault key in SecureStore
+    await SecureStore.setItemAsync(KEYS.bioKey, vaultKey);
+    await setBiometricEnabled(true);
+  } catch (error) {
+    console.error('Failed to create biometric keys:', error);
+    throw new Error('Failed to setup biometric authentication');
+  }
 };
 
 export const loadBiometricKey = async () => {
-  const v = await SecureStore.getItemAsync(KEYS.bioKey, { requireAuthentication: true });
+  // This will be called after biometric authentication succeeds
+  const v = await SecureStore.getItemAsync(KEYS.bioKey);
   if (!v) throw new Error('Biometric unlock not available');
   return v;
 };

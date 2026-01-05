@@ -2,12 +2,25 @@ import Screen from '@/components/Screen';
 import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const MASTER_PASSWORD_KEY = 'master_password_v1';
 
 export default function MasterPasswordIntro() {
   const router = useRouter();
   const { colors } = useTheme();
+
+  React.useEffect(() => {
+    (async () => {
+      const existing = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
+      if (existing) {
+        // Master password already exists, go to locked screen
+        router.replace('/master-password-locked');
+      }
+    })();
+  }, [router]);
 
   return (
     <Screen>

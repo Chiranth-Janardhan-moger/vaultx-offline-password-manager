@@ -22,11 +22,8 @@ export default function MasterPasswordSetup() {
     (async () => {
       const existing = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
       if (existing) {
-        Alert.alert(
-          'Master Password Already Set',
-          'You can only set your master password once. It cannot be changed.',
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
+        // Master password already exists, go to locked screen
+        router.replace('/master-password-locked');
       }
     })();
   }, [router]);
@@ -42,15 +39,14 @@ export default function MasterPasswordSetup() {
       // Double check it doesn't exist
       const existing = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
       if (existing) {
-        Alert.alert('Master Password Already Set', 'Cannot change master password');
-        router.back();
+        router.replace('/master-password-locked');
         return;
       }
 
-      const masterPassword = `${firstName.toLowerCase()}${lastName.toLowerCase()}${birthYear}${favoriteColor.toLowerCase()}`;
+      const masterPassword = `${firstName.trim().replace(/\s+/g, '').toLowerCase()}${lastName.trim().replace(/\s+/g, '').toLowerCase()}${birthYear}${favoriteColor.trim().replace(/\s+/g, '').toLowerCase()}`;
       await SecureStore.setItemAsync(MASTER_PASSWORD_KEY, masterPassword);
       Alert.alert('Success', 'Master password created!', [
-        { text: 'OK', onPress: () => router.back() }
+        { text: 'OK', onPress: () => router.replace('/master-password-locked') }
       ]);
     } catch (e: any) {
       Alert.alert('Error', e?.message ?? 'Failed to save');
@@ -69,7 +65,7 @@ export default function MasterPasswordSetup() {
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Master Password</Text>
-          <View style={styles.iconBtn} />
+          <View style={styles.NoiconBtn} />
         </View>
 
         <View style={[styles.infoCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
@@ -86,7 +82,7 @@ export default function MasterPasswordSetup() {
             placeholder="e.g. John"
             placeholderTextColor={colors.mutedText}
             value={firstName}
-            onChangeText={setFirstName}
+            onChangeText={(text) => setFirstName(text.replace(/\s+/g, ''))}
             autoCapitalize="words"
           />
 
@@ -96,7 +92,7 @@ export default function MasterPasswordSetup() {
             placeholder="e.g. Doe"
             placeholderTextColor={colors.mutedText}
             value={lastName}
-            onChangeText={setLastName}
+            onChangeText={(text) => setLastName(text.replace(/\s+/g, ''))}
             autoCapitalize="words"
           />
 
@@ -117,7 +113,7 @@ export default function MasterPasswordSetup() {
             placeholder="e.g. Blue"
             placeholderTextColor={colors.mutedText}
             value={favoriteColor}
-            onChangeText={setFavoriteColor}
+            onChangeText={(text) => setFavoriteColor(text.replace(/\s+/g, ''))}
             autoCapitalize="words"
           />
 
@@ -138,6 +134,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   title: { fontSize: 20, fontWeight: '900' },
+    NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   infoCard: { flexDirection: 'row', gap: 12, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 16, alignItems: 'center' },
   infoText: { fontSize: 13, fontWeight: '600', flex: 1, lineHeight: 18 },
   card: { borderWidth: 1, borderRadius: 16, padding: 14 },

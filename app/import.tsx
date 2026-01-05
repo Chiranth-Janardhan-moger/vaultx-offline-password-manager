@@ -1,6 +1,6 @@
 import Screen from '@/components/Screen';
+import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { clearAllSecure } from '@/lib/secure';
 import { Ionicons } from '@expo/vector-icons';
 import CryptoJS from 'crypto-js';
 import * as DocumentPicker from 'expo-document-picker';
@@ -15,6 +15,7 @@ const MASTER_PASSWORD_KEY = 'master_password_v1';
 export default function ImportScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { unlocked, vaultKey, setVault } = useSession();
 
   const [backupFile, setBackupFile] = React.useState<string | null>(null);
   const [backupPassword, setBackupPassword] = React.useState('');
@@ -61,46 +62,77 @@ export default function ImportScreen() {
       const content = await FileSystem.readAsStringAsync(backupFile);
       const backup = JSON.parse(content);
 
-      if (!backup.vault || !backup.version) {
+      if (!backup.version) {
         Alert.alert('Invalid Backup', 'This file is not a valid VaultX backup');
         return;
       }
 
-      // Decrypt master password if present
-      let decryptedMP = null;
-      if (backup.encryptedMasterPassword) {
+      // Handle different backup versions
+      let passwordsToRestore = [];
+      
+      if (backup.version === '2.0') {
+        // New format: passwords only
+        if (!backup.passwords) {
+          Alert.alert('Invalid Backup', 'No passwords found in backup');
+          return;
+        }
+        
         try {
-          decryptedMP = CryptoJS.AES.decrypt(backup.encryptedMasterPassword, backupPassword).toString(CryptoJS.enc.Utf8);
-          
-          if (!decryptedMP) {
+          const decryptedPasswords = CryptoJS.AES.decrypt(backup.passwords, backupPassword).toString(CryptoJS.enc.Utf8);
+          if (!decryptedPasswords) {
             Alert.alert('Incorrect Password', 'The backup password you entered is incorrect');
             return;
           }
+          const passwordsData = JSON.parse(decryptedPasswords);
+          passwordsToRestore = passwordsData.passwords || [];
         } catch {
           Alert.alert('Incorrect Password', 'The backup password you entered is incorrect');
           return;
         }
+      } else {
+        // Old format: full vault (for backward compatibility)
+        Alert.alert('Old Backup Format', 'This backup format is no longer supported. Please create a new backup.');
+        return;
       }
 
-      // IMPORTANT: Clear all old SecureStore data (PIN, password wraps, etc.)
-      await clearAllSecure();
-
-      // Save master password if present
-      if (decryptedMP) {
-        await SecureStore.setItemAsync(MASTER_PASSWORD_KEY, decryptedMP);
+      // Get current vault and merge passwords
+      if (!unlocked || !vaultKey) {
+        Alert.alert('Error', 'Not logged in. Please unlock your vault first.');
+        router.replace('/login');
+        return;
       }
 
-      // Write vault file
-      const vaultPath = `${(FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory}vault_v1.enc`;
-      await FileSystem.writeAsStringAsync(vaultPath, backup.vault);
+      const { decryptVaultWithKey, saveVault } = await import('@/lib/vault');
+      const currentVault = await decryptVaultWithKey(vaultKey);
+      
+      // Replace passwords with backup
+      currentVault.passwords = passwordsToRestore;
+      
+      // Save updated vault
+      await saveVault(currentVault, vaultKey);
+      
+      // Update session
+      setVault(() => currentVault);
+
+      // Decrypt and save master password if present
+      if (backup.encryptedMasterPassword) {
+        try {
+          const decryptedMP = CryptoJS.AES.decrypt(backup.encryptedMasterPassword, backupPassword).toString(CryptoJS.enc.Utf8);
+          if (decryptedMP) {
+            await SecureStore.setItemAsync(MASTER_PASSWORD_KEY, decryptedMP);
+          }
+        } catch {
+          // Master password decryption failed, but passwords were restored
+        }
+      }
 
       Alert.alert(
         'Restore Complete!',
-        'Your vault has been restored. You need to set up a new PIN and password for this device.\n\nYou will be redirected to the setup page.',
+        'Your passwords have been restored successfully.',
         [
           { 
             text: 'OK', 
-            onPress: () => router.replace('/')
+            onPress: () => router.replace('/dashboard')
           }
         ]
       );
@@ -109,7 +141,7 @@ export default function ImportScreen() {
     } finally {
       setBusy(false);
     }
-  }, [backupFile, backupPassword, router]);
+  }, [backupFile, backupPassword, router, unlocked, vaultKey, setVault]);
 
   return (
     <Screen>
@@ -119,17 +151,7 @@ export default function ImportScreen() {
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Import Backup</Text>
-          <View style={styles.iconBtn} />
-        </View>
-
-        <View style={[styles.warningCard, { backgroundColor: '#fef3c7', borderColor: '#fbbf24' }]}>
-          <Ionicons name="warning" size={24} color="#f59e0b" />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.warningTitle, { color: '#92400e' }]}>Important!</Text>
-            <Text style={[styles.warningText, { color: '#92400e' }]}>
-              Importing will replace your current vault and clear all login credentials. You'll need to set up a new PIN and password after import.
-            </Text>
-          </View>
+          <View style={styles.NoiconBtn} />
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -186,6 +208,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   title: { fontSize: 20, fontWeight: '900' },
+    NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   warningCard: {
     flexDirection: 'row',
     gap: 12,

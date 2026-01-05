@@ -25,7 +25,7 @@ export default function MasterPasswordLocked() {
     <Screen>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.content}>
-          <View style={[styles.imageCircle, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.imageCircle, { backgroundColor: '#FFFFFF', borderColor: colors.border }]}>
             <Image
               source={require('@/assets/images/shh.png')}
               style={styles.shhImage}
@@ -95,7 +95,14 @@ export default function MasterPasswordLocked() {
 
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={() => router.back()}
+          onPress={() => {
+            // Navigate to dashboard or settings depending on where we came from
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/dashboard');
+            }
+          }}
         >
           <Text style={styles.buttonText}>Got it!</Text>
         </TouchableOpacity>

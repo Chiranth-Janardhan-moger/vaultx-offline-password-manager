@@ -3,8 +3,7 @@ import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { categories, categorizeService, type CategoryType } from '@/lib/categories';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -24,21 +23,38 @@ export default function Dashboard() {
   const { unlocked, vault, lock } = useSession();
   const { colors } = useTheme();
   
-  const [showCategoryMenu, setShowCategoryMenu] = React.useState(false);
   const [showFabMenu, setShowFabMenu] = React.useState(false);
   const [hasMasterPassword, setHasMasterPassword] = React.useState(false);
+  const [lastTap, setLastTap] = React.useState(0);
+  const [showTutorial, setShowTutorial] = React.useState(false);
+  const [tutorialStep, setTutorialStep] = React.useState(0);
+  const [typedText, setTypedText] = React.useState('');
   
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const scaleAnims = React.useRef(categories.map(() => new Animated.Value(0))).current;
+  const fabLabelAnim = React.useRef(new Animated.Value(0)).current;
+  const spotlightAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     if (!unlocked) router.replace('/login');
   }, [unlocked, router]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      (async () => {
+        const mp = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
+        setHasMasterPassword(!!mp);
+      })();
+    }, [])
+  );
+
   React.useEffect(() => {
     (async () => {
-      const mp = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
-      setHasMasterPassword(!!mp);
+      // Check if tutorial has been shown
+      const tutorialShown = await SecureStore.getItemAsync('fab_tutorial_shown');
+      if (!tutorialShown) {
+        setShowTutorial(true);
+      }
     })();
   }, []);
 
@@ -78,34 +94,91 @@ export default function Dashboard() {
     return counts;
   }, [vault?.passwords]);
 
+  const handleDoubleTap = () => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    
+    if (now - lastTap < DOUBLE_TAP_DELAY) {
+      // Double tap detected - lock the app
+      lock();
+      router.replace('/login');
+    }
+    setLastTap(now);
+  };
+
+  const toggleFabMenu = () => {
+    // Show tutorial on first FAB click
+    if (showTutorial && tutorialStep === 0) {
+      setTutorialStep(1);
+      Animated.timing(spotlightAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+      // Start typing animation
+      typeText('Keep your existing passwords safe and organized — no need to remember them.', 0);
+      return;
+    }
+    
+    const toValue = showFabMenu ? 0 : 1;
+    Animated.spring(fabLabelAnim, {
+      toValue,
+      tension: 50,
+      friction: 7,
+      useNativeDriver: false,
+    }).start();
+    setShowFabMenu(!showFabMenu);
+  };
+
+  const typeText = (text: string, index: number) => {
+    if (index < text.length) {
+      setTypedText(text.substring(0, index + 1));
+      setTimeout(() => typeText(text, index + 1), 30);
+    }
+  };
+
+  const nextTutorialStep = () => {
+    if (tutorialStep === 1) {
+      setTutorialStep(2);
+      setTypedText('');
+      Animated.timing(spotlightAnim, {
+        toValue: 2,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+      typeText('Create strong, secure passwords automatically.', 0);
+    }
+  };
+
+  const closeTutorial = async () => {
+    setShowTutorial(false);
+    setTutorialStep(0);
+    setTypedText('');
+    await SecureStore.setItemAsync('fab_tutorial_shown', 'true');
+    Animated.timing(spotlightAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
     <Screen>
       <Animated.View style={[styles.container, { backgroundColor: colors.background, opacity: fadeAnim }]}>
         <View style={styles.header}>
-          <View style={{ flex: 1 }}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={handleDoubleTap} activeOpacity={0.7}>
             <Text style={[styles.title, { color: colors.text }]}>VaultX</Text>
             <Text style={[styles.subtitle, { color: colors.mutedText }]}>
               {vault?.user.phone ? maskPhone(vault.user.phone) : ''}
             </Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => router.push('/settings')}
-            >
-              <Ionicons name="settings-outline" size={20} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => {
-                lock();
-                router.replace('/login');
-              }}
-            >
-              <Ionicons name="lock-closed-outline" size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push('/settings')}
+          >
+            <Ionicons name="settings-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView 
@@ -132,94 +205,162 @@ export default function Dashboard() {
                 }}
               >
                 <TouchableOpacity
-                  style={styles.categoryBar}
+                  style={[styles.categoryBar, { backgroundColor: colors.card, borderColor: colors.border }]}
                   onPress={() => router.push(`/category/${category.id}`)}
                   activeOpacity={0.7}
                 >
-                  <LinearGradient
-                    colors={category.gradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.gradientBar}
-                  >
+                  <View style={styles.plainBar}>
                     <View style={styles.barLeft}>
-                      <View style={styles.barIconWrap}>
-                        <Ionicons name={category.icon as any} size={24} color="#fff" />
+                      <View style={[styles.barIconWrap, { backgroundColor: colors.primary + '15' }]}>
+                        <Ionicons name={category.icon as any} size={24} color={colors.primary} />
                       </View>
                       <View style={styles.barTextWrap}>
-                        <Text style={styles.barTitle}>{category.name}</Text>
-                        <Text style={styles.barSubtitle}>{count} password{count !== 1 ? 's' : ''}</Text>
+                        <Text style={[styles.barTitle, { color: colors.text }]}>{category.name}</Text>
+                        <Text style={[styles.barSubtitle, { color: colors.mutedText }]}>{count} password{count !== 1 ? 's' : ''}</Text>
                       </View>
                     </View>
                     <View style={styles.barRight}>
-                      <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.9)" />
+                      <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
                     </View>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               </Animated.View>
             );
           })}
         </ScrollView>
 
+        {showTutorial && tutorialStep > 0 ? (
+          <View style={styles.tutorialOverlay}>
+            <View style={[styles.tutorialDarkBg, { backgroundColor: 'rgba(0,0,0,0.9)' }]} />
+            
+            {/* Show FAB menu circles during tutorial */}
+            <View style={styles.fabMenuCircular}>
+              <Animated.View style={[styles.fabItemContainer, {
+                opacity: tutorialStep === 1 ? 1 : 0.3,
+              }]}>
+                <View style={[styles.fabCircleBtn, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="key" size={24} color="#fff" />
+                </View>
+              </Animated.View>
+
+              <Animated.View style={[styles.fabItemContainer, {
+                opacity: tutorialStep === 2 ? 1 : 0.3,
+              }]}>
+                <View style={[styles.fabCircleBtn, { backgroundColor: '#8b5cf6' }]}>
+                  <Ionicons name="sparkles" size={24} color="#fff" />
+                </View>
+              </Animated.View>
+            </View>
+            
+            <View style={styles.tutorialContent}>
+              <View style={[styles.tutorialIcon, { backgroundColor: tutorialStep === 1 ? colors.primary : '#8b5cf6' }]}>
+                <Ionicons name={tutorialStep === 1 ? 'key' : 'sparkles'} size={32} color="#fff" />
+              </View>
+              
+              <Text style={[styles.tutorialTitle, { color: '#fff' }]}>
+                {tutorialStep === 1 ? 'Save Existing Passwords' : 'Generate New Password'}
+              </Text>
+              
+              <Text style={[styles.tutorialText, { color: 'rgba(255,255,255,0.9)' }]}>
+                {typedText}
+              </Text>
+              
+              <View style={styles.tutorialButtons}>
+                {tutorialStep === 1 ? (
+                  <TouchableOpacity
+                    style={[styles.tutorialBtn, { backgroundColor: colors.primary }]}
+                    onPress={nextTutorialStep}
+                  >
+                    <Text style={styles.tutorialBtnText}>Next →</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.tutorialBtn, { backgroundColor: '#8b5cf6' }]}
+                    onPress={closeTutorial}
+                  >
+                    <Text style={styles.tutorialBtnText}>Got it</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         {showFabMenu ? (
           <>
             <TouchableOpacity
               style={styles.fabOverlay}
               activeOpacity={1}
-              onPress={() => setShowFabMenu(false)}
+              onPress={toggleFabMenu}
             />
-            <View style={styles.fabMenu}>
-              <TouchableOpacity
-                style={[styles.fabMenuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => {
-                  setShowFabMenu(false);
-                  router.push('/add');
-                }}
-              >
-                <View style={[styles.fabMenuIcon, { backgroundColor: colors.primary + '15' }]}>
-                  <Ionicons name="key" size={22} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.fabMenuText, { color: colors.text }]}>Add Password</Text>
-                  <Text style={[styles.fabMenuSubtext, { color: colors.mutedText }]}>Save existing password</Text>
-                </View>
-              </TouchableOpacity>
+            <View style={styles.fabMenuCircular}>
+              <Animated.View style={[styles.fabItemContainer, {
+                opacity: fabLabelAnim,
+              }]}>
+                <Animated.View style={[styles.fabLabel, { 
+                  backgroundColor: colors.card,
+                  width: fabLabelAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 210],
+                  }),
+                  opacity: fabLabelAnim,
+                }]}>
+                  <Text style={[styles.fabLabelText, { color: colors.text }]} numberOfLines={1}>Save Existing Passwords</Text>
+                </Animated.View>
+                <TouchableOpacity
+                  style={[styles.fabCircleBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    setShowFabMenu(false);
+                    fabLabelAnim.setValue(0);
+                    router.push('/add');
+                  }}
+                >
+                  <Ionicons name="key" size={24} color="#fff" />
+                </TouchableOpacity>
+              </Animated.View>
 
-              <TouchableOpacity
-                style={[styles.fabMenuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => {
-                  setShowFabMenu(false);
-                  if (!hasMasterPassword) {
-                    Alert.alert(
-                      'Master Password Required',
-                      'Set up your master password to generate strong passwords',
-                      [
-                        { text: 'Set Up Now', onPress: () => router.push('/master-password-intro') },
-                        { text: 'Cancel', style: 'cancel' }
-                      ]
-                    );
-                  } else {
-                    router.push('/generate-password');
-                  }
-                }}
-              >
-                <View style={[styles.fabMenuIcon, { backgroundColor: '#8b5cf6' + '15' }]}>
-                  <Ionicons name="sparkles" size={22} color="#8b5cf6" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.fabMenuText, { color: colors.text }]}>Generate Password</Text>
-                  <Text style={[styles.fabMenuSubtext, { color: colors.mutedText }]}>
-                    {hasMasterPassword ? 'Create strong password' : 'Setup required'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <Animated.View style={[styles.fabItemContainer, {
+                opacity: fabLabelAnim,
+              }]}>
+                <Animated.View style={[styles.fabLabel, { 
+                  backgroundColor: colors.card,
+                  width: fabLabelAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 200],
+                  }),
+                  opacity: fabLabelAnim,
+                }]}>
+                  <Text style={[styles.fabLabelText, { color: colors.text }]} numberOfLines={1}>Generate New Password</Text>
+                </Animated.View>
+                <TouchableOpacity
+                  style={[styles.fabCircleBtn, { backgroundColor: '#8b5cf6' }]}
+                  onPress={() => {
+                    setShowFabMenu(false);
+                    fabLabelAnim.setValue(0);
+                    if (!hasMasterPassword) {
+                      Alert.alert(
+                        'Master Password Required',
+                        'Set up your master password to generate strong passwords',
+                        [
+                          { text: 'Set Up Now', onPress: () => router.push('/master-password-intro') },
+                          { text: 'Cancel', style: 'cancel' }
+                        ]
+                      );
+                    } else {
+                      router.push('/generate-password');
+                    }
+                  }}
+                >
+                  <Ionicons name="sparkles" size={24} color="#fff" />
+                </TouchableOpacity>
+              </Animated.View>
             </View>
           </>
         ) : null}
 
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => setShowFabMenu(!showFabMenu)}
+          onPress={toggleFabMenu}
           activeOpacity={0.9}
         >
           <Animated.View
@@ -260,6 +401,7 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   listContainer: {
     paddingBottom: 100,
+    paddingHorizontal: 4,
     gap: 12,
   },
   categoryBar: {
@@ -270,13 +412,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
+    borderWidth: 1,
   },
-  gradientBar: {
+  plainBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    minHeight: 80,
+    padding: 14,
+    minHeight: 78,
   },
   barLeft: {
     flexDirection: 'row',
@@ -288,7 +431,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -298,13 +440,11 @@ const styles = StyleSheet.create({
   barTitle: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#fff',
     marginBottom: 4,
   },
   barSubtitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
   },
   barRight: {
     flexDirection: 'row',
@@ -316,43 +456,48 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  fabMenu: {
+  fabMenuCircular: {
     position: 'absolute',
-    bottom: 90,
-    left: 16,
-    right: 16,
-    gap: 12,
+    bottom: 100,
+    right: 20,
+    alignItems: 'flex-end',
+    gap: 16,
   },
-  fabMenuItem: {
+  fabItemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    gap: 12,
   },
-  fabMenuIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  fabLabel: {
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  fabLabelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  fabCircleBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fabMenuText: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  fabMenuSubtext: {
-    fontSize: 13,
-    marginTop: 2,
-    fontWeight: '600',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   fab: {
     position: 'absolute',
@@ -368,5 +513,69 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
+  },
+  tutorialOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  tutorialDarkBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  spotlightCircle: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  tutorialContent: {
+    position: 'absolute',
+    top: '30%',
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  tutorialIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  tutorialTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  tutorialText: {
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 32,
+    minHeight: 72,
+  },
+  tutorialButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  tutorialBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+  },
+  tutorialBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
   },
 });

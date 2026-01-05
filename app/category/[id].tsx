@@ -15,7 +15,7 @@ export default function CategoryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { vault, vaultKey, setVault } = useSession();
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   
   const category = getCategoryById(id as CategoryType);
   const [expandedIndex, setExpandedIndex] = React.useState<number | null>(null);
@@ -139,7 +139,7 @@ export default function CategoryDetail() {
           }
           renderItem={({ item, index }) => {
             const iconName = getServiceIcon(item.service);
-            const iconColor = getServiceColor(item.service);
+            const iconColor = getServiceColor(item.service, resolved === 'dark');
             const isExpanded = expandedIndex === item.globalIndex;
             const isLongPressed = longPressedIndex === item.globalIndex;
             const animValue = getAnimatedValue(item.globalIndex);

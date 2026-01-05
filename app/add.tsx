@@ -63,7 +63,7 @@ export default function AddPassword() {
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Add Password</Text>
-          <View style={styles.iconBtn} />
+          <View style={styles.NoiconBtn} />
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -143,6 +143,7 @@ export default function AddPassword() {
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  NoiconBtn: { width: 40, height: 40 ,borderColor: 'transparent'},
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   title: { fontSize: 20, fontWeight: '900' },
   card: { borderWidth: 1, borderRadius: 16, padding: 14 },
