@@ -177,21 +177,6 @@ cd android
 ```
 android/app/build/outputs/apk/release/app-release.apk
 ```
-
-### Build Optimizations Applied
-
-- ✅ R8 full mode enabled
-- ✅ ProGuard with 5 optimization passes
-- ✅ Resource shrinking enabled
-- ✅ PNG crunching enabled
-- ✅ Architecture filtering (ARM only)
-- ✅ Logging removed in release
-- ✅ Code obfuscation enabled
-
-**Expected APK Size:** 15-25 MB (60-70% reduction)
-
-See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for detailed build guide.
-
 ---
 
 ## 🔐 Security
