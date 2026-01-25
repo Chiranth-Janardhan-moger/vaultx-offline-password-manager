@@ -1,1 +1,1 @@
-100% offline password manager with AES-256 encryption, biometric unlock, and autofill support
+Offline password manager with AES-256 encryption and autofill
