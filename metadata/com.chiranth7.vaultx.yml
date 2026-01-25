@@ -1,0 +1,79 @@
+Categories:
+  - Security
+
+License: MIT
+
+AuthorName: Chiranth Moger
+AuthorEmail: chiranthmoger000@gmail.com
+AuthorWebSite: https://github.com/Chiranth-Janardhan-moger
+
+SourceCode: https://github.com/Chiranth-Janardhan-moger/VaultX
+IssueTracker: https://github.com/Chiranth-Janardhan-moger/VaultX/issues
+Changelog: https://github.com/Chiranth-Janardhan-moger/VaultX/blob/main/CHANGELOG.md
+
+Summary: Secure offline password manager with autofill
+Description: |-
+    VaultX is a fully offline, privacy-first password manager that keeps your passwords 
+    secure on your device. Your data never leaves your phone and never touches the cloud.
+    
+    <b>Key Features:</b>
+    • 100% Offline - No internet connection required or requested
+    • AES-256 Encryption - Military-grade security for all data
+    • Biometric Unlock - Fingerprint and face unlock support
+    • Android Autofill Service - Fill passwords in other apps seamlessly
+    • Smart Categories - Auto-organizes passwords by service type
+    • Master Password Generator - Create deterministic passwords
+    • Secure Export/Import - Encrypted backup functionality
+    • Multiple Themes - Dark/light modes with accessibility support
+    • Password Strength Indicator - Real-time strength analysis
+    • Auto-lock Timer - Configurable inactivity protection
+    • Favorites System - Quick access to frequently used passwords
+    • Search & Filter - Find passwords instantly
+    
+    <b>Privacy & Security:</b>
+    • Zero network permissions - No internet access whatsoever
+    • No analytics, tracking, or telemetry
+    • No cloud storage or syncing
+    • Open source and fully auditable
+    • Encrypted local storage only (SQLite with AES-256)
+    • Screenshot protection in sensitive screens
+    • Secure clipboard handling with auto-clear
+    • Screen recording protection
+    
+    <b>Technical Details:</b>
+    • Built with React Native and Expo
+    • Native Android autofill service implementation
+    • Biometric authentication using Android Keystore
+    • Material Design 3 UI with accessibility compliance
+    • Supports Android 7.0+ (API level 24+)
+    • APK size: ~15MB
+    
+    VaultX is perfect for users who prioritize privacy and want complete control 
+    over their password data without any cloud dependencies.
+
+RepoType: git
+Repo: https://github.com/Chiranth-Janardhan-moger/VaultX
+
+Builds:
+  - versionName: 1.2.48
+    versionCode: 248
+    commit: v1.2.48
+    subdir: android
+    gradle:
+      - yes
+    prebuild: 
+      - cd ../..
+      - npm ci
+      - npx expo prebuild --platform android --clean
+    scanignore:
+      - android/app/debug.keystore
+    scandelete:
+      - node_modules
+      - .expo
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.2.48
+CurrentVersionCode: 248
+
+NoSourceSince: ''

@@ -2,7 +2,7 @@
   "expo": {
     "name": "VaultX",
     "slug": "VaultX",
-    "version": "1.0.8",
+    "version": "1.2.48",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "vaultx",
@@ -23,7 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.chiranth7.VaultX"
+      "package": "com.chiranth7.vaultx"
     },
     "web": {
       "output": "static",

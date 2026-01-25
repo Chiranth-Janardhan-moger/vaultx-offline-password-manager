@@ -1,0 +1,37 @@
+VaultX is a fully offline, privacy-first password manager that keeps your passwords secure on your device. Your data never leaves your phone and never touches the cloud.
+
+KEY FEATURES:
+• 100% Offline - No internet connection required or used
+• AES-256 Encryption - Military-grade security for your passwords
+• Biometric Unlock - Fingerprint and face unlock support
+• Autofill Service - Seamlessly fill passwords in other apps
+• Smart Categories - Automatically organizes passwords by service type
+• Master Password - Generate deterministic passwords from a master password
+• Export/Import - Encrypted backup and restore functionality
+• Dark/Light Themes - Multiple theme options with accessibility support
+• PIN Protection - 6-digit PIN as backup unlock method
+• Auto-lock Timer - Configurable inactivity timeout
+
+PRIVACY & SECURITY:
+• Zero network permissions - Your data stays on your device
+• No analytics or tracking
+• No cloud storage or syncing
+• Open source and auditable
+• Encrypted local storage only
+• Screenshot protection in sensitive screens
+
+AUTOFILL SUPPORT:
+• Android Autofill Service integration
+• Works with browsers and apps
+• Secure authentication before filling
+• No data sent to external services
+
+VaultX is perfect for users who prioritize privacy and want complete control over their password data. All encryption and decryption happens locally on your device using industry-standard algorithms.
+
+The app requires minimal permissions:
+• Biometric authentication for secure unlock
+• Autofill service for password filling
+• Vibration for haptic feedback
+• Notifications for clipboard password detection
+
+No internet, storage, or location permissions are required or requested.

@@ -8,6 +8,12 @@ export type PasswordItem = {
   password: string;
   notes?: string;
   category?: CategoryType;
+  loginPin?: string;
+  transactionPin?: string;
+  otherPin?: string; // JSON string of array: [{label: string, pin: string}]
+  createdAt?: number; // Unix timestamp
+  modifiedAt?: number; // Unix timestamp
+  isFavorite?: boolean; // Star/pin for quick access
 };
 
 export type VaultData = {
@@ -98,7 +104,7 @@ export const toCsv = (vault: VaultData) => {
   };
 
   const escape = (v: string) => '"' + sanitizeCell(v).replace(/"/g, '""') + '"';
-  const header = ['service', 'username', 'password', 'notes'];
+  const header = ['service', 'username', 'password', 'notes', 'loginPin', 'transactionPin', 'otherPins'];
   const lines = [header.join(',')];
   for (const item of vault.passwords) {
     lines.push([
@@ -106,6 +112,9 @@ export const toCsv = (vault: VaultData) => {
       escape(item.username),
       escape(item.password),
       escape(item.notes ?? ''),
+      escape(item.loginPin ?? ''),
+      escape(item.transactionPin ?? ''),
+      escape(item.otherPin ?? ''),
     ].join(','));
   }
   return lines.join('\n');

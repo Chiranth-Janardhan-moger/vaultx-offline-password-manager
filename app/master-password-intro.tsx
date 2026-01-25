@@ -24,7 +24,12 @@ export default function MasterPasswordIntro() {
 
   return (
     <Screen>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: colors.background }} 
+        contentContainerStyle={styles.container}
+        bounces={true}
+        alwaysBounceVertical={true}
+      >
         <View style={[styles.iconWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="key" size={32} color={colors.primary} />
         </View>

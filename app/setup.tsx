@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -6,7 +7,7 @@ import { createNewVault, hashPassword, vaultExists } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const QUESTIONS = [
   'What is your pet\'s name?',
@@ -21,6 +22,7 @@ export default function Setup() {
   const router = useRouter();
   const { unlock } = useSession();
   const { colors } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [step, setStep] = React.useState<0 | 1 | 2 | 3>(0);
 
@@ -69,23 +71,71 @@ export default function Setup() {
   }, [router]);
 
   const nextFromAccount = React.useCallback(async () => {
-    if (!phone.trim()) return Alert.alert('Phone is required');
-    if (password.length < 8) return Alert.alert('Password must be at least 8 characters');
-    if (password !== confirm) return Alert.alert('Passwords do not match');
+    if (!phone.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Phone is required',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (password.length < 8) {
+      showAlert({
+        title: 'Password Too Short',
+        message: 'Password must be at least 8 characters',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (password !== confirm) {
+      showAlert({
+        title: 'Passwords Don\'t Match',
+        message: 'Passwords do not match',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     setStep(1);
   }, [phone, password, confirm]);
 
   const nextFromRecovery = React.useCallback(() => {
-    if (!answer.trim()) return Alert.alert('Please answer the security question');
+    if (!answer.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Please answer the security question',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
     setStep(2);
-  }, [answer]);
+  }, [answer, showAlert]);
 
   const nextFromPin = React.useCallback(() => {
-    if (!/^\d{6}$/.test(pin)) return Alert.alert('PIN must be 6 digits');
-    if (pin !== pin2) return Alert.alert('PINs do not match');
+    if (!/^\d{6}$/.test(pin)) {
+      showAlert({
+        title: 'Invalid PIN',
+        message: 'PIN must be 6 digits',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (pin !== pin2) {
+      showAlert({
+        title: 'PINs Don\'t Match',
+        message: 'PINs do not match',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
     setStep(3);
-  }, [pin, pin2]);
+  }, [pin, pin2, showAlert]);
 
   const finishSetup = React.useCallback(async () => {
     if (loading) return;
@@ -103,7 +153,12 @@ export default function Setup() {
       unlock(vault, vaultKey);
       router.replace('/dashboard');
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to create VaultX');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Failed to create VaultX',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setLoading(false);
     }
@@ -425,6 +480,8 @@ export default function Setup() {
           </View>
         ) : null}
       </View>
+
+      <AlertComponent />
     </Screen>
   );
 }

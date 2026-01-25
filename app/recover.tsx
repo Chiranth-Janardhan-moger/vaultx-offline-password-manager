@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -6,12 +7,13 @@ import { decryptVaultWithKey } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function Recover() {
   const router = useRouter();
   const { unlock } = useSession();
   const { colors } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [questions, setQuestions] = React.useState<string[] | null>(null);
   const [answer, setAnswer] = React.useState('');
@@ -21,7 +23,12 @@ export default function Recover() {
     (async () => {
       const q = await loadRecoveryQuestions();
       if (!q || q.length === 0) {
-        Alert.alert('Recovery not configured', 'Please unlock using PIN or fingerprint.');
+        showAlert({
+          title: 'Recovery not configured',
+          message: 'Please unlock using PIN or fingerprint.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
         router.back();
         return;
       }
@@ -32,7 +39,15 @@ export default function Recover() {
   const onRecover = React.useCallback(async () => {
     if (loading) return;
     if (!questions) return;
-    if (!answer.trim()) return Alert.alert('Please answer the security question');
+    if (!answer.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Please answer the security question',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -43,9 +58,19 @@ export default function Recover() {
     } catch (e: any) {
       const errorMsg = e?.message ?? 'Incorrect answer';
       if (errorMsg.includes('malformed') || errorMsg.includes('utf-8')) {
-        Alert.alert('Recovery Error', 'Your answer is incorrect. Make sure to type it exactly as you set it up.');
+        showAlert({
+          title: 'Recovery Error',
+          message: 'Your answer is incorrect. Make sure to type it exactly as you set it up.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
       } else {
-        Alert.alert('Error', errorMsg);
+        showAlert({
+          title: 'Error',
+          message: errorMsg,
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
       }
     } finally {
       setLoading(false);
@@ -98,6 +123,8 @@ export default function Recover() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <AlertComponent />
     </Screen>
   );
 }

@@ -1,14 +1,16 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { generateDeterministicPassword } from '@/lib/password-generator';
+import { normalizeServiceName } from '@/lib/service-icons';
 import { PasswordItem, saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const MASTER_PASSWORD_KEY = 'master_password_v1';
 
@@ -16,6 +18,7 @@ export default function GeneratePassword() {
   const router = useRouter();
   const { unlocked, vault, vaultKey, setVault } = useSession();
   const { colors } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [service, setService] = React.useState('');
   const [username, setUsername] = React.useState('');
@@ -23,6 +26,15 @@ export default function GeneratePassword() {
   const [generatedPassword, setGeneratedPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [hasMasterPassword, setHasMasterPassword] = React.useState(false);
+
+  // Show normalized service name suggestion
+  const normalizedSuggestion = React.useMemo(() => {
+    if (!service.trim() || service.length < 2) return null;
+    const normalized = normalizeServiceName(service);
+    // Only show if it's different from what user typed
+    if (normalized.toLowerCase() === service.toLowerCase()) return null;
+    return normalized;
+  }, [service]);
 
   React.useEffect(() => {
     if (!unlocked) router.replace('/login');
@@ -34,30 +46,63 @@ export default function GeneratePassword() {
   }, [unlocked, router]);
 
   const handleGenerate = React.useCallback(async () => {
-    if (!service.trim()) return Alert.alert('Service name is required');
-    if (!username.trim()) return Alert.alert('Username/Email is required');
+    if (!service.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Service name is required',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (!username.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Username/Email is required',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     try {
       const masterPassword = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
       if (!masterPassword) {
-        Alert.alert('Master Password Required', 'Please set up your master password first', [
-          { text: 'Set Up', onPress: () => router.push('/master-password-intro') },
-          { text: 'Cancel', style: 'cancel' }
-        ]);
+        showAlert({
+          title: 'Master Password Required',
+          message: 'Please set up your master password first',
+          cancelText: 'Cancel',
+          confirmText: 'Set Up',
+          onCancel: () => {},
+          onConfirm: () => router.push('/master-password-intro'),
+        });
         return;
       }
 
       const password = generateDeterministicPassword(service, username, masterPassword);
       setGeneratedPassword(password);
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to generate password');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Failed to generate password',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     }
-  }, [service, username, router]);
+  }, [service, username, router, showAlert]);
 
   const handleSave = React.useCallback(async () => {
     if (loading) return;
     if (!vault || !vaultKey) return;
-    if (!generatedPassword) return Alert.alert('Generate a password first');
+    if (!generatedPassword) {
+      showAlert({
+        title: 'Required',
+        message: 'Generate a password first',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -66,15 +111,25 @@ export default function GeneratePassword() {
         username: username.trim(),
         password: generatedPassword,
         notes: notes || 'Generated with Master Password',
+        createdAt: Date.now(),
+        modifiedAt: Date.now(),
       };
       const next = { ...vault, passwords: [...vault.passwords, item] };
       await saveVault(next, vaultKey);
       setVault(() => next);
-      Alert.alert('Success', 'Password saved!', [
-        { text: 'OK', onPress: () => router.replace('/dashboard') }
-      ]);
+      showAlert({
+        title: 'Success',
+        message: 'Password saved!',
+        confirmText: 'OK',
+        onConfirm: () => router.replace('/dashboard'),
+      });
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to save');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Failed to save',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setLoading(false);
     }
@@ -83,14 +138,24 @@ export default function GeneratePassword() {
   const copyPassword = React.useCallback(async () => {
     if (!generatedPassword) return;
     await Clipboard.setStringAsync(generatedPassword);
-    Alert.alert('Copied', 'Password copied to clipboard');
-  }, [generatedPassword]);
+    showAlert({
+      title: 'Copied',
+      message: 'Password copied to clipboard',
+      confirmText: 'OK',
+      onConfirm: () => {},
+    });
+  }, [generatedPassword, showAlert]);
 
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
   return (
     <Screen>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: colors.background }} 
+        contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
+        bounces={true}
+        alwaysBounceVertical={true}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -121,6 +186,17 @@ export default function GeneratePassword() {
             value={service}
             onChangeText={setService}
           />
+          {normalizedSuggestion ? (
+            <TouchableOpacity 
+              style={[styles.suggestionChip, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}
+              onPress={() => setService(normalizedSuggestion)}
+            >
+              <Ionicons name="sparkles" size={14} color={colors.primary} />
+              <Text style={[styles.suggestionText, { color: colors.primary }]}>
+                Use "{normalizedSuggestion}" instead?
+              </Text>
+            </TouchableOpacity>
+          ) : null}
 
           <Text style={[styles.label, { color: colors.mutedText }]}>Username / Email / Phone</Text>
           <TextInput
@@ -171,6 +247,8 @@ export default function GeneratePassword() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <AlertComponent />
     </Screen>
   );
 }
@@ -193,4 +271,19 @@ const styles = StyleSheet.create({
   passwordText: { fontSize: 16, fontWeight: '700', flex: 1, fontFamily: 'monospace' },
   button: { padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 14 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  suggestionText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });

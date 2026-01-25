@@ -11,21 +11,24 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-export default function AddPassword() {
+export default function EditPassword() {
   const router = useRouter();
-  const { unlocked, vault, vaultKey, setVault } = useSession();
+  const { index } = useLocalSearchParams<{ index: string }>();
+  const { vault, vaultKey, setVault } = useSession();
   const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
-  const params = useLocalSearchParams();
 
-  const [service, setService] = React.useState('');
-  const [username, setUsername] = React.useState('');
-  const [pw, setPw] = React.useState('');
+  const passwordIndex = parseInt(index || '0', 10);
+  const existingPassword = vault?.passwords[passwordIndex];
+
+  const [service, setService] = React.useState(existingPassword?.service || '');
+  const [username, setUsername] = React.useState(existingPassword?.username || '');
+  const [pw, setPw] = React.useState(existingPassword?.password || '');
   const [showPw, setShowPw] = React.useState(false);
-  const [notes, setNotes] = React.useState('');
-  const [loginPin, setLoginPin] = React.useState('');
+  const [notes, setNotes] = React.useState(existingPassword?.notes || '');
+  const [loginPin, setLoginPin] = React.useState(existingPassword?.loginPin || '');
   const [showLoginPin, setShowLoginPin] = React.useState(false);
-  const [transactionPin, setTransactionPin] = React.useState('');
+  const [transactionPin, setTransactionPin] = React.useState(existingPassword?.transactionPin || '');
   const [showTransactionPin, setShowTransactionPin] = React.useState(false);
   const [otherPins, setOtherPins] = React.useState<Array<{label: string; pin: string; show: boolean}>>([]);
   const [showPinSection, setShowPinSection] = React.useState(false);
@@ -41,56 +44,55 @@ export default function AddPassword() {
   const normalizedSuggestion = React.useMemo(() => {
     if (!service.trim() || service.length < 2) return null;
     const normalized = normalizeServiceName(service);
-    // Only show if it's different from what user typed
     if (normalized.toLowerCase() === service.toLowerCase()) return null;
     return normalized;
   }, [service]);
 
-  // Handle deep link with password from clipboard
   React.useEffect(() => {
-    if (params.password && typeof params.password === 'string') {
-      setPw(decodeURIComponent(params.password));
-      setShowPw(true); // Show password so user can verify
+    if (existingPassword?.otherPin) {
+      try {
+        const parsed = JSON.parse(existingPassword.otherPin) as Array<{label: string; pin: string}>;
+        setOtherPins(parsed.map(p => ({ ...p, show: false })));
+      } catch {}
     }
-  }, [params.password]);
+    if (existingPassword?.loginPin || existingPassword?.transactionPin || existingPassword?.otherPin) {
+      setShowPinSection(true);
+    }
+  }, [existingPassword]);
 
   const addOtherPin = () => {
     setOtherPins([...otherPins, { label: '', pin: '', show: false }]);
   };
 
-  const removeOtherPin = (index: number) => {
-    setOtherPins(otherPins.filter((_, i) => i !== index));
+  const removeOtherPin = (idx: number) => {
+    setOtherPins(otherPins.filter((_, i) => i !== idx));
   };
 
-  const updateOtherPinLabel = (index: number, label: string) => {
+  const updateOtherPinLabel = (idx: number, label: string) => {
     const updated = [...otherPins];
-    updated[index].label = label;
+    updated[idx].label = label;
     setOtherPins(updated);
   };
 
-  const updateOtherPinValue = (index: number, pin: string) => {
+  const updateOtherPinValue = (idx: number, pin: string) => {
     const updated = [...otherPins];
-    updated[index].pin = pin.replace(/[^0-9]/g, '');
+    updated[idx].pin = pin;
     setOtherPins(updated);
   };
 
-  const toggleOtherPinVisibility = (index: number) => {
+  const toggleOtherPinVisibility = (idx: number) => {
     const updated = [...otherPins];
-    updated[index].show = !updated[index].show;
+    updated[idx].show = !updated[idx].show;
     setOtherPins(updated);
   };
 
-  React.useEffect(() => {
-    if (!unlocked) router.replace('/login');
-  }, [unlocked, router]);
-
-  const onSave = React.useCallback(async () => {
+  const handleSave = async () => {
     if (loading) return;
     if (!vault || !vaultKey) return;
     if (!service.trim()) {
       showAlert({
         title: 'Required',
-        message: 'Service is required',
+        message: 'Service name is required',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -99,23 +101,18 @@ export default function AddPassword() {
     if (!username.trim()) {
       showAlert({
         title: 'Required',
-        message: 'Username/Email is required',
+        message: 'Username is required',
         confirmText: 'OK',
         onConfirm: () => {},
       });
       return;
     }
-    
-    // Check if at least password OR any PIN is provided
-    const hasLoginPin = loginPin.trim().length > 0;
-    const hasTransactionPin = transactionPin.trim().length > 0;
-    const hasOtherPins = otherPins.some(p => p.pin.trim().length > 0);
-    const hasAnyPin = hasLoginPin || hasTransactionPin || hasOtherPins;
-    
+
+    const hasAnyPin = loginPin || transactionPin || otherPins.some(p => p.pin);
     if (!pw && !hasAnyPin) {
       showAlert({
         title: 'Required',
-        message: 'Please provide either a password or at least one PIN',
+        message: 'Password or at least one PIN is required',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -124,41 +121,43 @@ export default function AddPassword() {
 
     setLoading(true);
     try {
-      // Auto-categorize based on service name
-      const category = categorizeService(service);
-      
-      // Prepare other pins data
-      const otherPinsData = otherPins
-        .filter(p => p.label.trim() && p.pin.trim())
-        .map(p => ({ label: p.label.trim(), pin: p.pin.trim() }));
-      
-      const item: PasswordItem = { 
-        service: service.trim(), 
-        username: username.trim(), 
-        password: pw || '', 
-        notes,
-        category,
-        loginPin: loginPin.trim() || undefined,
-        transactionPin: transactionPin.trim() || undefined,
-        otherPin: otherPinsData.length > 0 ? JSON.stringify(otherPinsData) : undefined,
-        createdAt: Date.now(),
+      const validOtherPins = otherPins.filter(p => p.label && p.pin);
+      const item: PasswordItem = {
+        service: service.trim(),
+        username: username.trim(),
+        password: pw,
+        notes: notes || undefined,
+        category: categorizeService(service.trim()),
+        loginPin: loginPin || undefined,
+        transactionPin: transactionPin || undefined,
+        otherPin: validOtherPins.length > 0 ? JSON.stringify(validOtherPins.map(p => ({ label: p.label, pin: p.pin }))) : undefined,
+        createdAt: existingPassword?.createdAt || Date.now(),
         modifiedAt: Date.now(),
       };
-      const next = { ...vault, passwords: [...vault.passwords, item] };
+
+      const updatedPasswords = [...vault.passwords];
+      updatedPasswords[passwordIndex] = item;
+
+      const next = { ...vault, passwords: updatedPasswords };
       await saveVault(next, vaultKey);
       setVault(() => next);
-      router.replace('/dashboard');
+      showAlert({
+        title: 'Success',
+        message: 'Password updated!',
+        confirmText: 'OK',
+        onConfirm: () => router.back(),
+      });
     } catch (e: any) {
       showAlert({
         title: 'Error',
-        message: e?.message ?? 'Failed to save',
+        message: e?.message ?? 'Failed to update',
         confirmText: 'OK',
         onConfirm: () => {},
       });
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, setVault, router]);
+  };
 
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
@@ -174,7 +173,7 @@ export default function AddPassword() {
           <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Add Password</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Edit Password</Text>
           <View style={styles.NoiconBtn} />
         </View>
 
@@ -228,12 +227,7 @@ export default function AddPassword() {
               value={pw}
               onChangeText={setPw}
             />
-            <TouchableOpacity
-              onPress={() => setShowPw((v) => !v)}
-              style={styles.eyeBtn}
-              accessibilityRole="button"
-              accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
-            >
+            <TouchableOpacity onPress={() => setShowPw((v) => !v)} style={styles.eyeBtn}>
               <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
             </TouchableOpacity>
           </View>
@@ -280,120 +274,88 @@ export default function AddPassword() {
             style={[styles.pinToggle, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
             onPress={() => setShowPinSection(!showPinSection)}
           >
-            <Ionicons name="keypad" size={20} color={colors.primary} />
+            <Ionicons name="keypad" size={18} color={colors.primary} />
             <Text style={[styles.pinToggleText, { color: colors.text }]}>
-              {showPinSection ? 'Hide' : 'Add'} PINs (Banking, UPI, etc.)
+              {showPinSection ? 'Hide' : 'Add'} PINs (Banking/UPI)
             </Text>
-            <Ionicons 
-              name={showPinSection ? 'chevron-up' : 'chevron-down'} 
-              size={18} 
-              color={colors.mutedText} 
-            />
+            <Ionicons name={showPinSection ? 'chevron-up' : 'chevron-down'} size={18} color={colors.mutedText} />
           </TouchableOpacity>
 
           {showPinSection ? (
             <View style={styles.pinSection}>
-              <Text style={[styles.pinSectionTitle, { color: colors.text }]}>
-                Store your app PINs securely
-              </Text>
-              <Text style={[styles.pinSectionSub, { color: colors.mutedText }]}>
-                Never forget your banking, UPI, or transaction PINs again
-              </Text>
-
-              {/* Login PIN */}
-              <Text style={[styles.label, { color: colors.mutedText }]}>Login PIN (Optional)</Text>
+              <Text style={[styles.label, { color: colors.mutedText }]}>Login PIN</Text>
               <View style={styles.inputWrap}>
                 <TextInput
                   style={[...inputStyle, { paddingRight: 44 }]}
-                  placeholder="e.g. 1234 or 123456"
+                  placeholder="Optional"
                   placeholderTextColor={colors.mutedText}
                   secureTextEntry={!showLoginPin}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  autoComplete="off"
-                  textContentType="none"
+                  keyboardType="numeric"
                   value={loginPin}
-                  onChangeText={(text) => setLoginPin(text.replace(/[^0-9]/g, ''))}
+                  onChangeText={setLoginPin}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowLoginPin((v) => !v)}
-                  style={styles.eyeBtn}
-                >
+                <TouchableOpacity onPress={() => setShowLoginPin(!showLoginPin)} style={styles.eyeBtn}>
                   <Ionicons name={showLoginPin ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
                 </TouchableOpacity>
               </View>
 
-              {/* Transaction PIN */}
-              <Text style={[styles.label, { color: colors.mutedText }]}>Transaction PIN (Optional)</Text>
+              <Text style={[styles.label, { color: colors.mutedText }]}>Transaction PIN</Text>
               <View style={styles.inputWrap}>
                 <TextInput
                   style={[...inputStyle, { paddingRight: 44 }]}
-                  placeholder="e.g. 1234 or 123456"
+                  placeholder="Optional"
                   placeholderTextColor={colors.mutedText}
                   secureTextEntry={!showTransactionPin}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  autoComplete="off"
-                  textContentType="none"
+                  keyboardType="numeric"
                   value={transactionPin}
-                  onChangeText={(text) => setTransactionPin(text.replace(/[^0-9]/g, ''))}
+                  onChangeText={setTransactionPin}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowTransactionPin((v) => !v)}
-                  style={styles.eyeBtn}
-                >
+                <TouchableOpacity onPress={() => setShowTransactionPin(!showTransactionPin)} style={styles.eyeBtn}>
                   <Ionicons name={showTransactionPin ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
                 </TouchableOpacity>
               </View>
 
-              {/* Other PIN with custom label */}
-              <Text style={[styles.label, { color: colors.mutedText, marginTop: 12 }]}>Additional PINs</Text>
-              
-              {otherPins.map((otherPin, index) => (
-                <View key={index} style={styles.otherPinItem}>
+              {otherPins.map((pin, idx) => (
+                <View key={idx} style={styles.otherPinRow}>
                   <View style={{ flex: 1 }}>
+                    <Text style={[styles.label, { color: colors.mutedText }]}>PIN Label</Text>
                     <TextInput
-                      style={[inputStyle, { marginBottom: 8 }]}
-                      placeholder="PIN Label (e.g. Booking PIN)"
+                      style={inputStyle}
+                      placeholder="e.g. MPIN, ATM PIN"
                       placeholderTextColor={colors.mutedText}
-                      value={otherPin.label}
-                      onChangeText={(text) => updateOtherPinLabel(index, text)}
+                      value={pin.label}
+                      onChangeText={(text) => updateOtherPinLabel(idx, text)}
                     />
+                    <Text style={[styles.label, { color: colors.mutedText }]}>PIN Value</Text>
                     <View style={styles.inputWrap}>
                       <TextInput
                         style={[...inputStyle, { paddingRight: 44 }]}
                         placeholder="Enter PIN"
                         placeholderTextColor={colors.mutedText}
-                        secureTextEntry={!otherPin.show}
-                        keyboardType="number-pad"
-                        maxLength={6}
-                        autoComplete="off"
-                        textContentType="none"
-                        value={otherPin.pin}
-                        onChangeText={(text) => updateOtherPinValue(index, text)}
+                        secureTextEntry={!pin.show}
+                        keyboardType="numeric"
+                        value={pin.pin}
+                        onChangeText={(text) => updateOtherPinValue(idx, text)}
                       />
-                      <TouchableOpacity
-                        onPress={() => toggleOtherPinVisibility(index)}
-                        style={styles.eyeBtn}
-                      >
-                        <Ionicons name={otherPin.show ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
+                      <TouchableOpacity onPress={() => toggleOtherPinVisibility(idx)} style={styles.eyeBtn}>
+                        <Ionicons name={pin.show ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
                       </TouchableOpacity>
                     </View>
                   </View>
                   <TouchableOpacity
-                    onPress={() => removeOtherPin(index)}
-                    style={[styles.removeBtn, { backgroundColor: colors.inputBg }]}
+                    style={[styles.removeBtn, { backgroundColor: '#ef4444' }]}
+                    onPress={() => removeOtherPin(idx)}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    <Ionicons name="trash" size={16} color="#fff" />
                   </TouchableOpacity>
                 </View>
               ))}
 
               <TouchableOpacity
-                style={[styles.addPinBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                style={[styles.addPinBtn, { borderColor: colors.primary }]}
                 onPress={addOtherPin}
               >
-                <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
                 <Text style={[styles.addPinText, { color: colors.primary }]}>Add Another PIN</Text>
               </TouchableOpacity>
             </View>
@@ -402,9 +364,9 @@ export default function AddPassword() {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.primary }, loading && { opacity: 0.6 }]}
             disabled={loading}
-            onPress={onSave}
+            onPress={handleSave}
           >
-            <Text style={styles.buttonText}>{loading ? 'Saving...' : 'Save'}</Text>
+            <Text style={styles.buttonText}>{loading ? 'Saving...' : 'Save Changes'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -416,75 +378,23 @@ export default function AddPassword() {
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  NoiconBtn: { width: 40, height: 40 ,borderColor: 'transparent'},
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   title: { fontSize: 20, fontWeight: '900' },
+  NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderColor: 'transparent' },
   card: { borderWidth: 1, borderRadius: 16, padding: 14 },
   label: { fontSize: 12, fontWeight: '800', marginTop: 8, marginBottom: 6 },
   input: { borderWidth: 1, padding: 12, borderRadius: 12, fontSize: 15 },
   inputWrap: { position: 'relative' },
-  eyeBtn: { position: 'absolute', right: 2, top: 0, bottom: 0, height: 44, width: 44, alignItems: 'center', justifyContent: 'center' },
+  eyeBtn: { position: 'absolute', right: 12, top: 12 },
   button: { padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 14 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  pinToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 12,
-  },
-  pinToggleText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  pinSection: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(99, 102, 241, 0.05)',
-  },
-  pinSectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  pinSectionSub: {
-    fontSize: 12,
-    marginBottom: 12,
-    lineHeight: 16,
-  },
-  otherPinItem: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-    alignItems: 'flex-start',
-  },
-  removeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  addPinBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    marginTop: 4,
-  },
-  addPinText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  pinToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 12 },
+  pinToggleText: { flex: 1, fontSize: 14, fontWeight: '700' },
+  pinSection: { marginTop: 12 },
+  otherPinRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  removeBtn: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 32 },
+  addPinBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', marginTop: 12 },
+  addPinText: { fontSize: 14, fontWeight: '700' },
   suggestionChip: {
     flexDirection: 'row',
     alignItems: 'center',

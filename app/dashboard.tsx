@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -6,9 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const MASTER_PASSWORD_KEY = 'master_password_v1';
+const DOUBLE_TAP_LOCK_KEY = 'double_tap_lock';
 
 const maskPhone = (phone: string): string => {
   if (phone.length <= 4) return phone;
@@ -20,11 +22,13 @@ const maskPhone = (phone: string): string => {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { unlocked, vault, lock } = useSession();
+  const { unlocked, vault, lock, resetAutoLockTimer } = useSession();
   const { colors } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
   
   const [showFabMenu, setShowFabMenu] = React.useState(false);
   const [hasMasterPassword, setHasMasterPassword] = React.useState(false);
+  const [doubleTapEnabled, setDoubleTapEnabled] = React.useState(false);
   const [lastTap, setLastTap] = React.useState(0);
   const [showTutorial, setShowTutorial] = React.useState(false);
   const [tutorialStep, setTutorialStep] = React.useState(0);
@@ -34,6 +38,8 @@ export default function Dashboard() {
   const scaleAnims = React.useRef(categories.map(() => new Animated.Value(0))).current;
   const fabLabelAnim = React.useRef(new Animated.Value(0)).current;
   const spotlightAnim = React.useRef(new Animated.Value(0)).current;
+  const typingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   React.useEffect(() => {
     if (!unlocked) router.replace('/login');
@@ -41,9 +47,15 @@ export default function Dashboard() {
 
   useFocusEffect(
     React.useCallback(() => {
+      // Reset auto-lock timer when dashboard is focused
+      resetAutoLockTimer();
+      
       (async () => {
         const mp = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
         setHasMasterPassword(!!mp);
+        
+        const doubleTap = await SecureStore.getItemAsync(DOUBLE_TAP_LOCK_KEY);
+        setDoubleTapEnabled(doubleTap === 'true');
       })();
     }, [])
   );
@@ -95,6 +107,9 @@ export default function Dashboard() {
   }, [vault?.passwords]);
 
   const handleDoubleTap = () => {
+    // Only lock if double-tap is enabled in settings
+    if (!doubleTapEnabled) return;
+    
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
     
@@ -104,6 +119,10 @@ export default function Dashboard() {
       router.replace('/login');
     }
     setLastTap(now);
+  };
+
+  const openSearch = () => {
+    router.push('/search');
   };
 
   const toggleFabMenu = () => {
@@ -121,24 +140,37 @@ export default function Dashboard() {
     }
     
     const toValue = showFabMenu ? 0 : 1;
+    
+    // Smoother spring animation
     Animated.spring(fabLabelAnim, {
       toValue,
-      tension: 50,
-      friction: 7,
+      tension: 80,
+      friction: 8,
       useNativeDriver: false,
     }).start();
+    
     setShowFabMenu(!showFabMenu);
   };
 
   const typeText = (text: string, index: number) => {
+    // Clear any existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
     if (index < text.length) {
       setTypedText(text.substring(0, index + 1));
-      setTimeout(() => typeText(text, index + 1), 30);
+      typingTimeoutRef.current = setTimeout(() => typeText(text, index + 1), 30);
     }
   };
 
   const nextTutorialStep = () => {
     if (tutorialStep === 1) {
+      // Clear any ongoing typing animation
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
       setTutorialStep(2);
       setTypedText('');
       Animated.timing(spotlightAnim, {
@@ -151,15 +183,24 @@ export default function Dashboard() {
   };
 
   const closeTutorial = async () => {
-    setShowTutorial(false);
-    setTutorialStep(0);
-    setTypedText('');
-    await SecureStore.setItemAsync('fab_tutorial_shown', 'true');
-    Animated.timing(spotlightAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    try {
+      // Clear any ongoing typing animation
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      await SecureStore.setItemAsync('fab_tutorial_shown', 'true');
+      setShowTutorial(false);
+      setTutorialStep(0);
+      setTypedText('');
+      Animated.timing(spotlightAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } catch (error) {
+      console.error('Failed to save tutorial state:', error);
+    }
   };
 
   return (
@@ -173,18 +214,31 @@ export default function Dashboard() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => router.push('/settings')}
-          >
-            <Ionicons name="settings-outline" size={20} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={openSearch}
+            >
+              <Ionicons name="search" size={20} color={colors.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push('/settings')}
+            >
+              <Ionicons name="settings-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView 
           style={styles.scrollView}
+          onScroll={resetAutoLockTimer}
+          scrollEventThrottle={1000}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          bounces={true}
+          alwaysBounceVertical={true}
         >
           {categories.map((category, index) => {
             const count = categoryCounts[category.id] || 0;
@@ -296,6 +350,20 @@ export default function Dashboard() {
             <View style={styles.fabMenuCircular}>
               <Animated.View style={[styles.fabItemContainer, {
                 opacity: fabLabelAnim,
+                transform: [
+                  {
+                    translateY: fabLabelAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                  {
+                    scale: fabLabelAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
               }]}>
                 <Animated.View style={[styles.fabLabel, { 
                   backgroundColor: colors.card,
@@ -321,6 +389,20 @@ export default function Dashboard() {
 
               <Animated.View style={[styles.fabItemContainer, {
                 opacity: fabLabelAnim,
+                transform: [
+                  {
+                    translateY: fabLabelAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [40, 0],
+                    }),
+                  },
+                  {
+                    scale: fabLabelAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
               }]}>
                 <Animated.View style={[styles.fabLabel, { 
                   backgroundColor: colors.card,
@@ -338,14 +420,14 @@ export default function Dashboard() {
                     setShowFabMenu(false);
                     fabLabelAnim.setValue(0);
                     if (!hasMasterPassword) {
-                      Alert.alert(
-                        'Master Password Required',
-                        'Set up your master password to generate strong passwords',
-                        [
-                          { text: 'Set Up Now', onPress: () => router.push('/master-password-intro') },
-                          { text: 'Cancel', style: 'cancel' }
-                        ]
-                      );
+                      showAlert({
+                        title: 'Master Password Required',
+                        message: 'Set up your master password to generate strong passwords',
+                        cancelText: 'Cancel',
+                        confirmText: 'Set Up Now',
+                        onCancel: () => {},
+                        onConfirm: () => router.push('/master-password-intro'),
+                      });
                     } else {
                       router.push('/generate-password');
                     }
@@ -361,13 +443,22 @@ export default function Dashboard() {
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
           onPress={toggleFabMenu}
-          activeOpacity={0.9}
+          activeOpacity={0.85}
         >
           <Animated.View
             style={{
               transform: [
                 {
-                  rotate: showFabMenu ? '45deg' : '0deg',
+                  rotate: fabLabelAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '135deg'],
+                  }),
+                },
+                {
+                  scale: fabLabelAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.1],
+                  }),
                 },
               ],
             }}
@@ -376,6 +467,8 @@ export default function Dashboard() {
           </Animated.View>
         </TouchableOpacity>
       </Animated.View>
+
+      <AlertComponent />
     </Screen>
   );
 }
@@ -390,6 +483,11 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
   subtitle: { marginTop: 4, fontSize: 13, fontWeight: '600' },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   iconBtn: {
     width: 44,
     height: 44,
@@ -397,6 +495,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    display: 'flex',
   },
   scrollView: { flex: 1 },
   listContainer: {
@@ -433,6 +532,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    display: 'flex',
   },
   barTextWrap: {
     flex: 1,
@@ -493,11 +593,11 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
   },
   fab: {
     position: 'absolute',
@@ -508,11 +608,11 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    elevation: 12,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
   },
   tutorialOverlay: {
     position: 'absolute',

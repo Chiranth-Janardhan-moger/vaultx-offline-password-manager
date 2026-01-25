@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -6,12 +7,13 @@ import { decryptVaultWithKey, hashPassword, saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChangePassword() {
   const router = useRouter();
   const { colors } = useTheme();
   const { unlocked } = useSession();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [currentPin, setCurrentPin] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -28,15 +30,30 @@ export default function ChangePassword() {
 
   const handleChangePassword = async () => {
     if (!/^\d{6}$/.test(currentPin)) {
-      Alert.alert('Invalid VPin', 'VPin must be exactly 6 digits');
+      showAlert({
+        title: 'Invalid VPin',
+        message: 'VPin must be exactly 6 digits',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert('Password Too Short', 'Password must be at least 8 characters');
+      showAlert({
+        title: 'Password Too Short',
+        message: 'Password must be at least 8 characters',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Passwords Don\'t Match', 'Please make sure both passwords match');
+      showAlert({
+        title: 'Passwords Don\'t Match',
+        message: 'Please make sure both passwords match',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
 
@@ -57,11 +74,19 @@ export default function ChangePassword() {
       // Save new password wrap
       await savePasswordWrap(vaultKey, newPassword);
       
-      Alert.alert('Success', 'Your password has been changed successfully', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      showAlert({
+        title: 'Success',
+        message: 'Your password has been changed successfully',
+        confirmText: 'OK',
+        onConfirm: () => router.back(),
+      });
     } catch (error) {
-      Alert.alert('Error', 'Incorrect VPin or failed to change password');
+      showAlert({
+        title: 'Error',
+        message: 'Incorrect VPin or failed to change password',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setLoading(false);
     }
@@ -161,6 +186,8 @@ export default function ChangePassword() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <AlertComponent />
     </Screen>
   );
 }

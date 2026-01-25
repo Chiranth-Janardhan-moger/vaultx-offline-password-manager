@@ -25,7 +25,12 @@ export default function ViewMasterPassword() {
 
   return (
     <Screen>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: colors.background }} 
+        contentContainerStyle={styles.container}
+        bounces={true}
+        alwaysBounceVertical={true}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -101,7 +106,7 @@ export default function ViewMasterPassword() {
 
 const styles = StyleSheet.create({
   container: { padding: 20, paddingBottom: 40 },
-    NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   title: { fontSize: 20, fontWeight: '900' },

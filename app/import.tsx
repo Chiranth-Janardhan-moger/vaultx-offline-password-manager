@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -8,7 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const MASTER_PASSWORD_KEY = 'master_password_v1';
 
@@ -16,6 +17,7 @@ export default function ImportScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { unlocked, vaultKey, setVault } = useSession();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [backupFile, setBackupFile] = React.useState<string | null>(null);
   const [backupPassword, setBackupPassword] = React.useState('');
@@ -35,24 +37,49 @@ export default function ImportScreen() {
       
       // Validate file extension
       if (!file.name.toLowerCase().endsWith('.vxb')) {
-        Alert.alert('Invalid File', 'Please select a VaultX backup file (.vxb)');
+        showAlert({
+          title: 'Invalid File',
+          message: 'Please select a VaultX backup file (.vxb)',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
         return;
       }
       
       setBackupFile(file.uri);
-      Alert.alert('File Selected', file.name);
+      showAlert({
+        title: 'File Selected',
+        message: file.name,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to pick file');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Failed to pick file',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     }
   }, []);
 
   const handleImport = React.useCallback(async () => {
     if (!backupFile) {
-      Alert.alert('No File Selected', 'Please select a backup file first');
+      showAlert({
+        title: 'No File Selected',
+        message: 'Please select a backup file first',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     if (!backupPassword) {
-      Alert.alert('Password Required', 'Enter your backup password');
+      showAlert({
+        title: 'Password Required',
+        message: 'Enter your backup password',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
 
@@ -63,7 +90,12 @@ export default function ImportScreen() {
       const backup = JSON.parse(content);
 
       if (!backup.version) {
-        Alert.alert('Invalid Backup', 'This file is not a valid VaultX backup');
+        showAlert({
+          title: 'Invalid Backup',
+          message: 'This file is not a valid VaultX backup',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
         return;
       }
 
@@ -73,31 +105,56 @@ export default function ImportScreen() {
       if (backup.version === '2.0') {
         // New format: passwords only
         if (!backup.passwords) {
-          Alert.alert('Invalid Backup', 'No passwords found in backup');
+          showAlert({
+            title: 'Invalid Backup',
+            message: 'No passwords found in backup',
+            confirmText: 'OK',
+            onConfirm: () => {},
+          });
           return;
         }
         
         try {
           const decryptedPasswords = CryptoJS.AES.decrypt(backup.passwords, backupPassword).toString(CryptoJS.enc.Utf8);
           if (!decryptedPasswords) {
-            Alert.alert('Incorrect Password', 'The backup password you entered is incorrect');
+            showAlert({
+              title: 'Incorrect Password',
+              message: 'The backup password you entered is incorrect',
+              confirmText: 'OK',
+              onConfirm: () => {},
+            });
             return;
           }
           const passwordsData = JSON.parse(decryptedPasswords);
           passwordsToRestore = passwordsData.passwords || [];
         } catch {
-          Alert.alert('Incorrect Password', 'The backup password you entered is incorrect');
+          showAlert({
+            title: 'Incorrect Password',
+            message: 'The backup password you entered is incorrect',
+            confirmText: 'OK',
+            onConfirm: () => {},
+          });
           return;
         }
       } else {
         // Old format: full vault (for backward compatibility)
-        Alert.alert('Old Backup Format', 'This backup format is no longer supported. Please create a new backup.');
+        showAlert({
+          title: 'Old Backup Format',
+          message: 'This backup format is no longer supported. Please create a new backup.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
         return;
       }
 
       // Get current vault and merge passwords
       if (!unlocked || !vaultKey) {
-        Alert.alert('Error', 'Not logged in. Please unlock your vault first.');
+        showAlert({
+          title: 'Error',
+          message: 'Not logged in. Please unlock your vault first.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
         router.replace('/login');
         return;
       }
@@ -126,18 +183,19 @@ export default function ImportScreen() {
         }
       }
 
-      Alert.alert(
-        'Restore Complete!',
-        'Your passwords have been restored successfully.',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => router.replace('/dashboard')
-          }
-        ]
-      );
+      showAlert({
+        title: 'Restore Complete!',
+        message: 'Your passwords have been restored successfully.',
+        confirmText: 'OK',
+        onConfirm: () => router.replace('/dashboard'),
+      });
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to import backup');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Failed to import backup',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setBusy(false);
     }
@@ -145,7 +203,12 @@ export default function ImportScreen() {
 
   return (
     <Screen>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: colors.background }} 
+        contentContainerStyle={styles.container}
+        bounces={true}
+        alwaysBounceVertical={true}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -199,6 +262,8 @@ export default function ImportScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <AlertComponent />
     </Screen>
   );
 }

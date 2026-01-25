@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -8,14 +9,16 @@ import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import * as Sharing from 'expo-sharing';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const MASTER_PASSWORD_KEY = 'master_password_v1';
+const LAST_BACKUP_DATE_KEY = 'last_backup_date';
 
 export default function ExportScreen() {
   const router = useRouter();
   const { unlocked, vault, vaultKey } = useSession();
   const { colors } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [busy, setBusy] = React.useState(false);
   const [backupPassword, setBackupPassword] = React.useState('');
@@ -29,7 +32,12 @@ export default function ExportScreen() {
   const ensureShare = async (path: string, mimeType?: string) => {
     const available = await Sharing.isAvailableAsync();
     if (!available) {
-      Alert.alert('Saved', `File saved: ${path}`);
+      showAlert({
+        title: 'Saved',
+        message: `File saved: ${path}`,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     await Sharing.shareAsync(path, mimeType ? { mimeType } : undefined);
@@ -40,15 +48,30 @@ export default function ExportScreen() {
     
     // Validate backup password
     if (!backupPassword) {
-      Alert.alert('Backup Password Required', 'Please enter a backup password to secure your export');
+      showAlert({
+        title: 'Backup Password Required',
+        message: 'Please enter a backup password to secure your export',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     if (backupPassword.length < 6) {
-      Alert.alert('Password Too Short', 'Backup password must be at least 6 characters');
+      showAlert({
+        title: 'Password Too Short',
+        message: 'Backup password must be at least 6 characters',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     if (backupPassword !== confirmPassword) {
-      Alert.alert('Passwords Don\'t Match', 'Please make sure both passwords match');
+      showAlert({
+        title: 'Passwords Don\'t Match',
+        message: 'Please make sure both passwords match',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     
@@ -56,7 +79,12 @@ export default function ExportScreen() {
     try {
       // Get vault key from session
       if (!unlocked || !vaultKey) {
-        Alert.alert('Error', 'Not logged in. Please unlock your vault first.');
+        showAlert({
+          title: 'Error',
+          message: 'Not logged in. Please unlock your vault first.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
         router.replace('/login');
         return;
       }
@@ -95,17 +123,26 @@ export default function ExportScreen() {
       await FileSystem.writeAsStringAsync(filePath, JSON.stringify(completeBackup));
       await ensureShare(filePath, 'application/json');
       
-      Alert.alert(
-        'Backup Complete!',
-        'Your passwords have been backed up. Remember your backup password - you\'ll need it to restore!',
-        [{ text: 'OK' }]
-      );
+      // Record backup date
+      await SecureStore.setItemAsync(LAST_BACKUP_DATE_KEY, Date.now().toString());
+      
+      showAlert({
+        title: 'Backup Complete!',
+        message: 'Your passwords have been backed up. Remember your backup password - you\'ll need it to restore!',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       
       // Clear passwords
       setBackupPassword('');
       setConfirmPassword('');
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to export backup');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Failed to export backup',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setBusy(false);
     }
@@ -113,7 +150,12 @@ export default function ExportScreen() {
 
   return (
     <Screen>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: colors.background }} 
+        contentContainerStyle={styles.container}
+        bounces={true}
+        alwaysBounceVertical={true}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -122,12 +164,12 @@ export default function ExportScreen() {
           <View style={styles.NoiconBtn} />
         </View>
 
-        <View style={[styles.infoCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+        <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.infoTitle, { color: colors.text }]}>Secure Backup</Text>
             <Text style={[styles.infoText, { color: colors.mutedText }]}>
-              Create a backup password to encrypt your master password. You'll need this password to restore.
+              Create an encrypted backup of all your passwords. You'll need your backup password to restore on any device.
             </Text>
           </View>
         </View>
@@ -192,6 +234,8 @@ export default function ExportScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <AlertComponent />
     </Screen>
   );
 }

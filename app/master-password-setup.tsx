@@ -1,16 +1,18 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const MASTER_PASSWORD_KEY = 'master_password_v1';
 
 export default function MasterPasswordSetup() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
@@ -29,10 +31,42 @@ export default function MasterPasswordSetup() {
   }, [router]);
 
   const handleSave = React.useCallback(async () => {
-    if (!firstName.trim()) return Alert.alert('First name is required');
-    if (!lastName.trim()) return Alert.alert('Last name is required');
-    if (!birthYear.trim() || birthYear.length !== 4) return Alert.alert('Enter valid birth year (4 digits)');
-    if (!favoriteColor.trim()) return Alert.alert('Favorite color is required');
+    if (!firstName.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'First name is required',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (!lastName.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Last name is required',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (!birthYear.trim() || birthYear.length !== 4) {
+      showAlert({
+        title: 'Invalid Input',
+        message: 'Enter valid birth year (4 digits)',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    if (!favoriteColor.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Favorite color is required',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -45,11 +79,19 @@ export default function MasterPasswordSetup() {
 
       const masterPassword = `${firstName.trim().replace(/\s+/g, '').toLowerCase()}${lastName.trim().replace(/\s+/g, '').toLowerCase()}${birthYear}${favoriteColor.trim().replace(/\s+/g, '').toLowerCase()}`;
       await SecureStore.setItemAsync(MASTER_PASSWORD_KEY, masterPassword);
-      Alert.alert('Success', 'Master password created!', [
-        { text: 'OK', onPress: () => router.replace('/master-password-locked') }
-      ]);
+      showAlert({
+        title: 'Success',
+        message: 'Master password created!',
+        confirmText: 'OK',
+        onConfirm: () => router.replace('/master-password-locked'),
+      });
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to save');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Failed to save',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setLoading(false);
     }
@@ -59,7 +101,12 @@ export default function MasterPasswordSetup() {
 
   return (
     <Screen>
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: colors.background }} 
+        contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
+        bounces={true}
+        alwaysBounceVertical={true}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -126,6 +173,8 @@ export default function MasterPasswordSetup() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <AlertComponent />
     </Screen>
   );
 }

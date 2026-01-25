@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -6,7 +7,7 @@ import { decryptVaultWithKey } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const maskPhone = (phone: string): string => {
   if (phone.length <= 4) return phone;
@@ -20,6 +21,7 @@ export default function UnlockPassword() {
   const router = useRouter();
   const { unlock } = useSession();
   const { colors } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
@@ -33,7 +35,12 @@ export default function UnlockPassword() {
     (async () => {
       const hasPassword = await hasPasswordUnlock();
       if (!hasPassword) {
-        Alert.alert('Password not configured', 'Please use PIN or recovery.');
+        showAlert({
+          title: 'Password not configured',
+          message: 'Please use PIN or recovery.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
         router.back();
         return;
       }
@@ -45,7 +52,12 @@ export default function UnlockPassword() {
   const ensureNotLocked = React.useCallback(() => {
     if (Date.now() < lockedUntil) {
       const secs = Math.ceil((lockedUntil - Date.now()) / 1000);
-      Alert.alert('Try again later', `Too many attempts. Wait ${secs}s.`);
+      showAlert({
+        title: 'Try again later',
+        message: `Too many attempts. Wait ${secs}s.`,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return false;
     }
     return true;
@@ -69,7 +81,15 @@ export default function UnlockPassword() {
   const handleUnlock = React.useCallback(async () => {
     if (!ensureNotLocked()) return;
     if (loading) return;
-    if (!password.trim()) return Alert.alert('Enter password');
+    if (!password.trim()) {
+      showAlert({
+        title: 'Required',
+        message: 'Enter password',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -77,7 +97,12 @@ export default function UnlockPassword() {
       await unlockWithVaultKey(vaultKey);
     } catch (e: any) {
       registerFailure();
-      Alert.alert('Error', e?.message ?? 'Incorrect password');
+      showAlert({
+        title: 'Error',
+        message: e?.message ?? 'Incorrect password',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setLoading(false);
     }
@@ -138,6 +163,8 @@ export default function UnlockPassword() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <AlertComponent />
     </Screen>
   );
 }

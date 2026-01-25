@@ -1,3 +1,4 @@
+import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -5,12 +6,13 @@ import { savePinWrap, unwrapWithPassword } from '@/lib/secure';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChangeVPin() {
   const router = useRouter();
   const { colors } = useTheme();
   const { unlocked } = useSession();
+  const { showAlert, AlertComponent } = useCustomAlert();
 
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPin, setNewPin] = React.useState('');
@@ -29,15 +31,30 @@ export default function ChangeVPin() {
 
   const handleChangePin = async () => {
     if (!currentPassword) {
-      Alert.alert('Password Required', 'Enter your current password to verify');
+      showAlert({
+        title: 'Password Required',
+        message: 'Enter your current password to verify',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     if (!/^\d{6}$/.test(newPin)) {
-      Alert.alert('Invalid VPin', 'VPin must be exactly 6 digits');
+      showAlert({
+        title: 'Invalid VPin',
+        message: 'VPin must be exactly 6 digits',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
     if (newPin !== confirmPin) {
-      Alert.alert('VPins Don\'t Match', 'Please make sure both VPins match');
+      showAlert({
+        title: 'VPins Don\'t Match',
+        message: 'Please make sure both VPins match',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
       return;
     }
 
@@ -49,11 +66,19 @@ export default function ChangeVPin() {
       // Save new PIN wrap
       await savePinWrap(vaultKey, newPin);
       
-      Alert.alert('Success', 'Your VPin has been changed successfully', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      showAlert({
+        title: 'Success',
+        message: 'Your VPin has been changed successfully',
+        confirmText: 'OK',
+        onConfirm: () => router.back(),
+      });
     } catch (error) {
-      Alert.alert('Error', 'Incorrect password or failed to change VPin');
+      showAlert({
+        title: 'Error',
+        message: 'Incorrect password or failed to change VPin',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
     } finally {
       setLoading(false);
     }
@@ -186,6 +211,8 @@ export default function ChangeVPin() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <AlertComponent />
     </Screen>
   );
 }
