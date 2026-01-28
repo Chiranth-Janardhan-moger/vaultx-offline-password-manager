@@ -7,6 +7,8 @@
 [![React Native](https://img.shields.io/badge/React%20Native-0.74-blue.svg)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-52-black.svg)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![F-Droid](https://img.shields.io/badge/F--Droid-Coming%20Soon-1976D2?logo=fdroid&logoColor=white)](#)
+
 
 [Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Security](#-security) • [Build](#-build)
 
