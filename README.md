@@ -33,9 +33,9 @@ VaultX is a **fully offline, privacy-first password manager** built with React N
 
 ---
 
-## ✨ Features
+## Features
 
-### 🔒 Security Features
+### Security Features
 
 - **AES-256 Encryption** — Military-grade encryption for all stored data
 - **PBKDF2 Key Derivation** — Secure key generation with salt
@@ -48,7 +48,7 @@ VaultX is a **fully offline, privacy-first password manager** built with React N
 - **No Plaintext Storage** — All passwords encrypted at rest
 - **Secure Backup System** — Export with user-controlled encryption
 
-### 🎨 User Experience
+###  User Experience
 
 - **Beautiful Category System** — Passwords organized in gradient folders
 - **Smart Auto-categorization** — Automatically sorts by service type (Google, Banking, Social Media, etc.)
@@ -62,7 +62,7 @@ VaultX is a **fully offline, privacy-first password manager** built with React N
 - **Password Visibility Toggle** — Show/hide passwords easily
 - **Floating Action Button** — Quick access to add/generate passwords
 
-### 🗂️ Password Management
+###  Password Management
 
 - **Add Known Passwords** — Store existing credentials securely
 - **Generate Master Passwords** — Deterministic password generation
@@ -73,12 +73,12 @@ VaultX is a **fully offline, privacy-first password manager** built with React N
 - **Notes Support** — Add additional information to entries
 - **Phone Number Masking** — Privacy protection (90XXXXX93)
 
-### 🎯 Smart Categories
+### Smart Categories
 
 VaultX automatically categorizes your passwords into:
 
-- 🔵 **Google Services** — Gmail, Drive, YouTube, etc.
-- 💰 **Banking & Finance** — Banks, payment apps, crypto
+-  **Google Services** — Gmail, Drive, YouTube, etc.
+-  **Banking & Finance** — Banks, payment apps, crypto
 - 📱 **Social Media** — Facebook, Instagram, Twitter, etc.
 - 🛒 **Shopping** — Amazon, eBay, online stores
 - 🎮 **Gaming** — Steam, Epic, PlayStation, Xbox
