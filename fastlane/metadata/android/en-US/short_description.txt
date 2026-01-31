@@ -1,1 +1,1 @@
-Offline password manager with AES-256 encryption and autofill
+Offline password manager with AES-256 encryption
