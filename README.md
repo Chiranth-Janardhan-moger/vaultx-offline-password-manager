@@ -8,6 +8,7 @@
 [![Expo](https://img.shields.io/badge/Expo-52-black.svg)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![F-Droid](https://img.shields.io/badge/F--Droid-Coming%20Soon-1976D2?logo=fdroid&logoColor=white)](#)
+[![Play Store](https://img.shields.io/badge/Play%20Store-Coming%20Soon-4285F4?logo=google-play&logoColor=white)](#)
 
 
 [Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Security](#-security) • [Build](#-build)
