@@ -109,18 +109,9 @@ Generate strong, consistent passwords for any service:
 ---
 
 ## 📸 Screenshots
+<img width="8000" height="3125" alt="2" src="https://github.com/user-attachments/assets/edabb54a-0e75-4449-ad95-3d84bbca057f" />
+<img width="8000" height="3125" alt="3" src="https://github.com/user-attachments/assets/a8ab23da-3adf-43d3-9fbc-1d8101ab833a" />
 
-<div align="center">
-
-| Welcome Screen | Login | Dashboard |
-|:---:|:---:|:---:|
-| ![Welcome](docs/welcome.png) | ![Login](docs/login.png) | ![Dashboard](docs/dashboard.png) |
-
-| Categories | Password Details | Settings |
-|:---:|:---:|:---:|
-| ![Categories](docs/categories.png) | ![Details](docs/details.png) | ![Settings](docs/settings.png) |
-
-</div>
 
 ---
 
