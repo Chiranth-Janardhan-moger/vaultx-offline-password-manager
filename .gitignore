@@ -40,4 +40,12 @@ app-example
 
 # generated native folders
 /ios
-/android
+# Note: /android folder is kept for F-Droid builds
+# Only ignore specific android build artifacts
+android/app/build/
+android/build/
+android/.gradle/
+android/app/.cxx/
+android/app/src/main/assets/
+android/app/src/main/res/drawable-*/
+android/app/src/main/res/raw/

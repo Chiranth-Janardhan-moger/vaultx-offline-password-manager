@@ -1,0 +1,34 @@
+Categories:
+  - Security
+License: MIT
+AuthorName: Chiranth Moger
+SourceCode: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
+IssueTracker: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/issues
+
+Summary: Secure offline password manager with autofill
+
+Description: |-
+    VaultX is a fully offline privacy-first password manager that keeps your passwords
+    secure on your device. Your data never leaves your phone and never touches the cloud.
+
+RepoType: git
+Repo: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
+
+Builds:
+  - versionName: 1.2.48
+    versionCode: 248
+    commit: v1.2.48
+    subdir: android
+    gradle:
+      - yes
+    prebuild: cd ../.. && npm ci && npx expo prebuild --platform android --clean
+    scanignore:
+      - android/app/debug.keystore
+    scandelete:
+      - node_modules
+      - .expo
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.2.48
+CurrentVersionCode: 248
