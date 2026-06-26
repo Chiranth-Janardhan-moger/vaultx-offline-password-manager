@@ -33,6 +33,14 @@ export default function EditPassword() {
   const [otherPins, setOtherPins] = React.useState<Array<{label: string; pin: string; show: boolean}>>([]);
   const [showPinSection, setShowPinSection] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [folder, setFolder] = React.useState(existingPassword?.folder || '');
+
+  const folderSuggestions = React.useMemo(() => {
+    if (!vault) return [];
+    const pFolders = vault.passwords.map(p => p.folder).filter(Boolean);
+    const cFolders = (vault.cards || []).map(c => c.folder).filter(Boolean);
+    return Array.from(new Set([...pFolders, ...cFolders])) as string[];
+  }, [vault]);
 
   // Password strength check
   const passwordStrength = React.useMemo(() => {
@@ -133,6 +141,7 @@ export default function EditPassword() {
         otherPin: validOtherPins.length > 0 ? JSON.stringify(validOtherPins.map(p => ({ label: p.label, pin: p.pin }))) : undefined,
         createdAt: existingPassword?.createdAt || Date.now(),
         modifiedAt: Date.now(),
+        folder: folder.trim() || undefined,
       };
 
       const updatedPasswords = [...vault.passwords];
@@ -193,7 +202,7 @@ export default function EditPassword() {
             >
               <Ionicons name="sparkles" size={14} color={colors.primary} />
               <Text style={[styles.suggestionText, { color: colors.primary }]}>
-                Use "{normalizedSuggestion}" instead?
+                Use &quot;{normalizedSuggestion}&quot; instead?
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -268,6 +277,28 @@ export default function EditPassword() {
             value={notes}
             onChangeText={setNotes}
           />
+
+          <Text style={[styles.label, { color: colors.mutedText }]}>Folder (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. Personal, Taxes, Server Keys"
+            placeholderTextColor={colors.mutedText}
+            value={folder}
+            onChangeText={setFolder}
+          />
+          {folderSuggestions.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.folderSuggestionsScroll}>
+              {folderSuggestions.map((f, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.folderChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  onPress={() => setFolder(f)}
+                >
+                  <Text style={[styles.folderChipText, { color: colors.text }]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
           {/* PIN Section Toggle */}
           <TouchableOpacity
@@ -436,5 +467,20 @@ const styles = StyleSheet.create({
   strengthFeedback: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  folderSuggestionsScroll: {
+    paddingVertical: 6,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  folderChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  folderChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

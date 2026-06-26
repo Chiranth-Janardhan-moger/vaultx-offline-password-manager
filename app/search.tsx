@@ -549,7 +549,7 @@ export default function SearchScreen() {
             <TextInput
               ref={searchInputRef}
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search usernames,passwords..."
+              placeholder="Search..."
               placeholderTextColor={colors.mutedText}
               value={searchQuery}
               onChangeText={(text) => {

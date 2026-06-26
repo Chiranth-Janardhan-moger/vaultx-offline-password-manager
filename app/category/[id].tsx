@@ -32,8 +32,42 @@ const formatTimestamp = (timestamp?: number): string => {
   return `${years}y ago`;
 };
 
+import { getTOTPDetails } from '@/lib/totp';
+
+function TotpCodeDisplay({ secret, colors }: { secret: string; colors: any }) {
+  const [details, setDetails] = React.useState(() => getTOTPDetails(secret));
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setDetails(getTOTPDetails(secret));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [secret]);
+
+  return (
+    <View style={styles.detailRow}>
+      <Text style={[styles.detailLabel, { color: colors.mutedText }]}>2FA Code (TOTP)</Text>
+      <View style={styles.detailValue}>
+        <Text style={[styles.detailText, { color: colors.text, fontSize: 18, fontWeight: '900', letterSpacing: 1 }]}>
+          {details.code.slice(0, 3)} {details.code.slice(3)}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ color: colors.mutedText, fontSize: 11, fontWeight: '600' }}>
+            {details.remainingSeconds}s
+          </Text>
+          <TouchableOpacity onPress={() => {
+            Clipboard.setStringAsync(details.code);
+          }}>
+            <Ionicons name="copy-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function CategoryDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
   const router = useRouter();
   const { vault, vaultKey, setVault } = useSession();
   const { colors, resolved } = useTheme();
@@ -223,16 +257,19 @@ export default function CategoryDetail() {
     }
   };
 
-  // Filter passwords for this category
+  // Filter passwords for this category and sort alphabetically by service name
   const categoryPasswords = React.useMemo(() => {
     if (!vault?.passwords) return [];
     return vault.passwords
       .map((pwd, idx) => ({ ...pwd, globalIndex: idx }))
       .filter(pwd => {
         const pwdCategory = pwd.category || categorizeService(pwd.service);
-        return pwdCategory === id;
-      });
-  }, [vault?.passwords, id]);
+        const matchesCategory = pwdCategory === id;
+        const matchesFolder = folder ? pwd.folder === folder : true;
+        return matchesCategory && matchesFolder;
+      })
+      .sort((a, b) => a.service.toLowerCase().localeCompare(b.service.toLowerCase()));
+  }, [vault?.passwords, id, folder]);
 
   return (
     <Screen>
@@ -257,7 +294,7 @@ export default function CategoryDetail() {
               <Ionicons name={category.icon as any} size={32} color="#fff" />
             </View>
           </View>
-          <Text style={styles.headerTitle}>{category.name}</Text>
+          <Text style={styles.headerTitle}>{folder ? `${category.name} (${folder})` : category.name}</Text>
           <Text style={styles.headerCount}>{categoryPasswords.length} passwords</Text>
         </LinearGradient>
 
@@ -408,6 +445,10 @@ export default function CategoryDetail() {
                             </View>
                           </View>
                         </View>
+                      ) : null}
+
+                      {item.totpSecret ? (
+                        <TotpCodeDisplay secret={item.totpSecret} colors={colors} />
                       ) : null}
 
                       {item.notes ? (

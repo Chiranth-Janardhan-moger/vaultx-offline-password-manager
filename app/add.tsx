@@ -30,6 +30,14 @@ export default function AddPassword() {
   const [otherPins, setOtherPins] = React.useState<Array<{label: string; pin: string; show: boolean}>>([]);
   const [showPinSection, setShowPinSection] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [folder, setFolder] = React.useState('');
+
+  const folderSuggestions = React.useMemo(() => {
+    if (!vault) return [];
+    const pFolders = vault.passwords.map(p => p.folder).filter(Boolean);
+    const cFolders = (vault.cards || []).map(c => c.folder).filter(Boolean);
+    return Array.from(new Set([...pFolders, ...cFolders])) as string[];
+  }, [vault]);
 
   // Password strength check
   const passwordStrength = React.useMemo(() => {
@@ -143,6 +151,7 @@ export default function AddPassword() {
         otherPin: otherPinsData.length > 0 ? JSON.stringify(otherPinsData) : undefined,
         createdAt: Date.now(),
         modifiedAt: Date.now(),
+        folder: folder.trim() || undefined,
       };
       const next = { ...vault, passwords: [...vault.passwords, item] };
       await saveVault(next, vaultKey);
@@ -158,7 +167,7 @@ export default function AddPassword() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, setVault, router]);
+  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, setVault, router]);
 
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
@@ -194,7 +203,7 @@ export default function AddPassword() {
             >
               <Ionicons name="sparkles" size={14} color={colors.primary} />
               <Text style={[styles.suggestionText, { color: colors.primary }]}>
-                Use "{normalizedSuggestion}" instead?
+                Use &quot;{normalizedSuggestion}&quot; instead?
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -274,6 +283,28 @@ export default function AddPassword() {
             value={notes}
             onChangeText={setNotes}
           />
+
+          <Text style={[styles.label, { color: colors.mutedText }]}>Folder (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. Personal, Taxes, Server Keys"
+            placeholderTextColor={colors.mutedText}
+            value={folder}
+            onChangeText={setFolder}
+          />
+          {folderSuggestions.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.folderSuggestionsScroll}>
+              {folderSuggestions.map((f, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.folderChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  onPress={() => setFolder(f)}
+                >
+                  <Text style={[styles.folderChipText, { color: colors.text }]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
           {/* PIN Section Toggle */}
           <TouchableOpacity
@@ -526,5 +557,20 @@ const styles = StyleSheet.create({
   strengthFeedback: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  folderSuggestionsScroll: {
+    paddingVertical: 6,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  folderChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  folderChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

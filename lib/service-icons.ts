@@ -71,6 +71,10 @@ export const normalizeServiceName = (serviceName: string): string => {
   if (service.includes('reliance')) return 'Reliance';
   if (service.includes('airtel')) return 'Airtel';
   if (service.includes('jio')) return 'Jio';
+  if (service.includes('lic') || service.includes('life insurance')) return 'LIC';
+  if (service.includes('supabase')) return 'Supabase';
+  if (service.includes('indianoil') || service.includes('indian oil')) return 'Indian Oil';
+  if (service.includes('aws')) return 'AWS';
   
   // Railways & Transportation
   if (service.includes('irctc') || service.includes('indian railway')) return 'IRCTC';
@@ -246,6 +250,10 @@ export const getServiceIcon = (serviceName: string): string => {
   // Indian IT Companies
   if (service.includes('tcs') || service.includes('infosys') || service.includes('wipro') || 
       service.includes('hcl') || service.includes('tech mahindra')) return 'code-slash';
+  if (service.includes('lic') || service.includes('life insurance')) return 'shield-checkmark-outline';
+  if (service.includes('supabase')) return 'flash-outline';
+  if (service.includes('indianoil') || service.includes('indian oil')) return 'flame-outline';
+  if (service.includes('aws')) return 'logo-amazon';
   
   // Telecom
   if (service.includes('reliance') || service.includes('airtel') || service.includes('jio')) return 'phone-portrait';
@@ -395,6 +403,10 @@ export const getServiceColor = (serviceName: string, isDarkTheme: boolean = fals
   if (service.includes('wipro')) return '#6CB33F';
   if (service.includes('hcl')) return '#0066B2';
   if (service.includes('tech mahindra')) return '#ED1C24';
+  if (service.includes('lic') || service.includes('life insurance')) return '#0054a6';
+  if (service.includes('supabase')) return '#3ecf8e';
+  if (service.includes('indianoil') || service.includes('indian oil')) return '#ff6600';
+  if (service.includes('aws')) return '#ff9900';
   
   // Telecom
   if (service.includes('reliance') || service.includes('jio')) return '#0066B2';

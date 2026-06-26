@@ -101,19 +101,20 @@ export default function ExportScreen() {
         ? CryptoJS.AES.encrypt(masterPassword, backupPassword).toString()
         : null;
       
-      // Create backup with ONLY passwords (no phone, no password hash)
-      const passwordsOnly = {
+      // Create backup with passwords and cards (no phone, no password hash)
+      const backupData = {
         passwords: vaultData.passwords,
+        cards: vaultData.cards || [],
       };
       
-      // Encrypt the passwords with backup password
-      const encryptedPasswords = CryptoJS.AES.encrypt(JSON.stringify(passwordsOnly), backupPassword).toString();
+      // Encrypt the data with backup password
+      const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(backupData), backupPassword).toString();
       
       // Create complete backup
       const completeBackup = {
-        passwords: encryptedPasswords,
+        passwords: encryptedData,
         encryptedMasterPassword,
-        version: '2.0', // New version for passwords-only backup
+        version: '2.0',
         timestamp: Date.now(),
       };
       
@@ -169,7 +170,7 @@ export default function ExportScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.infoTitle, { color: colors.text }]}>Secure Backup</Text>
             <Text style={[styles.infoText, { color: colors.mutedText }]}>
-              Create an encrypted backup of all your passwords. You'll need your backup password to restore on any device.
+              Create an encrypted backup of all your passwords. You&apos;ll need your backup password to restore on any device.
             </Text>
           </View>
         </View>

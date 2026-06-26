@@ -14,6 +14,28 @@ export type PasswordItem = {
   createdAt?: number; // Unix timestamp
   modifiedAt?: number; // Unix timestamp
   isFavorite?: boolean; // Star/pin for quick access
+  folder?: string; // Custom folder category
+  totpSecret?: string; // Base32 2FA secret key
+};
+
+export type CardField = {
+  label: string;
+  value: string;
+  isSensitive: boolean;
+};
+
+export type CardType = 'aadhaar' | 'pan' | 'voter_id' | 'credit_card' | 'debit_card' | 'custom';
+
+export type CardItem = {
+  id: string;
+  type: CardType;
+  title: string;
+  holderName: string;
+  number: string;
+  fields: CardField[];
+  gradient: [string, string];
+  createdAt: number;
+  folder?: string; // Custom folder category
 };
 
 export type VaultData = {
@@ -22,6 +44,8 @@ export type VaultData = {
     passwordHash: string;
   };
   passwords: PasswordItem[];
+  cards?: CardItem[];
+  folders?: string[]; // List of user-defined custom folders
 };
 
 const VAULT_FILENAME = 'vault_v1.enc';
@@ -68,6 +92,7 @@ export const createNewVault = async (phone: string, password: string, vaultKey: 
   const data: VaultData = {
     user: { phone, passwordHash: hashPassword(password) },
     passwords: [],
+    cards: [],
   };
   await saveEncryptedVault(data, vaultKey);
   return data;

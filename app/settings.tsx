@@ -550,7 +550,7 @@ export default function Settings() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.starTitle, { color: colors.text }]}>Like this project?</Text>
                 <Text style={[styles.starSub, { color: colors.mutedText }]}>
-                  Don't forget to give it a ⭐ on GitHub!
+                  Don&apos;t forget to give it a ⭐ on GitHub!
                 </Text>
               </View>
             </View>

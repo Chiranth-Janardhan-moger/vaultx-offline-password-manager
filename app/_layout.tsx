@@ -52,7 +52,17 @@ export default function RootLayout() {
               animationDuration: 180,
             }),
           }} 
-        />
+        >
+          <Stack.Screen 
+            name="cards" 
+            options={{ 
+              presentation: 'modal', 
+              animation: 'slide_from_bottom',
+              gestureEnabled: true,
+              gestureDirection: 'vertical',
+            }} 
+          />
+        </Stack>
       </SessionProvider>
     </ThemeProvider>
   );

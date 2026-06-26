@@ -60,7 +60,7 @@ class VaultXAutofillService : AutofillService() {
         
         // Create a dataset that opens VaultX
         val presentation = RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
-            setTextViewText(android.R.id.text1, "🔐 Fill with VaultX")
+            setTextViewText(android.R.id.text1, "Fill with VaultX")
         }
         
         // Create intent to open VaultX autofill picker

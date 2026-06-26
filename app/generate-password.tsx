@@ -193,7 +193,7 @@ export default function GeneratePassword() {
             >
               <Ionicons name="sparkles" size={14} color={colors.primary} />
               <Text style={[styles.suggestionText, { color: colors.primary }]}>
-                Use "{normalizedSuggestion}" instead?
+                Use &quot;{normalizedSuggestion}&quot; instead?
               </Text>
             </TouchableOpacity>
           ) : null}

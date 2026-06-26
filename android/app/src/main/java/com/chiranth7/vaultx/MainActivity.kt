@@ -1,5 +1,6 @@
 package com.chiranth7.vaultx
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -21,6 +22,11 @@ class MainActivity : ReactActivity() {
     )
     
     super.onCreate(null)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
   }
 
   /**
@@ -48,7 +54,7 @@ class MainActivity : ReactActivity() {
   override fun invokeDefaultOnBackPressed() {
       if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
           if (!moveTaskToBack(false)) {
-              super.invokeDefaultOnBackPressed()
+              super.moveTaskToBack(false)
           }
           return
       }

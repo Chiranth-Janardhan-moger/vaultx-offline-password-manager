@@ -101,6 +101,7 @@ export default function ImportScreen() {
 
       // Handle different backup versions
       let passwordsToRestore = [];
+      let cardsToRestore = [];
       
       if (backup.version === '2.0') {
         // New format: passwords only
@@ -127,6 +128,7 @@ export default function ImportScreen() {
           }
           const passwordsData = JSON.parse(decryptedPasswords);
           passwordsToRestore = passwordsData.passwords || [];
+          cardsToRestore = passwordsData.cards || [];
         } catch {
           showAlert({
             title: 'Incorrect Password',
@@ -162,8 +164,9 @@ export default function ImportScreen() {
       const { decryptVaultWithKey, saveVault } = await import('@/lib/vault');
       const currentVault = await decryptVaultWithKey(vaultKey);
       
-      // Replace passwords with backup
+      // Replace passwords and cards with backup
       currentVault.passwords = passwordsToRestore;
+      currentVault.cards = cardsToRestore;
       
       // Save updated vault
       await saveVault(currentVault, vaultKey);

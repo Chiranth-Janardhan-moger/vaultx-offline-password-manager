@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
+import autofillService from '@/lib/autofill';
 import { Animated, Easing, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
@@ -218,7 +219,18 @@ export default function Login() {
     const data = await decryptVaultWithKey(vaultKey);
     failedAttemptsRef.current = 0;
     unlock(data, vaultKey);
-    router.replace('/dashboard');
+    
+    try {
+      const autofillData = await autofillService.getAutofillIntentData();
+      if (autofillData.autofillMode) {
+        router.replace('/autofill' as any);
+      } else {
+        router.replace('/dashboard');
+      }
+    } catch (e) {
+      console.error('Autofill check failed, defaulting to dashboard', e);
+      router.replace('/dashboard');
+    }
   }, [unlock, router, scaleAnim, fadeAnim]);
 
   const unlockByPin = React.useCallback(async (pinValue: string) => {

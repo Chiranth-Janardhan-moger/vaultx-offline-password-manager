@@ -6,8 +6,9 @@ import { categories, categorizeService, type CategoryType } from '@/lib/categori
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import autofillService from '@/lib/autofill';
 import React from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, AppState, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const MASTER_PASSWORD_KEY = 'master_password_v1';
 const DOUBLE_TAP_LOCK_KEY = 'double_tap_lock';
@@ -40,9 +41,44 @@ export default function Dashboard() {
   const spotlightAnim = React.useRef(new Animated.Value(0)).current;
   const typingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [selectedFolder, setSelectedFolder] = React.useState<string | null>(null);
+
+  const uniqueFolders = React.useMemo(() => {
+    if (!vault) return [];
+    const pFolders = vault.passwords.map(p => p.folder).filter(Boolean);
+    const cFolders = (vault.cards || []).map(c => c.folder).filter(Boolean);
+    return Array.from(new Set([...pFolders, ...cFolders])) as string[];
+  }, [vault]);
+
 
   React.useEffect(() => {
-    if (!unlocked) router.replace('/login');
+    if (!unlocked) {
+      router.replace('/login');
+      return;
+    }
+
+    const checkAutofill = async () => {
+      try {
+        const autofillData = await autofillService.getAutofillIntentData();
+        if (autofillData.autofillMode) {
+          router.replace('/autofill' as any);
+        }
+      } catch (e) {
+        console.error('Failed to check autofill intent:', e);
+      }
+    };
+
+    checkAutofill();
+
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'active') {
+        await checkAutofill();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, [unlocked, router]);
 
   useFocusEffect(
@@ -92,19 +128,20 @@ export default function Dashboard() {
     ]).start();
   }, []);
 
-  // Count passwords per category
+  // Count passwords per category (filtered by folder if selected)
   const categoryCounts = React.useMemo(() => {
     if (!vault?.passwords) return {};
     
     const counts: { [key in CategoryType]?: number } = {};
     
     vault.passwords.forEach(pwd => {
+      if (selectedFolder && pwd.folder !== selectedFolder) return;
       const category = pwd.category || categorizeService(pwd.service);
       counts[category] = (counts[category] || 0) + 1;
     });
     
     return counts;
-  }, [vault?.passwords]);
+  }, [vault?.passwords, selectedFolder]);
 
   const handleDoubleTap = () => {
     // Only lock if double-tap is enabled in settings
@@ -224,12 +261,55 @@ export default function Dashboard() {
 
             <TouchableOpacity
               style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push('/cards')}
+            >
+              <Ionicons name="card-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => router.push('/settings')}
             >
               <Ionicons name="settings-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
+
+        {uniqueFolders.length > 0 && (
+          <View style={styles.foldersContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.foldersScroll}>
+              <TouchableOpacity
+                style={[
+                  styles.folderTab,
+                  !selectedFolder && styles.folderTabActive,
+                  {
+                    backgroundColor: !selectedFolder ? colors.primary + '15' : colors.card,
+                    borderColor: !selectedFolder ? colors.primary : colors.border,
+                  }
+                ]}
+                onPress={() => setSelectedFolder(null)}
+              >
+                <Text style={[styles.folderTabText, { color: !selectedFolder ? colors.primary : colors.text }]}>All</Text>
+              </TouchableOpacity>
+              {uniqueFolders.map((f, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.folderTab,
+                    selectedFolder === f && styles.folderTabActive,
+                    {
+                      backgroundColor: selectedFolder === f ? colors.primary + '15' : colors.card,
+                      borderColor: selectedFolder === f ? colors.primary : colors.border,
+                    }
+                  ]}
+                  onPress={() => setSelectedFolder(f)}
+                >
+                  <Text style={[styles.folderTabText, { color: selectedFolder === f ? colors.primary : colors.text }]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         <ScrollView 
           style={styles.scrollView}
@@ -260,7 +340,7 @@ export default function Dashboard() {
               >
                 <TouchableOpacity
                   style={[styles.categoryBar, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => router.push(`/category/${category.id}`)}
+                  onPress={() => router.push(selectedFolder ? `/category/${category.id}?folder=${encodeURIComponent(selectedFolder)}` : `/category/${category.id}`)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.plainBar}>
@@ -676,6 +756,37 @@ const styles = StyleSheet.create({
   tutorialBtnText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '800',
+  },
+  foldersContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  foldersScroll: {
+    paddingVertical: 6,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  folderTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  folderTabActive: {
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  folderTabText: {
+    fontSize: 12,
     fontWeight: '800',
   },
 });
