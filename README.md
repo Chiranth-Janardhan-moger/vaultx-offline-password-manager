@@ -134,8 +134,8 @@ Generate strong, consistent passwords for any service:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/vaultx.git
-   cd vaultx
+   git clone https://github.com/Chiranth-Janardhan-moger/VaultX.git
+   cd VaultX
    ```
 
 2. **Install dependencies**
@@ -347,9 +347,9 @@ If you find VaultX useful, please consider:
 
 ## 📞 Contact
 
-- **GitHub:** [@yourusername](https://github.com/yourusername)
-- **Issues:** [Report a bug](https://github.com/yourusername/vaultx/issues)
-- **Discussions:** [Feature requests](https://github.com/yourusername/vaultx/discussions)
+- **GitHub:** [@Chiranth-Janardhan-moger](https://github.com/Chiranth-Janardhan-moger)
+- **Issues:** [Report a bug](https://github.com/Chiranth-Janardhan-moger/VaultX/issues)
+- **Discussions:** [Feature requests](https://github.com/Chiranth-Janardhan-moger/VaultX/discussions)
 
 ---
 
