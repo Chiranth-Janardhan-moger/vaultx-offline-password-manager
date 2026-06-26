@@ -112,7 +112,7 @@ If you encounter issues:
 1. Check Android version (must be 8.0+)
 2. Verify biometric is set up on your device
 3. Restart VaultX and try again
-4. Report issues on GitHub: https://github.com/Chiranth-Janardhan-moger/VaultX
+4. Report issues on GitHub: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
 
 ---
 

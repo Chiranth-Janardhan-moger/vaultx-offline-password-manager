@@ -205,8 +205,8 @@ VaultX has **zero anti-features** as defined by F-Droid:
 
 - **Developer**: Chiranth Moger
 - **Email**: chiranthmoger000@gmail.com
-- **GitHub**: https://github.com/Chiranth-Janardhan-moger/VaultX
-- **Issues**: https://github.com/Chiranth-Janardhan-moger/VaultX/issues
+- **GitHub**: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
+- **Issues**: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/issues
 
 ## 📄 License
 

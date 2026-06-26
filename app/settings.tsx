@@ -177,7 +177,7 @@ export default function Settings() {
   };
 
   const openGitHub = async () => {
-    const url = 'https://github.com/Chiranth-Janardhan-moger/VaultX';
+    const url = 'https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager';
     const canOpen = await Linking.canOpenURL(url);
     if (canOpen) {
       await Linking.openURL(url);

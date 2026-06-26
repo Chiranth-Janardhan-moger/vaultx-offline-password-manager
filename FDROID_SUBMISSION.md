@@ -59,9 +59,9 @@ AuthorName: Chiranth Moger
 AuthorEmail: chiranthmoger000@gmail.com
 AuthorWebSite: https://github.com/Chiranth-Janardhan-moger
 
-SourceCode: https://github.com/Chiranth-Janardhan-moger/VaultX
-IssueTracker: https://github.com/Chiranth-Janardhan-moger/VaultX/issues
-Changelog: https://github.com/Chiranth-Janardhan-moger/VaultX/blob/main/CHANGELOG.md
+SourceCode: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
+IssueTracker: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/issues
+Changelog: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/blob/main/CHANGELOG.md
 
 Summary: Secure offline password manager with autofill
 
@@ -105,7 +105,7 @@ Description: |-
     over their password data without any cloud dependencies.
 
 RepoType: git
-Repo: https://github.com/Chiranth-Janardhan-moger/VaultX
+Repo: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
 
 Builds:
   - versionName: 1.2.48
@@ -172,7 +172,7 @@ git push origin master
 - **F-Droid Data Repo**: https://gitlab.com/fdroid/fdroiddata
 - **Submission Guide**: https://f-droid.org/docs/Submitting_to_F-Droid/
 - **Metadata Reference**: https://f-droid.org/docs/Build_Metadata_Reference/
-- **Your App Repo**: https://github.com/Chiranth-Janardhan-moger/VaultX
+- **Your App Repo**: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
 
 ## 🎯 Summary
 
