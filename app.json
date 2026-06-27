@@ -21,7 +21,6 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#2563EB"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.chiranth7.vaultx"
     },

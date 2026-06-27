@@ -1,9 +1,7 @@
 package com.chiranth7.vaultx
 
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -14,28 +12,22 @@ import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    // SECURITY: Block screenshots, screen recording, and screen sharing by default
-    // This can be toggled via the ScreenSecurity native module from React Native
-    window.setFlags(
-      WindowManager.LayoutParams.FLAG_SECURE,
-      WindowManager.LayoutParams.FLAG_SECURE
-    )
-    
+    // Set the theme to AppTheme BEFORE onCreate to support
+    // coloring the background, status bar, and navigation bar.
+    // This is required for expo-splash-screen.
+    setTheme(R.style.AppTheme);
     super.onCreate(null)
   }
 
-  override fun onNewIntent(intent: Intent) {
-    super.onNewIntent(intent)
-    setIntent(intent)
-  }
-
   /**
-   * Returns the name of the main component registered from JavaScript.
+   * Returns the name of the main component registered from JavaScript. This is used to schedule
+   * rendering of the component.
    */
   override fun getMainComponentName(): String = "main"
 
   /**
-   * Returns the instance of the [ReactActivityDelegate].
+   * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]
+   * which allows you to enable New Architecture with a single boolean flags [fabricEnabled]
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate {
     return ReactActivityDelegateWrapper(
@@ -50,14 +42,20 @@ class MainActivity : ReactActivity() {
 
   /**
     * Align the back button behavior with Android S
+    * where moving root activities to background instead of finishing activities.
+    * @see <a href="https://developer.android.com/reference/android/app/Activity#onBackPressed()">onBackPressed</a>
     */
   override fun invokeDefaultOnBackPressed() {
       if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
           if (!moveTaskToBack(false)) {
-              super.moveTaskToBack(false)
+              // For non-root activities, use the default implementation to finish them.
+              super.invokeDefaultOnBackPressed()
           }
           return
       }
+
+      // Use the default back button implementation on Android S
+      // because it's doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
   }
 }
