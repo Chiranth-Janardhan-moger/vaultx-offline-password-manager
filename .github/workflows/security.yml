@@ -1,0 +1,87 @@
+name: Security Scanning (CodeQL & Dependency Review)
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  schedule:
+    # Run every Sunday at 03:00 UTC
+    - cron: '0 3 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@5a2cd3ddb5adce84f2b417e5a0655d8f6393081e # v4.3.4
+
+  codeql-analysis:
+    name: CodeQL Static Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript-typescript', 'java-kotlin' ]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@2d790406f505036ef40ecba973cc774a50395acf # v3.25.10
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Setup Node.js (for JS/TS build context)
+        if: matrix.language == 'javascript-typescript'
+        uses: actions/setup-node@6012dfb2a907e9616d87e3a15e2123d476627f79 # v4.0.3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Node Modules
+        if: matrix.language == 'javascript-typescript'
+        run: npm ci
+
+      - name: Setup Java Development Kit (JDK 21 for Java/Kotlin compilation)
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@99b86db111e919e99a749ee0f322e16febbe0f34 # v4.2.1
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        if: matrix.language == 'java-kotlin'
+        uses: gradle/actions/setup-gradle@dbbd9c43ee6cc741585b8a092858602b40a790f7 # v3.5.0
+
+      - name: Build Java/Kotlin Code (for CodeQL compilation-based analysis)
+        if: matrix.language == 'java-kotlin'
+        run: |
+          cd android
+          ./gradlew compileDebugSources
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@2d790406f505036ef40ecba973cc774a50395acf # v3.25.10
+        with:
+          category: "/language:${{ matrix.language }}"

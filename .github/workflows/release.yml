@@ -1,0 +1,128 @@
+name: Android CD (Release Build & Publish)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Version tag for this release (e.g., v1.3.4)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    name: Build Signed Release & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Set Release Tag Environment Variable
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "RELEASE_TAG=${{ inputs.release_tag }}" >> $GITHUB_ENV
+          else
+            echo "RELEASE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@6012dfb2a907e9616d87e3a15e2123d476627f79 # v4.0.3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Node Modules
+        run: npm ci
+
+      - name: Setup Java Development Kit (JDK 21)
+        uses: actions/setup-java@99b86db111e919e99a749ee0f322e16febbe0f34 # v4.2.1
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@dbbd9c43ee6cc741585b8a092858602b40a790f7 # v3.5.0
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@213dcd7645ef0e3d26da512228f0c6c6007cca05 # v3.5.0
+
+      - name: Decode Android Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+        # Mark step as sensitive to prevent exposing file creation details
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Build Release APK & AAB
+        run: |
+          cd android
+          ./gradlew assembleRelease bundleRelease
+        env:
+          ANDROID_KEYSTORE_FILE: release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Clean Up Keystore File (Always Run)
+        if: always()
+        run: |
+          rm -f android/app/release.keystore
+          echo "Temporary keystore file securely removed."
+
+      - name: Rename Build Artifacts
+        run: |
+          mkdir -p build-assets
+          cp android/app/build/outputs/apk/release/app-release.apk build-assets/vaultx-${{ env.RELEASE_TAG }}.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab build-assets/vaultx-${{ env.RELEASE_TAG }}.aab
+
+      - name: Generate SHA256 Checksums
+        run: |
+          cd build-assets
+          sha256sum vaultx-${{ env.RELEASE_TAG }}.apk > vaultx-${{ env.RELEASE_TAG }}-apk-sha256.txt
+          sha256sum vaultx-${{ env.RELEASE_TAG }}.aab > vaultx-${{ env.RELEASE_TAG }}-aab-sha256.txt
+          cat *-sha256.txt
+
+      - name: Upload Artifacts to GitHub Run
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: vaultx-release-builds
+          path: build-assets/
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.0.6
+        with:
+          name: Release ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          body: |
+            ## VaultX Release ${{ env.RELEASE_TAG }}
+            
+            This release was compiled and signed automatically via our secure GitHub Actions CD pipeline.
+            
+            ### Checksums for Verification
+            Refer to the attached `*-sha256.txt` files to verify downloaded assets locally.
+          files: |
+            build-assets/vaultx-${{ env.RELEASE_TAG }}.apk
+            build-assets/vaultx-${{ env.RELEASE_TAG }}.aab
+            build-assets/vaultx-${{ env.RELEASE_TAG }}-apk-sha256.txt
+            build-assets/vaultx-${{ env.RELEASE_TAG }}-aab-sha256.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Release to GitLab
+        run: |
+          python scripts/gitlab_release_upload.py \
+            build-assets/vaultx-${{ env.RELEASE_TAG }}.apk \
+            build-assets/vaultx-${{ env.RELEASE_TAG }}.aab \
+            build-assets/vaultx-${{ env.RELEASE_TAG }}-apk-sha256.txt \
+            build-assets/vaultx-${{ env.RELEASE_TAG }}-aab-sha256.txt
+        env:
+          GITLAB_PAT: ${{ secrets.GITLAB_PAT }}
+          GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
+          GITLAB_API_URL: ${{ secrets.GITLAB_API_URL }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}

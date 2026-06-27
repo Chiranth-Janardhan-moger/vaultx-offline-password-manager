@@ -49,3 +49,14 @@ android/app/.cxx/
 android/app/src/main/assets/
 android/app/src/main/res/drawable-*/
 android/app/src/main/res/raw/
+android/local.properties
+
+# Secrets, Keystores, and CI Build Artifacts
+*.keystore
+build-assets/
+.env
+.env.production
+.env.development
+.env.staging
+.env.local
+.env*.local

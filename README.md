@@ -288,8 +288,18 @@ vaultx/
 │   └── password-generator.ts  # Master password logic
 ├── assets/                # Images and fonts
 ├── android/               # Native Android code
+├── docs/                  # CI/CD and Release documentation
 └── BUILD_INSTRUCTIONS.md  # Build guide
 ```
+
+---
+
+## 🚀 CI/CD & Releases Automation
+
+VaultX features a fully automated CI/CD pipeline built with GitHub Actions:
+*   **Continuous Integration**: Automated Gradle Wrapper validation, JS/TS linting, Android linting, unit tests, and debug compilation on every Push/PR targeting `main` ([CI Guide](docs/CI_CD_DOCUMENTATION.md)).
+*   **Security & CodeQL Scanning**: Static analysis scanning for JS/TS and compiled Java/Kotlin sources alongside automated dependency review checks.
+*   **Secure Release Delivery**: Version tag pushes automatically compile production-signed APK/AAB builds, generate SHA256 checksums, and publish releases to GitHub and GitLab REST API. See the [GitHub Secrets Guide](docs/GITHUB_SECRETS_GUIDE.md) and [Release Process Documentation](docs/RELEASE_PROCESS.md) for setup instructions.
 
 ---
 
