@@ -63,7 +63,7 @@ jobs:
       - name: Run Android Lint
         run: |
           cd android
-          ./gradlew lintDebug
+          ./gradlew :app:lintDebug
 
       - name: Run Android Unit Tests
         run: |
