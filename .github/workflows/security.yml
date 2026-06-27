@@ -55,14 +55,12 @@ jobs:
           queries: security-extended,security-and-quality
 
       - name: Setup Node.js (for JS/TS build context)
-        if: matrix.language == 'javascript-typescript'
         uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
           node-version: 18
           cache: 'npm'
 
       - name: Install Node Modules
-        if: matrix.language == 'javascript-typescript'
         run: npm ci
 
       - name: Setup Java Development Kit (JDK 21 for Java/Kotlin compilation)
