@@ -61,7 +61,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Node Modules
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Setup Java Development Kit (JDK 21 for Java/Kotlin compilation)
         if: matrix.language == 'java-kotlin'
