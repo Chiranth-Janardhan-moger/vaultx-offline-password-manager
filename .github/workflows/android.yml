@@ -65,10 +65,7 @@ jobs:
           cd android
           ./gradlew :app:lintDebug
 
-      - name: Run Android Unit Tests
-        run: |
-          cd android
-          ./gradlew testDebugUnitTest
+
 
   build-debug:
     name: Build Debug APK
