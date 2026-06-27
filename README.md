@@ -1,8 +1,8 @@
-# 🔐 VaultX — Secure Offline Password Manager
+# 🔐 VaultX — Secure Open Source Password Manager (Offline-first)
 
 <div align="center">
 
-**Military-grade encryption • Offline-first • Zero cloud dependency**
+**Military-grade encryption • Open Source Password Manager • Zero cloud dependency**
 
 [![React Native](https://img.shields.io/badge/React%20Native-0.74-blue.svg)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-52-black.svg)](https://expo.dev/)
@@ -16,7 +16,7 @@
 
 ## 📱 What is VaultX?
 
-VaultX is a **fully offline, privacy-first password manager** built with React Native and Expo. Your passwords never leave your device, never touch the cloud, and are protected with military-grade AES-256 encryption.
+VaultX is a secure, **open source password manager** that is fully offline and privacy-first. Built with React Native and Expo, your passwords never leave your device, never touch the cloud, and are protected with military-grade AES-256 encryption.
 
 ### Why VaultX?
 
