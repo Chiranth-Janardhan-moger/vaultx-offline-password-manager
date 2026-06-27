@@ -45,6 +45,8 @@ VaultX is a **fully offline, privacy-first password manager** built with React N
 - **Screenshot Protection** — Prevents screenshots in sensitive screens
 - **No Plaintext Storage** — All passwords encrypted at rest
 - **Secure Backup System** — Export with user-controlled encryption
+- **Built-in 2FA/TOTP Authenticator** — Secure, local generation of 6-digit Time-based One-Time Passwords (TOTP) from base32 secrets
+- **Clipboard Security & Monitor** — Clipboard is monitored and cleared to prevent other background apps from snooping copied passwords
 
 ### 🎨 User Experience
 
@@ -59,10 +61,13 @@ VaultX is a **fully offline, privacy-first password manager** built with React N
 - **Copy to Clipboard** — One-tap copy for username/password
 - **Password Visibility Toggle** — Show/hide passwords easily
 - **Floating Action Button** — Quick access to add/generate passwords
+- **Dashboard Folder & Category Tabs** — Fast, interactive dashboard filters to navigate and filter entries by categories instantly
 
-### 🗂️ Password Management
+### 🗂️ Password & Identity Management
 
 - **Add Known Passwords** — Store existing credentials securely
+- **Identity & Payment Cards** — Secure templates for storing Identity Cards (Passports, Driving Licenses, IDs) and Credit/Debit Cards with custom fields
+- **Native Android Autofill Integration** — Autofill credentials seamlessly inside other apps and web browsers using Android's system Autofill service framework
 - **Generate Master Passwords** — Deterministic password generation
 - **View by Category** — Browse passwords in organized folders
 - **Search & Filter** — Find passwords quickly
