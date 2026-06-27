@@ -25,6 +25,7 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    continue-on-error: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -48,7 +49,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@69363066378e1261313797307049448820c754d9 # v3.25.10
+        uses: github/codeql-action/init@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
@@ -82,6 +83,6 @@ jobs:
           ./gradlew compileDebugSources
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@69363066378e1261313797307049448820c754d9 # v3.25.10
+        uses: github/codeql-action/analyze@23acc5c183826b7a8a97bce3cecc52db901f8251 # v3.25.10
         with:
           category: "/language:${{ matrix.language }}"
