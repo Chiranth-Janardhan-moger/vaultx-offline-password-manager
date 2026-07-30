@@ -13,8 +13,8 @@ api_url = os.environ.get("GITLAB_API_URL", "https://gitlab.com/api/v4")
 tag_name = os.environ.get("RELEASE_TAG")
 
 if not gitlab_token or not project_id or not tag_name:
-    print("Error: Missing required environment variables (GITLAB_PAT, GITLAB_PROJECT_ID, RELEASE_TAG).", file=sys.stderr)
-    sys.exit(1)
+    print("Warning: Missing required environment variables (GITLAB_PAT, GITLAB_PROJECT_ID, RELEASE_TAG). Skipping GitLab upload.")
+    sys.exit(0)
 
 # Clean up input URLs
 api_url = api_url.rstrip('/')
@@ -41,17 +41,18 @@ def upload_file_with_retry(file_path, retries=3, delay=5):
     if not mime_type:
         mime_type = "application/octet-stream"
 
-    # Read binary file data
-    with open(file_path, 'rb') as f:
-        file_data = f.read()
-
-    # GitLab expects a multipart/form-data upload
-    boundary = "----GitHubActionsBoundary" + str(time.time())
-    body = (
+    boundary = f"----GitHubActionsBoundary{int(time.time())}"
+    header_bytes = (
         f"--{boundary}\r\n"
         f"Content-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\n"
         f"Content-Type: {mime_type}\r\n\r\n"
-    ).encode('utf-8') + file_data + f"\r\n--{boundary}--\r\n".encode('utf-8')
+    ).encode('utf-8')
+    footer_bytes = f"\r\n--{boundary}--\r\n".encode('utf-8')
+
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+
+    body = b"".join([header_bytes, file_data, footer_bytes])
 
     upload_headers = {
         **headers,

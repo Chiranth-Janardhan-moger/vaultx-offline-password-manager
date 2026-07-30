@@ -3,7 +3,10 @@ Categories:
 License: MIT
 AuthorName: Chiranth Moger
 SourceCode: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
-IssueTracker: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/issues
+IssueTracker: 
+  https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/issues
+
+AutoName: VaultX
 
 RepoType: git
 Repo: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager
@@ -15,23 +18,17 @@ Builds:
     subdir: android/app
     sudo:
       - apt-get update
-      - apt-get install npm
+      - apt-get install -y npm
     init:
       - cd ../..
-      - npm install
+      - npm install --legacy-peer-deps
     gradle:
       - yes
-    srclibs:
-      - firebase-stub@ce90a956aacda17a85c60577ee443aeb83d876ef
     prebuild:
       - cd ../..
       - sed -i -e '1a "expo":{"autolinking":{"android":{"buildFromSource":[".*"]}}},' package.json
       - sed -i '/jvmToolchain\|JavaVersion/s/17/21/' node_modules/@react-native/gradle-plugin/*/build.gradle.kts node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/JdkConfiguratorUtils.kt
-      - sed -i -e '/installReferrerVersion/,+12d' node_modules/react-native-device-info/android/build.gradle
-      - sed -i -e '/installreferrer/d' node_modules/expo-application/android/build.gradle
-      - sed -i -e '/com.android.installreferrer.api/d' -e '/StringBuilder()/,/^      })/d' -e '/getInstallReferrerAsync/apromise.resolve("")' node_modules/expo-application/android/src/main/java/expo/modules/application/ApplicationModule.kt
-      - sed -i -e '/firebase/d' node_modules/expo-notifications/android/build.gradle
-      - cp -a $$firebase-stub$$/firebase-messaging/src node_modules/expo-notifications/android
+      - sed -i '/android {/a\    namespace "com.rnbiometrics"' node_modules/react-native-biometrics/android/build.gradle
       - npx expo prebuild -p android --clean
       - sed -i -e '/signingConfig /d' android/app/build.gradle
     scanignore:
@@ -45,3 +42,4 @@ AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 1.3.4
 CurrentVersionCode: 248
+
