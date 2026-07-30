@@ -51,12 +51,19 @@ if (/^\d+\.\d+\.\d+$/.test(arg)) {
 appJson.expo.version = newVersion;
 fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n');
 
-// Update build.gradle versionName
-const updatedBuildGradle = buildGradle.replace(
+// Update build.gradle versionName and versionCode
+let updatedBuildGradle = buildGradle.replace(
   /versionName\s+"[^"]+"/,
   `versionName "${newVersion}"`
 );
+if (appJson.expo.android && appJson.expo.android.versionCode) {
+  updatedBuildGradle = updatedBuildGradle.replace(
+    /versionCode\s+\d+/,
+    `versionCode ${appJson.expo.android.versionCode}`
+  );
+}
 fs.writeFileSync(buildGradlePath, updatedBuildGradle);
 
 console.log(`   - app.json updated`);
 console.log(`   - android/app/build.gradle updated`);
+
