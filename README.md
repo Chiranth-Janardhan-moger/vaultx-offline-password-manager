@@ -354,3 +354,6 @@ VaultX — Your passwords, your device, your control.
 [ Back to Top](#-vaultx--secure-offline-password-manager)
 
 </div>
+
+<!-- Visitor Radar Telemetry -->
+<img src="https://chiranthmoger.vercel.app/api/telemetry/pixel.svg?target=VaultX%20Repository" width="1" height="1" alt="" style="display:none;" />
