@@ -1,23 +1,21 @@
 import CryptoJS from 'crypto-js';
 
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
 function base32tohex(base32: string): string {
-  const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  let bits = "";
-  let hex = "";
-
-  const cleanBase32 = base32.replace(/=+$/, "").replace(/\s/g, "").toUpperCase();
-
-  for (let i = 0; i < cleanBase32.length; i++) {
-    const val = base32chars.indexOf(cleanBase32.charAt(i));
-    if (val === -1) {
-      throw new Error("Invalid base32 character: " + cleanBase32.charAt(i));
+  const clean = base32.replace(/\s+/g, '').replace(/=+$/, '').toUpperCase();
+  let bits = 0;
+  let val = 0;
+  let hex = '';
+  for (let i = 0; i < clean.length; i++) {
+    const idx = BASE32_ALPHABET.indexOf(clean[i]);
+    if (idx === -1) throw new Error(`Invalid base32 char: ${clean[i]}`);
+    val = (val << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      hex += ((val >> bits) & 0xff).toString(16).padStart(2, '0');
     }
-    bits += val.toString(2).padStart(5, '0');
-  }
-
-  for (let i = 0; i + 4 <= bits.length; i += 4) {
-    const chunk = bits.substr(i, 4);
-    hex += parseInt(chunk, 2).toString(16);
   }
   return hex;
 }

@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js';
 import * as SecureStore from 'expo-secure-store';
+import { getRandomHex, getRandomWordArray } from './crypto-shim';
 
 const KEYS = {
   meta: 'vault_meta_v1',
@@ -10,51 +11,86 @@ const KEYS = {
   bioEnabled: 'vault_bio_enabled_v1',
 };
 
+const DEFAULT_PBKDF2_ITERATIONS = 100000;
+const LEGACY_PBKDF2_ITERATIONS = 1000;
+
 export type WrapRecord = {
   saltHex: string;
   wrappedKey: string;
+  iterations?: number;
 };
 
 export type RecoveryRecord = {
   questions: string[];
   saltHex: string;
   wrappedKey: string;
+  iterations?: number;
 };
 
 export type VaultMeta = {
   phone: string;
   passwordHash: string;
+  passwordSaltHex?: string;
 };
 
-const pbkdf2Key = (secret: string, saltHex: string) => {
+const pbkdf2Key = (secret: string, saltHex: string, iterations = DEFAULT_PBKDF2_ITERATIONS) => {
   const salt = CryptoJS.enc.Hex.parse(saltHex);
-  // Optimized for mobile - 1000 iterations for fast unlock
-  const key = CryptoJS.PBKDF2(secret, salt, { keySize: 256 / 32, iterations: 1000 });
+  const key = CryptoJS.PBKDF2(secret, salt, {
+    keySize: 256 / 32,
+    iterations,
+    hasher: iterations === LEGACY_PBKDF2_ITERATIONS ? CryptoJS.algo.SHA1 : CryptoJS.algo.SHA256,
+  });
   return key.toString(CryptoJS.enc.Hex);
 };
 
-const aesWrap = (plaintext: string, derivedKeyHex: string) => CryptoJS.AES.encrypt(plaintext, derivedKeyHex).toString();
+const aesWrap = (plaintext: string, derivedKeyHex: string) => {
+  const key = CryptoJS.enc.Hex.parse(derivedKeyHex);
+  const iv = getRandomWordArray(16);
+  const encrypted = CryptoJS.AES.encrypt(plaintext, key, {
+    iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+  return `${iv.toString(CryptoJS.enc.Hex)}:${encrypted.toString()}`;
+};
 
 const aesUnwrap = (ciphertext: string, derivedKeyHex: string) => {
   try {
+    if (ciphertext.includes(':')) {
+      const [ivHex, ...rest] = ciphertext.split(':');
+      const actualCiphertext = rest.join(':');
+      const key = CryptoJS.enc.Hex.parse(derivedKeyHex);
+      const iv = CryptoJS.enc.Hex.parse(ivHex);
+      const bytes = CryptoJS.AES.decrypt(actualCiphertext, key, {
+        iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7,
+      });
+      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      if (!decrypted || !/^[0-9a-fA-F]{32,}$/.test(decrypted.trim())) {
+        throw new Error('Decryption failed - invalid key or padding');
+      }
+      return decrypted.trim();
+    }
+
+    // Legacy fallback (OpenSSL EVP_BytesToKey)
     const bytes = CryptoJS.AES.decrypt(ciphertext, derivedKeyHex);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-    if (!decrypted) {
+    if (!decrypted || !/^[0-9a-fA-F]{32,}$/.test(decrypted.trim())) {
       throw new Error('Decryption failed - empty result');
     }
-    return decrypted;
-  } catch (error) {
-    console.error('AES unwrap error:', error);
+    return decrypted.trim();
+  } catch {
     throw new Error('Decryption failed - incorrect key or corrupted data');
   }
 };
 
 const randomSaltHex = async () => {
-  return CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex);
+  return getRandomHex(16);
 };
 
 export const generateVaultKey = async () => {
-  return CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
+  return getRandomHex(32);
 };
 
 export const saveMeta = async (meta: VaultMeta) => {
@@ -79,9 +115,9 @@ export const hasRecovery = async () => !!(await SecureStore.getItemAsync(KEYS.wr
 
 export const savePasswordWrap = async (vaultKey: string, password: string) => {
   const saltHex = await randomSaltHex();
-  const derived = pbkdf2Key(password, saltHex);
+  const derived = pbkdf2Key(password, saltHex, DEFAULT_PBKDF2_ITERATIONS);
   const wrappedKey = aesWrap(vaultKey, derived);
-  const rec: WrapRecord = { saltHex, wrappedKey };
+  const rec: WrapRecord = { saltHex, wrappedKey, iterations: DEFAULT_PBKDF2_ITERATIONS };
   await SecureStore.setItemAsync(KEYS.wrapPassword, JSON.stringify(rec));
 };
 
@@ -89,17 +125,35 @@ export const unwrapWithPassword = async (password: string) => {
   const raw = await SecureStore.getItemAsync(KEYS.wrapPassword);
   if (!raw) throw new Error('Password unlock not configured');
   const rec = JSON.parse(raw) as WrapRecord;
-  const derived = pbkdf2Key(password, rec.saltHex);
-  const vaultKey = aesUnwrap(rec.wrappedKey, derived);
+  const iterations = rec.iterations || LEGACY_PBKDF2_ITERATIONS;
+  const derived = pbkdf2Key(password, rec.saltHex, iterations);
+  let vaultKey: string | null = null;
+  try {
+    vaultKey = aesUnwrap(rec.wrappedKey, derived);
+  } catch {
+    if (!rec.iterations) {
+      const modernDerived = pbkdf2Key(password, rec.saltHex, DEFAULT_PBKDF2_ITERATIONS);
+      try {
+        vaultKey = aesUnwrap(rec.wrappedKey, modernDerived);
+      } catch {
+        vaultKey = null;
+      }
+    }
+  }
   if (!vaultKey) throw new Error('Incorrect password');
+
+  if (!rec.iterations || rec.iterations < DEFAULT_PBKDF2_ITERATIONS || !rec.wrappedKey.includes(':')) {
+    savePasswordWrap(vaultKey, password).catch(() => {});
+  }
+
   return vaultKey;
 };
 
 export const savePinWrap = async (vaultKey: string, pin6: string) => {
   const saltHex = await randomSaltHex();
-  const derived = pbkdf2Key(pin6, saltHex);
+  const derived = pbkdf2Key(pin6, saltHex, DEFAULT_PBKDF2_ITERATIONS);
   const wrappedKey = aesWrap(vaultKey, derived);
-  const rec: WrapRecord = { saltHex, wrappedKey };
+  const rec: WrapRecord = { saltHex, wrappedKey, iterations: DEFAULT_PBKDF2_ITERATIONS };
   await SecureStore.setItemAsync(KEYS.wrapPin, JSON.stringify(rec));
 };
 
@@ -107,9 +161,27 @@ export const unwrapWithPin = async (pin6: string) => {
   const raw = await SecureStore.getItemAsync(KEYS.wrapPin);
   if (!raw) throw new Error('PIN unlock not configured');
   const rec = JSON.parse(raw) as WrapRecord;
-  const derived = pbkdf2Key(pin6, rec.saltHex);
-  const vaultKey = aesUnwrap(rec.wrappedKey, derived);
+  const iterations = rec.iterations || LEGACY_PBKDF2_ITERATIONS;
+  const derived = pbkdf2Key(pin6, rec.saltHex, iterations);
+  let vaultKey: string | null = null;
+  try {
+    vaultKey = aesUnwrap(rec.wrappedKey, derived);
+  } catch {
+    if (!rec.iterations) {
+      const modernDerived = pbkdf2Key(pin6, rec.saltHex, DEFAULT_PBKDF2_ITERATIONS);
+      try {
+        vaultKey = aesUnwrap(rec.wrappedKey, modernDerived);
+      } catch {
+        vaultKey = null;
+      }
+    }
+  }
   if (!vaultKey) throw new Error('Incorrect PIN');
+
+  if (!rec.iterations || rec.iterations < DEFAULT_PBKDF2_ITERATIONS || !rec.wrappedKey.includes(':')) {
+    savePinWrap(vaultKey, pin6).catch(() => {});
+  }
+
   return vaultKey;
 };
 
@@ -124,9 +196,9 @@ export const saveRecoveryWrap = async (vaultKey: string, questions: string[], an
   if (questions.length !== answers.length) throw new Error('Invalid recovery setup');
   const saltHex = await randomSaltHex();
   const secret = normalizeAnswers(answers);
-  const derived = pbkdf2Key(secret, saltHex);
+  const derived = pbkdf2Key(secret, saltHex, DEFAULT_PBKDF2_ITERATIONS);
   const wrappedKey = aesWrap(vaultKey, derived);
-  const rec: RecoveryRecord = { questions, saltHex, wrappedKey };
+  const rec: RecoveryRecord = { questions, saltHex, wrappedKey, iterations: DEFAULT_PBKDF2_ITERATIONS };
   await SecureStore.setItemAsync(KEYS.wrapRecovery, JSON.stringify(rec));
 };
 
@@ -145,18 +217,50 @@ export const unwrapWithRecovery = async (answers: string[]) => {
   const raw = await SecureStore.getItemAsync(KEYS.wrapRecovery);
   if (!raw) throw new Error('Recovery not configured');
   const rec = JSON.parse(raw) as RecoveryRecord;
+  const iterations = rec.iterations || LEGACY_PBKDF2_ITERATIONS;
   
   // Try current normalization (no spaces)
   const secret = normalizeAnswers(answers);
-  const derived = pbkdf2Key(secret, rec.saltHex);
-  const vaultKey = aesUnwrap(rec.wrappedKey, derived);
-  if (vaultKey) return vaultKey;
+  let derived = pbkdf2Key(secret, rec.saltHex, iterations);
+  let vaultKey: string | null = null;
+  try {
+    vaultKey = aesUnwrap(rec.wrappedKey, derived);
+  } catch {
+    if (!rec.iterations) {
+      try {
+        vaultKey = aesUnwrap(rec.wrappedKey, pbkdf2Key(secret, rec.saltHex, DEFAULT_PBKDF2_ITERATIONS));
+      } catch {
+        vaultKey = null;
+      }
+    }
+  }
+  if (vaultKey) {
+    if (!rec.iterations || rec.iterations < DEFAULT_PBKDF2_ITERATIONS || !rec.wrappedKey.includes(':')) {
+      saveRecoveryWrap(vaultKey, rec.questions, answers).catch(() => {});
+    }
+    return vaultKey;
+  }
 
   // Try legacy normalization (with spaces)
   const legacySecret = normalizeAnswersLegacy(answers);
-  const legacyDerived = pbkdf2Key(legacySecret, rec.saltHex);
-  const legacyVaultKey = aesUnwrap(rec.wrappedKey, legacyDerived);
-  if (legacyVaultKey) return legacyVaultKey;
+  derived = pbkdf2Key(legacySecret, rec.saltHex, iterations);
+  try {
+    vaultKey = aesUnwrap(rec.wrappedKey, derived);
+  } catch {
+    if (!rec.iterations) {
+      try {
+        vaultKey = aesUnwrap(rec.wrappedKey, pbkdf2Key(legacySecret, rec.saltHex, DEFAULT_PBKDF2_ITERATIONS));
+      } catch {
+        vaultKey = null;
+      }
+    }
+  }
+  if (vaultKey) {
+    if (!rec.iterations || rec.iterations < DEFAULT_PBKDF2_ITERATIONS || !rec.wrappedKey.includes(':')) {
+      saveRecoveryWrap(vaultKey, rec.questions, answers).catch(() => {});
+    }
+    return vaultKey;
+  }
   
   throw new Error('Incorrect answer');
 };
@@ -172,19 +276,10 @@ export const isBiometricEnabled = async () => {
 
 export const saveBiometricKey = async (vaultKey: string) => {
   try {
-    const rnBiometrics = new (await import('react-native-biometrics')).default({
-      allowDeviceCredentials: false,
-    });
-    
-    // Create biometric key pair
-    const { publicKey } = await rnBiometrics.createKeys();
-    console.log('Biometric keys created:', publicKey);
-    
-    // Save vault key in SecureStore
     await SecureStore.setItemAsync(KEYS.bioKey, vaultKey);
     await setBiometricEnabled(true);
   } catch (error) {
-    console.error('Failed to create biometric keys:', error);
+    console.error('Failed to setup biometric authentication:', error);
     throw new Error('Failed to setup biometric authentication');
   }
 };

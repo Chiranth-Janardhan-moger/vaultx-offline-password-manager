@@ -31,6 +31,7 @@ export default function AddPassword() {
   const [showPinSection, setShowPinSection] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [folder, setFolder] = React.useState('');
+  const [totpSecret, setTotpSecret] = React.useState('');
 
   const folderSuggestions = React.useMemo(() => {
     if (!vault) return [];
@@ -152,6 +153,7 @@ export default function AddPassword() {
         createdAt: Date.now(),
         modifiedAt: Date.now(),
         folder: folder.trim() || undefined,
+        totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
       };
       const next = { ...vault, passwords: [...vault.passwords, item] };
       await saveVault(next, vaultKey);
@@ -167,7 +169,7 @@ export default function AddPassword() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, setVault, router]);
+  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, totpSecret, setVault, router]);
 
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
@@ -305,6 +307,17 @@ export default function AddPassword() {
               ))}
             </ScrollView>
           )}
+
+          <Text style={[styles.label, { color: colors.mutedText }]}>2FA / TOTP Secret Key (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. JBSWY3DPEHPK3PXP"
+            placeholderTextColor={colors.mutedText}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            value={totpSecret}
+            onChangeText={(t) => setTotpSecret(t.replace(/\s+/g, '').toUpperCase())}
+          />
 
           {/* PIN Section Toggle */}
           <TouchableOpacity

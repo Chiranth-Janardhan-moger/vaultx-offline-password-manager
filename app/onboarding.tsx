@@ -3,9 +3,7 @@ import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const slides = [
   {

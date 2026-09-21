@@ -1,1 +1,1 @@
-Secure offline password manager with autofill
+Secure offline password and identity wallet manager

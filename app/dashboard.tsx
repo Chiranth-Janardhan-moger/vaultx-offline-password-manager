@@ -1,4 +1,3 @@
-import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -6,11 +5,9 @@ import { categories, categorizeService, type CategoryType } from '@/lib/categori
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import autofillService from '@/lib/autofill';
 import React from 'react';
-import { Animated, AppState, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const MASTER_PASSWORD_KEY = 'master_password_v1';
 const DOUBLE_TAP_LOCK_KEY = 'double_tap_lock';
 
 const maskPhone = (phone: string): string => {
@@ -25,10 +22,8 @@ export default function Dashboard() {
   const router = useRouter();
   const { unlocked, vault, lock, resetAutoLockTimer } = useSession();
   const { colors } = useTheme();
-  const { showAlert, AlertComponent } = useCustomAlert();
   
   const [showFabMenu, setShowFabMenu] = React.useState(false);
-  const [hasMasterPassword, setHasMasterPassword] = React.useState(false);
   const [doubleTapEnabled, setDoubleTapEnabled] = React.useState(false);
   const [lastTap, setLastTap] = React.useState(0);
   const [showTutorial, setShowTutorial] = React.useState(false);
@@ -54,31 +49,7 @@ export default function Dashboard() {
   React.useEffect(() => {
     if (!unlocked) {
       router.replace('/login');
-      return;
     }
-
-    const checkAutofill = async () => {
-      try {
-        const autofillData = await autofillService.getAutofillIntentData();
-        if (autofillData.autofillMode) {
-          router.replace('/autofill' as any);
-        }
-      } catch (e) {
-        console.error('Failed to check autofill intent:', e);
-      }
-    };
-
-    checkAutofill();
-
-    const subscription = AppState.addEventListener('change', async (nextAppState) => {
-      if (nextAppState === 'active') {
-        await checkAutofill();
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
   }, [unlocked, router]);
 
   useFocusEffect(
@@ -87,9 +58,6 @@ export default function Dashboard() {
       resetAutoLockTimer();
       
       (async () => {
-        const mp = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
-        setHasMasterPassword(!!mp);
-        
         const doubleTap = await SecureStore.getItemAsync(DOUBLE_TAP_LOCK_KEY);
         setDoubleTapEnabled(doubleTap === 'true');
       })();
@@ -499,18 +467,7 @@ export default function Dashboard() {
                   onPress={() => {
                     setShowFabMenu(false);
                     fabLabelAnim.setValue(0);
-                    if (!hasMasterPassword) {
-                      showAlert({
-                        title: 'Master Password Required',
-                        message: 'Set up your master password to generate strong passwords',
-                        cancelText: 'Cancel',
-                        confirmText: 'Set Up Now',
-                        onCancel: () => {},
-                        onConfirm: () => router.push('/master-password-intro'),
-                      });
-                    } else {
-                      router.push('/generate-password');
-                    }
+                    router.push('/generate-password');
                   }}
                 >
                   <Ionicons name="sparkles" size={24} color="#fff" />
@@ -547,8 +504,6 @@ export default function Dashboard() {
           </Animated.View>
         </TouchableOpacity>
       </Animated.View>
-
-      <AlertComponent />
     </Screen>
   );
 }

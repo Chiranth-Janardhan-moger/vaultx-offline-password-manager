@@ -11,12 +11,11 @@ import * as Sharing from 'expo-sharing';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-const MASTER_PASSWORD_KEY = 'master_password_v1';
 const LAST_BACKUP_DATE_KEY = 'last_backup_date';
 
 export default function ExportScreen() {
   const router = useRouter();
-  const { unlocked, vault, vaultKey } = useSession();
+  const { unlocked, vaultKey } = useSession();
   const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
@@ -89,18 +88,10 @@ export default function ExportScreen() {
         return;
       }
 
-      // Decrypt vault to get passwords only
+      // Decrypt vault to get passwords and cards
       const { decryptVaultWithKey } = await import('@/lib/vault');
       const vaultData = await decryptVaultWithKey(vaultKey);
-      
-      // Get master password
-      const masterPassword = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
-      
-      // Encrypt master password with user's backup password
-      const encryptedMasterPassword = masterPassword 
-        ? CryptoJS.AES.encrypt(masterPassword, backupPassword).toString()
-        : null;
-      
+
       // Create backup with passwords and cards (no phone, no password hash)
       const backupData = {
         passwords: vaultData.passwords,
@@ -113,7 +104,6 @@ export default function ExportScreen() {
       // Create complete backup
       const completeBackup = {
         passwords: encryptedData,
-        encryptedMasterPassword,
         version: '2.0',
         timestamp: Date.now(),
       };

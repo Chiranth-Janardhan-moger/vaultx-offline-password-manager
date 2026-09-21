@@ -2,17 +2,24 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { generateDeterministicPassword } from '@/lib/password-generator';
 import { normalizeServiceName } from '@/lib/service-icons';
+import { getRandomBytes } from '@/lib/crypto-shim';
 import { PasswordItem, saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-const MASTER_PASSWORD_KEY = 'master_password_v1';
+const generateSecurePassword = (length = 16): string => {
+  const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*';
+  const randomBytes = getRandomBytes(length);
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars[randomBytes[i] % chars.length];
+  }
+  return result;
+};
 
 export default function GeneratePassword() {
   const router = useRouter();
@@ -25,27 +32,27 @@ export default function GeneratePassword() {
   const [notes, setNotes] = React.useState('');
   const [generatedPassword, setGeneratedPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [hasMasterPassword, setHasMasterPassword] = React.useState(false);
 
   // Show normalized service name suggestion
   const normalizedSuggestion = React.useMemo(() => {
     if (!service.trim() || service.length < 2) return null;
     const normalized = normalizeServiceName(service);
-    // Only show if it's different from what user typed
     if (normalized.toLowerCase() === service.toLowerCase()) return null;
     return normalized;
   }, [service]);
 
   React.useEffect(() => {
     if (!unlocked) router.replace('/login');
-    
-    (async () => {
-      const mp = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
-      setHasMasterPassword(!!mp);
-    })();
   }, [unlocked, router]);
 
-  const handleGenerate = React.useCallback(async () => {
+  const handleGenerate = React.useCallback(() => {
+    const password = generateSecurePassword(16);
+    setGeneratedPassword(password);
+  }, []);
+
+  const handleSave = React.useCallback(async () => {
+    if (loading) return;
+    if (!vault || !vaultKey) return;
     if (!service.trim()) {
       showAlert({
         title: 'Required',
@@ -55,45 +62,6 @@ export default function GeneratePassword() {
       });
       return;
     }
-    if (!username.trim()) {
-      showAlert({
-        title: 'Required',
-        message: 'Username/Email is required',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-      return;
-    }
-
-    try {
-      const masterPassword = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
-      if (!masterPassword) {
-        showAlert({
-          title: 'Master Password Required',
-          message: 'Please set up your master password first',
-          cancelText: 'Cancel',
-          confirmText: 'Set Up',
-          onCancel: () => {},
-          onConfirm: () => router.push('/master-password-intro'),
-        });
-        return;
-      }
-
-      const password = generateDeterministicPassword(service, username, masterPassword);
-      setGeneratedPassword(password);
-    } catch (e: any) {
-      showAlert({
-        title: 'Error',
-        message: e?.message ?? 'Failed to generate password',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-    }
-  }, [service, username, router, showAlert]);
-
-  const handleSave = React.useCallback(async () => {
-    if (loading) return;
-    if (!vault || !vaultKey) return;
     if (!generatedPassword) {
       showAlert({
         title: 'Required',
@@ -110,7 +78,7 @@ export default function GeneratePassword() {
         service: service.trim(),
         username: username.trim(),
         password: generatedPassword,
-        notes: notes || 'Generated with Master Password',
+        notes: notes || 'Generated password',
         createdAt: Date.now(),
         modifiedAt: Date.now(),
       };
@@ -133,7 +101,7 @@ export default function GeneratePassword() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, generatedPassword, notes, setVault, router]);
+  }, [loading, vault, vaultKey, service, username, generatedPassword, notes, setVault, router, showAlert]);
 
   const copyPassword = React.useCallback(async () => {
     if (!generatedPassword) return;
@@ -163,19 +131,6 @@ export default function GeneratePassword() {
           <Text style={[styles.title, { color: colors.text }]}>Generate Password</Text>
           <View style={styles.NoiconBtn} />
         </View>
-
-        {!hasMasterPassword ? (
-          <TouchableOpacity
-            style={[styles.warningCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-            onPress={() => router.push('/master-password-intro')}
-          >
-            <Ionicons name="warning" size={20} color="#f59e0b" />
-            <Text style={[styles.warningText, { color: colors.text }]}>
-              Set up Master Password first
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
-          </TouchableOpacity>
-        ) : null}
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.label, { color: colors.mutedText }]}>Website / App name</Text>

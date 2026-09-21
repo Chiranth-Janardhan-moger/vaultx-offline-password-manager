@@ -3,11 +3,12 @@ import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { generateVaultKey, saveBiometricKey, saveMeta, savePasswordWrap, savePinWrap, saveRecoveryWrap } from '@/lib/secure';
-import { createNewVault, hashPassword, vaultExists } from '@/lib/vault';
+import { createNewVault, generateSaltHex, hashPassword, vaultExists } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 const QUESTIONS = [
   'What is your pet\'s name?',
@@ -58,11 +59,10 @@ export default function Setup() {
       }
       
       try {
-        const ReactNativeBiometrics = (await import('react-native-biometrics')).default;
-        const rnBiometrics = new ReactNativeBiometrics({ allowDeviceCredentials: false });
-        const { available, biometryType } = await rnBiometrics.isSensorAvailable();
-        console.log('Biometric sensor available:', available, 'Type:', biometryType);
-        setBioSupported(available && (biometryType === 'Biometrics' || biometryType === 'TouchID' || biometryType === 'FaceID'));
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        console.log('Biometric hardware:', hasHardware, 'enrolled:', isEnrolled);
+        setBioSupported(hasHardware && isEnrolled);
       } catch (error) {
         console.error('Biometric check failed:', error);
         setBioSupported(false);
@@ -142,14 +142,16 @@ export default function Setup() {
     setLoading(true);
     try {
       const vaultKey = await generateVaultKey();
+      const passwordSaltHex = generateSaltHex();
+      const passwordHash = hashPassword(password, passwordSaltHex);
 
-      await saveMeta({ phone: phone.trim(), passwordHash: hashPassword(password) });
+      await saveMeta({ phone: phone.trim(), passwordHash, passwordSaltHex });
       await savePasswordWrap(vaultKey, password);
       await saveRecoveryWrap(vaultKey, [QUESTIONS[selectedQuestion]], [answer]);
       await savePinWrap(vaultKey, pin);
       if (enableBio && bioSupported) await saveBiometricKey(vaultKey);
 
-      const vault = await createNewVault(phone.trim(), password, vaultKey);
+      const vault = await createNewVault(phone.trim(), password, vaultKey, passwordSaltHex);
       unlock(vault, vaultKey);
       router.replace('/dashboard');
     } catch (e: any) {
@@ -213,11 +215,11 @@ export default function Setup() {
                 placeholder="Create Password"
                 placeholderTextColor={colors.mutedText}
                 secureTextEntry={!showPassword}
-                autoComplete="off"
-                textContentType="none"
-                importantForAutofill="no"
+                autoComplete="password-new"
                 autoCapitalize="none"
                 autoCorrect={false}
+                spellCheck={false}
+                keyboardType={showPassword ? 'visible-password' : 'default'}
                 selectionColor={colors.primary}
                 underlineColorAndroid="transparent"
                 returnKeyType="next"
@@ -257,11 +259,11 @@ export default function Setup() {
                 placeholder="Confirm Password"
                 placeholderTextColor={colors.mutedText}
                 secureTextEntry={!showConfirm}
-                autoComplete="off"
-                textContentType="none"
-                importantForAutofill="no"
+                autoComplete="password-new"
                 autoCapitalize="none"
                 autoCorrect={false}
+                spellCheck={false}
+                keyboardType={showConfirm ? 'visible-password' : 'default'}
                 selectionColor={colors.primary}
                 underlineColorAndroid="transparent"
                 returnKeyType="done"

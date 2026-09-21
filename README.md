@@ -1,4 +1,4 @@
-#  VaultX — Secure Open Source Password Manager (Offline-first)
+# VaultX — Secure Open Source Password Manager (Offline-first)
 
 <div align="center">
 
@@ -14,7 +14,7 @@
 
 ---
 
-##  What is VaultX?
+## What is VaultX?
 
 VaultX is a secure, **open source password manager** that is fully offline and privacy-first. Built with React Native and Expo, your passwords never leave your device, never touch the cloud, and are protected with military-grade AES-256 encryption.
 
@@ -31,9 +31,9 @@ VaultX is a secure, **open source password manager** that is fully offline and p
 
 ---
 
-##  Features
+## Features
 
-###  Security Features
+### Security Features
 
 - **AES-256 Encryption** — Military-grade encryption for all stored data
 - **PBKDF2 Key Derivation** — Secure key generation with salt
@@ -48,7 +48,7 @@ VaultX is a secure, **open source password manager** that is fully offline and p
 - **Built-in 2FA/TOTP Authenticator** — Secure, local generation of 6-digit Time-based One-Time Passwords (TOTP) from base32 secrets
 - **Clipboard Security & Monitor** — Clipboard is monitored and cleared to prevent other background apps from snooping copied passwords
 
-###  User Experience
+### User Experience
 
 - **Beautiful Category System** — Passwords organized in gradient folders
 - **Smart Auto-categorization** — Automatically sorts by service type (Google, Banking, Social Media, etc.)
@@ -63,12 +63,10 @@ VaultX is a secure, **open source password manager** that is fully offline and p
 - **Floating Action Button** — Quick access to add/generate passwords
 - **Dashboard Folder & Category Tabs** — Fast, interactive dashboard filters to navigate and filter entries by categories instantly
 
-### ️ Password & Identity Management
+### Password & Identity Management
 
 - **Add Known Passwords** — Store existing credentials securely
 - **Identity & Payment Cards** — Secure templates for storing Identity Cards (Passports, Driving Licenses, IDs) and Credit/Debit Cards with custom fields
-- **Native Android Autofill Integration** — Autofill credentials seamlessly inside other apps and web browsers using Android's system Autofill service framework
-- **Generate Master Passwords** — Deterministic password generation
 - **View by Category** — Browse passwords in organized folders
 - **Search & Filter** — Find passwords quickly
 - **Copy Credentials** — One-tap copy with visual feedback
@@ -76,7 +74,7 @@ VaultX is a secure, **open source password manager** that is fully offline and p
 - **Notes Support** — Add additional information to entries
 - **Phone Number Masking** — Privacy protection (90XXXXX93)
 
-###  Smart Categories
+### Smart Categories
 
 VaultX automatically categorizes your passwords into:
 
@@ -88,7 +86,7 @@ VaultX automatically categorizes your passwords into:
 -  **Work & Productivity** — Slack, Notion, Trello, etc.
 -  **Other** — Everything else
 
-###  Master Password System
+### Master Password System
 
 Generate strong, consistent passwords for any service:
 
@@ -98,7 +96,7 @@ Generate strong, consistent passwords for any service:
 4. Same input always generates same password
 5. No storage needed — regenerate anytime
 
-###  Performance Optimizations
+### Performance Optimizations
 
 - **Optimized APK Size** — 60-70% reduction (15-25 MB)
 - **R8 Full Mode** — Aggressive code shrinking
@@ -110,13 +108,13 @@ Generate strong, consistent passwords for any service:
 
 ---
 
-##  Screenshots
+## Screenshots
 <img width="8000" height="3125" alt="VaultX Offline Password Manager - Secure Dashboard, Categories, and Card Wallet View" src="https://github.com/user-attachments/assets/edabb54a-0e75-4449-ad95-3d84bbca057f" />
 <img width="8000" height="3125" alt="VaultX - Biometric Authentication and Master Password Generator UI Screens" src="https://github.com/user-attachments/assets/a8ab23da-3adf-43d3-9fbc-1d8101ab833a" />
 
 ---
 
-##  Installation
+## Installation
 
 ### Prerequisites
 
@@ -157,7 +155,7 @@ npm install crypto-js react-native-get-random-values
 
 ---
 
-##  Build APK
+## Build APK
 
 ### Development Build
 
@@ -187,7 +185,7 @@ android/app/build/outputs/apk/release/app-release.apk
 
 ---
 
-##  Security
+## Security
 
 ### Encryption Details
 
@@ -231,7 +229,7 @@ User Credentials (PIN/Password/Question)
 
 ---
 
-##  Themes
+## Themes
 
 VaultX supports multiple theme modes:
 
@@ -243,7 +241,7 @@ VaultX supports multiple theme modes:
 
 ---
 
-##  Tech Stack
+## Tech Stack
 
 - **Framework:** React Native + Expo
 - **Language:** TypeScript
@@ -257,7 +255,7 @@ VaultX supports multiple theme modes:
 
 ---
 
-## ️ Project Structure
+## Project Structure
 
 ```
 vaultx/
@@ -290,7 +288,7 @@ vaultx/
 
 ---
 
-##  Contributing
+## Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -310,13 +308,13 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-##  License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-##  Acknowledgments
+## Acknowledgments
 
 - Built with [Expo](https://expo.dev/)
 - Icons by [Ionicons](https://ionic.io/ionicons)
@@ -325,7 +323,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-##  Support
+## Support
 
 If you find VaultX useful, please consider:
 
@@ -337,7 +335,7 @@ If you find VaultX useful, please consider:
 
 ---
 
-##  Contact
+## Contact
 
 - **GitHub:** [@Chiranth-Janardhan-moger](https://github.com/Chiranth-Janardhan-moger)
 - **Issues:** [Report a bug](https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/issues)
@@ -347,7 +345,7 @@ If you find VaultX useful, please consider:
 
 <div align="center">
 
-**Made with ️ for privacy and security**
+**Made with care for privacy and security**
 
 VaultX — Your passwords, your device, your control.
 

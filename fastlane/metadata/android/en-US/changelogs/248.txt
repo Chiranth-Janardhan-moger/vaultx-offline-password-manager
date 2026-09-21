@@ -1,4 +1,4 @@
-Version 1.2.48:
+Version 1.3.4:
 • Complete custom alert system with theme adaptation
 • Enhanced move functionality with beautiful animations
 • Improved password strength indicators

@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
 import * as FileSystem from 'expo-file-system/legacy';
 import { type CategoryType } from './categories';
+import { getRandomHex, getRandomWordArray } from './crypto-shim';
 
 export type PasswordItem = {
   service: string;
@@ -42,6 +43,7 @@ export type VaultData = {
   user: {
     phone: string;
     passwordHash: string;
+    passwordSaltHex?: string;
   };
   passwords: PasswordItem[];
   cards?: CardItem[];
@@ -60,20 +62,65 @@ export const vaultExists = async () => {
   return !!info.exists;
 };
 
-export const hashPassword = (pw: string) => CryptoJS.SHA256(pw).toString(CryptoJS.enc.Hex);
+export const generateSaltHex = (bytes = 16) => getRandomHex(bytes);
 
-const encryptText = (plaintext: string, key: string) => CryptoJS.AES.encrypt(plaintext, key).toString();
+export const hashPassword = (pw: string, saltHex?: string): string => {
+  if (!saltHex) {
+    return CryptoJS.SHA256(pw).toString(CryptoJS.enc.Hex);
+  }
+  const salt = CryptoJS.enc.Hex.parse(saltHex);
+  return CryptoJS.PBKDF2(pw, salt, {
+    keySize: 256 / 32,
+    iterations: 100000,
+    hasher: CryptoJS.algo.SHA256,
+  }).toString(CryptoJS.enc.Hex);
+};
 
-const decryptText = (ciphertext: string, key: string) => {
+export const verifyPassword = (password: string, storedHash: string, saltHex?: string): boolean => {
+  if (saltHex) {
+    return hashPassword(password, saltHex) === storedHash;
+  }
+  return hashPassword(password) === storedHash;
+};
+
+const encryptText = (plaintext: string, keyHex: string) => {
+  const key = CryptoJS.enc.Hex.parse(keyHex);
+  const iv = getRandomWordArray(16);
+  const encrypted = CryptoJS.AES.encrypt(plaintext, key, {
+    iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+  return `${iv.toString(CryptoJS.enc.Hex)}:${encrypted.toString()}`;
+};
+
+const decryptText = (ciphertext: string, keyHex: string) => {
   try {
-    const bytes = CryptoJS.AES.decrypt(ciphertext, key);
+    if (ciphertext.includes(':')) {
+      const [ivHex, ...rest] = ciphertext.split(':');
+      const actualCiphertext = rest.join(':');
+      const key = CryptoJS.enc.Hex.parse(keyHex);
+      const iv = CryptoJS.enc.Hex.parse(ivHex);
+      const bytes = CryptoJS.AES.decrypt(actualCiphertext, key, {
+        iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7,
+      });
+      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      if (!decrypted) {
+        throw new Error('Decryption failed - invalid key or padding');
+      }
+      return decrypted;
+    }
+
+    // Legacy fallback (OpenSSL EVP_BytesToKey)
+    const bytes = CryptoJS.AES.decrypt(ciphertext, keyHex);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
     if (!decrypted) {
       throw new Error('Decryption failed - empty result');
     }
     return decrypted;
-  } catch (error) {
-    console.error('Vault decrypt error:', error);
+  } catch {
     throw new Error('Unable to decrypt vault - incorrect key or corrupted data');
   }
 };
@@ -88,9 +135,19 @@ export const readEncryptedString = async () => {
   return FileSystem.readAsStringAsync(getVaultFilePath());
 };
 
-export const createNewVault = async (phone: string, password: string, vaultKey: string): Promise<VaultData> => {
+export const createNewVault = async (
+  phone: string,
+  password: string,
+  vaultKey: string,
+  saltHex?: string
+): Promise<VaultData> => {
+  const passwordSaltHex = saltHex || generateSaltHex();
   const data: VaultData = {
-    user: { phone, passwordHash: hashPassword(password) },
+    user: {
+      phone,
+      passwordHash: hashPassword(password, passwordSaltHex),
+      passwordSaltHex,
+    },
     passwords: [],
     cards: [],
   };
@@ -103,7 +160,7 @@ export const unlockLegacyVaultWithPassword = async (password: string): Promise<V
   const decrypted = decryptText(encrypted, password);
   if (!decrypted) throw new Error('Incorrect password');
   const data = JSON.parse(decrypted) as VaultData;
-  if (!data?.user?.passwordHash || hashPassword(password) !== data.user.passwordHash) {
+  if (!data?.user?.passwordHash || !verifyPassword(password, data.user.passwordHash, data.user.passwordSaltHex)) {
     throw new Error('Incorrect password');
   }
   return data;
@@ -113,9 +170,13 @@ export const decryptVaultWithKey = async (vaultKey: string): Promise<VaultData> 
   const encrypted = await readEncryptedString();
   const decrypted = decryptText(encrypted, vaultKey);
   if (!decrypted) throw new Error('Unable to decrypt vault');
-  const data = JSON.parse(decrypted) as VaultData;
-  if (!data?.user?.passwordHash) throw new Error('Corrupted vault');
-  return data;
+  try {
+    const data = JSON.parse(decrypted) as VaultData;
+    if (!data?.user?.passwordHash) throw new Error('Corrupted vault');
+    return data;
+  } catch {
+    throw new Error('Unable to decrypt vault - incorrect key or corrupted data');
+  }
 };
 
 export const saveVault = async (vault: VaultData, vaultKey: string) => {

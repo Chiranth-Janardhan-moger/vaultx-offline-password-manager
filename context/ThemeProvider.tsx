@@ -43,14 +43,14 @@ const lightColors: ThemeColors = {
 };
 
 const darkColors: ThemeColors = {
-  background: '#0b0b0c',
+  background: '#000000',
   card: '#111827',
   text: '#ffffff',
   mutedText: '#9aa0a6',
   inputBg: '#1f2937',
   primary: '#2563EB',
   border: '#1f2937',
-  statusBarBg: '#0b0b0c',
+  statusBarBg: '#000000',
 };
 
 // Enhanced contrast WITHOUT borders (subtle gray borders for definition)

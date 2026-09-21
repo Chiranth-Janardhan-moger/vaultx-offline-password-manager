@@ -6,11 +6,9 @@ import { CardField, CardItem, CardType, saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Sharing from 'expo-sharing';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-  Animated,
   Modal,
   ScrollView,
   StyleSheet,
@@ -22,7 +20,6 @@ import {
   KeyboardAvoidingView,
   Share,
 } from 'react-native';
-import ViewShot, { captureRef } from 'react-native-view-shot';
 
 const CARD_TEMPLATES: Record<CardType, { title: string; gradient: [string, string]; fields: CardField[] }> = {
   aadhaar: {
@@ -92,9 +89,13 @@ const PREMIUM_GRADIENTS: [string, string][] = [
 
 export default function CardsScreen({ isTab }: { isTab?: boolean }) {
   const router = useRouter();
-  const { colors, resolved } = useTheme();
-  const { vault, vaultKey, setVault } = useSession();
+  const { colors } = useTheme();
+  const { unlocked, vault, vaultKey, setVault } = useSession();
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  React.useEffect(() => {
+    if (!unlocked) router.replace('/login');
+  }, [unlocked, router]);
 
   const Wrapper = isTab ? View : Screen;
 
@@ -135,12 +136,9 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
   // Share States & Methods
   const [sharingCard, setSharingCard] = React.useState<CardItem | null>(null);
   const [shareFields, setShareFields] = React.useState<{ [key: string]: boolean }>({});
-  const [shareFormat, setShareFormat] = React.useState<'text' | 'card'>('text');
-  const viewShotRef = React.useRef<any>(null);
 
   const initiateShare = (card: CardItem) => {
     setSharingCard(card);
-    setShareFormat('text');
     const initial: { [key: string]: boolean } = {
       number: !card.type.includes('card'),
       holderName: true,
@@ -154,58 +152,26 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
   const executeShare = async () => {
     if (!sharingCard) return;
 
-    if (shareFormat === 'text') {
-      let text = `*${sharingCard.title}*\n`;
-      if (shareFields.holderName) text += `Holder Name: ${sharingCard.holderName}\n`;
-      if (shareFields.number) {
-        text += `Card Number: ${sharingCard.number}\n`;
-      } else {
-        text += `Card Number: ${formatCardNumber(sharingCard.number, sharingCard.type, false)}\n`;
-      }
-      sharingCard.fields.forEach((f, idx) => {
-        if (shareFields[`field_${idx}`]) {
-          text += `${f.label}: ${f.value}\n`;
-        } else {
-          text += `${f.label}: ••••••••\n`;
-        }
-      });
-
-      try {
-        await Share.share({ message: text });
-        setSharingCard(null);
-      } catch (err) {
-        console.error('Failed to share text:', err);
-      }
+    let text = `*${sharingCard.title}*\n`;
+    if (shareFields.holderName) text += `Holder Name: ${sharingCard.holderName}\n`;
+    if (shareFields.number) {
+      text += `Card Number: ${sharingCard.number}\n`;
     } else {
-      // Capture Card Image and share it
-      try {
-        if (!viewShotRef.current) return;
-
-        const isSharingAvailable = await Sharing.isAvailableAsync();
-        if (!isSharingAvailable) {
-          showAlert({
-            title: 'Not Supported',
-            message: 'Sharing is not available on this device.',
-            confirmText: 'OK',
-          });
-          return;
-        }
-
-        const uri = await viewShotRef.current.capture();
-        await Sharing.shareAsync(uri, {
-          mimeType: 'image/png',
-          dialogTitle: `Share ${sharingCard.title}`,
-          UTI: 'public.png',
-        });
-        setSharingCard(null);
-      } catch (err) {
-        console.error('Failed to capture or share card image:', err);
-        showAlert({
-          title: 'Share Error',
-          message: 'Could not generate card image for sharing.',
-          confirmText: 'OK',
-        });
+      text += `Card Number: ${formatCardNumber(sharingCard.number, sharingCard.type, false)}\n`;
+    }
+    sharingCard.fields.forEach((f, idx) => {
+      if (shareFields[`field_${idx}`]) {
+        text += `${f.label}: ${f.value}\n`;
+      } else {
+        text += `${f.label}: ••••••••\n`;
       }
+    });
+
+    try {
+      await Share.share({ message: text });
+      setSharingCard(null);
+    } catch (err) {
+      console.error('Failed to share text:', err);
     }
   };
 
@@ -291,26 +257,35 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
       folder: folder.trim() || undefined,
     };
 
-    const nextCards = [...cards, newCard];
+    if (!vault || !vaultKey) {
+      showAlert({
+        title: 'Session Expired',
+        message: 'Please log in again to save your card',
+        confirmText: 'OK',
+        onConfirm: () => router.replace('/login'),
+      });
+      return;
+    }
+
+    const currentCards = vault.cards || cards;
+    const nextCards = [...currentCards, newCard];
     try {
-      if (vault && vaultKey) {
-        const updatedVault = { ...vault, cards: nextCards };
-        await saveVault(updatedVault, vaultKey);
-        setVault(() => updatedVault);
-        setCards(nextCards);
-        setIsAddModalVisible(false);
-        resetForm();
-        showAlert({
-          title: 'Success',
-          message: 'Identity Card saved successfully',
-          confirmText: 'OK',
-        });
-      }
+      const updatedVault = { ...vault, cards: nextCards };
+      await saveVault(updatedVault, vaultKey);
+      setVault(() => updatedVault);
+      setCards(nextCards);
+      setIsAddModalVisible(false);
+      resetForm();
+      showAlert({
+        title: 'Success',
+        message: 'Identity Card saved successfully',
+        confirmText: 'OK',
+      });
     } catch (error) {
       console.error('Failed to save card:', error);
       showAlert({
         title: 'Error',
-        message: 'Failed to save card data',
+        message: (error as Error)?.message || 'Failed to save card data',
         confirmText: 'OK',
       });
     }
@@ -324,40 +299,45 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
       confirmText: 'Delete',
       type: 'destructive',
       onConfirm: async () => {
-        const nextCards = cards.filter(c => c.id !== cardId);
+        if (!vault || !vaultKey) return;
+        const currentCards = vault.cards || cards;
+        const nextCards = currentCards.filter(c => c.id !== cardId);
         try {
-          if (vault && vaultKey) {
-            const updatedVault = { ...vault, cards: nextCards };
-            await saveVault(updatedVault, vaultKey);
-            setVault(() => updatedVault);
-            setCards(nextCards);
-            setSelectedCard(null);
-          }
+          const updatedVault = { ...vault, cards: nextCards };
+          await saveVault(updatedVault, vaultKey);
+          setVault(() => updatedVault);
+          setCards(nextCards);
+          setSelectedCard(null);
         } catch (error) {
           console.error('Failed to delete card:', error);
+          showAlert({
+            title: 'Error',
+            message: (error as Error)?.message || 'Failed to delete card',
+            confirmText: 'OK',
+          });
         }
       },
     });
   };
 
   const handleMoveCard = async (index: number, direction: 'up' | 'down') => {
+    if (!vault || !vaultKey) return;
+    const currentCards = vault.cards || cards;
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= cards.length) return;
+    if (newIndex < 0 || newIndex >= currentCards.length) return;
 
-    const nextCards = [...cards];
+    const nextCards = [...currentCards];
     const temp = nextCards[index];
     nextCards[index] = nextCards[newIndex];
     nextCards[newIndex] = temp;
 
     try {
-      if (vault && vaultKey) {
-        const updatedVault = { ...vault, cards: nextCards };
-        await saveVault(updatedVault, vaultKey);
-        setVault(() => updatedVault);
-        setCards(nextCards);
-        if (selectedCard && selectedCard.id === temp.id) {
-          setSelectedCard(nextCards[newIndex]);
-        }
+      const updatedVault = { ...vault, cards: nextCards };
+      await saveVault(updatedVault, vaultKey);
+      setVault(() => updatedVault);
+      setCards(nextCards);
+      if (selectedCard && selectedCard.id === temp.id) {
+        setSelectedCard(nextCards[newIndex]);
       }
     } catch (error) {
       console.error('Failed to reorder card:', error);
@@ -671,9 +651,10 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
         style={[
           styles.cardWrapper,
           {
-            marginTop: index === 0 || isExpanded ? 0 : -110,
+            marginTop: index === 0 || isExpanded ? 0 : -60,
+            marginBottom: isExpanded ? 16 : 0,
             zIndex: isReorderingMode ? 999 : index,
-            transform: isReorderingMode ? [{ scale: 1.04 }] : [],
+            transform: isReorderingMode ? [{ scale: 1.02 }] : [],
           },
         ]}
         onPress={() => {
@@ -695,13 +676,7 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
           colors={card.gradient}
           style={[
             styles.cardFace,
-            {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-              elevation: 8,
-            },
+            isReorderingMode && { elevation: 8 },
           ]}
         >
           {renderCardFaceContent(card, false, undefined, isExpanded, isReorderingMode)}
@@ -1045,62 +1020,11 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
                 </TouchableOpacity>
               </View>
 
-              {/* Format Selector */}
-              <View style={[styles.formatSelector, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                <TouchableOpacity
-                  style={[
-                    styles.formatOption,
-                    shareFormat === 'text' && { backgroundColor: colors.primary }
-                  ]}
-                  onPress={() => setShareFormat('text')}
-                >
-                  <Ionicons name="text-outline" size={18} color={shareFormat === 'text' ? '#ffffff' : colors.text} />
-                  <Text style={[styles.formatOptionText, { color: shareFormat === 'text' ? '#ffffff' : colors.text }]}>
-                    Share as Text
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.formatOption,
-                    shareFormat === 'card' && { backgroundColor: colors.primary }
-                  ]}
-                  onPress={() => setShareFormat('card')}
-                >
-                  <Ionicons name="image-outline" size={18} color={shareFormat === 'card' ? '#ffffff' : colors.text} />
-                  <Text style={[styles.formatOptionText, { color: shareFormat === 'card' ? '#ffffff' : colors.text }]}>
-                    Share as Card
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
               <Text style={{ color: colors.mutedText, fontSize: 13, marginBottom: 16 }}>
                 Select the details you want to share. Sensitive fields are deselected by default.
               </Text>
 
               <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-                {shareFormat === 'card' && sharingCard && (
-                  <View style={styles.previewContainer}>
-                    <Text style={[styles.previewTitle, { color: colors.mutedText }]}>CARD PREVIEW</Text>
-                    <ViewShot
-                      ref={viewShotRef}
-                      options={{ format: 'png', quality: 1.0 }}
-                      style={styles.viewShotWrapper}
-                    >
-                      <LinearGradient
-                        colors={sharingCard.gradient}
-                        style={[
-                          styles.cardFace,
-                          {
-                            width: '100%',
-                            height: 200,
-                          },
-                        ]}
-                      >
-                        {renderCardFaceContent(sharingCard, true, shareFields)}
-                      </LinearGradient>
-                    </ViewShot>
-                  </View>
-                )}
 
                 {sharingCard && (
                   <View style={{ gap: 12 }}>
@@ -1163,9 +1087,7 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
                 style={[styles.saveBtn, { backgroundColor: colors.primary, marginTop: 20 }]}
                 onPress={executeShare}
               >
-                <Text style={styles.saveBtnText}>
-                  {shareFormat === 'text' ? 'Share Text Details' : 'Share Card Image'}
-                </Text>
+                <Text style={styles.saveBtnText}>Share Card Details</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1196,7 +1118,11 @@ const styles = StyleSheet.create({
   scrollContainer: { paddingBottom: 60 },
   stackContainer: { marginTop: 12, paddingBottom: 100 },
   expandedContainer: { marginTop: 12 },
-  cardWrapper: { marginBottom: 20 },
+  cardWrapper: {
+    marginBottom: 20,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+  },
   cardFace: {
     borderRadius: 20,
     padding: 22,
@@ -1204,6 +1130,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   aadhaarTricolorAccent: {
     position: 'absolute',

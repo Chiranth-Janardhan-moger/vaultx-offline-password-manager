@@ -10,6 +10,8 @@ type SessionValue = {
   unlocked: boolean;
   vault: VaultData | null;
   vaultKey: string | null;
+  autoLockMinutes: number;
+  updateAutoLockMinutes: (minutes: number) => Promise<void>;
   unlock: (vault: VaultData, vaultKey: string) => void;
   lock: () => void;
   setVault: (updater: (prev: VaultData) => VaultData) => void;
@@ -35,6 +37,11 @@ export const SessionProvider: React.FC<React.PropsWithChildren> = ({ children })
       }
     })();
   }, []);
+
+  const updateAutoLockMinutes = async (minutes: number) => {
+    setAutoLockMinutes(minutes);
+    await SecureStore.setItemAsync(AUTO_LOCK_TIMER_KEY, minutes.toString());
+  };
 
   // Clear auto-lock timer
   const clearAutoLockTimer = () => {
@@ -118,6 +125,8 @@ export const SessionProvider: React.FC<React.PropsWithChildren> = ({ children })
     unlocked: !!vault && !!vaultKey,
     vault,
     vaultKey,
+    autoLockMinutes,
+    updateAutoLockMinutes,
     unlock: (v, k) => {
       setVaultState(v);
       setVaultKey(k);
@@ -133,7 +142,7 @@ export const SessionProvider: React.FC<React.PropsWithChildren> = ({ children })
       setVaultState(updater(vault));
     },
     resetAutoLockTimer,
-  }), [vault, vaultKey]);
+  }), [vault, vaultKey, autoLockMinutes]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 };

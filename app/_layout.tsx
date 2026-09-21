@@ -1,7 +1,6 @@
+import '@/lib/crypto-shim';
 import { SessionProvider } from "@/context/SessionProvider";
 import { ThemeProvider } from "@/context/ThemeProvider";
-import { startClipboardMonitoring, stopClipboardMonitoring } from '@/lib/clipboard-monitor';
-import '@/lib/crypto-shim';
 import { setScreenshotBlocking } from '@/lib/screen-security';
 import { Stack } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
@@ -24,16 +23,6 @@ export default function RootLayout() {
         await setScreenshotBlocking(true);
       }
     })();
-  }, []);
-
-  React.useEffect(() => {
-    // Start clipboard monitoring when app opens
-    startClipboardMonitoring();
-    
-    return () => {
-      // Stop monitoring when app closes
-      stopClipboardMonitoring();
-    };
   }, []);
 
   return (

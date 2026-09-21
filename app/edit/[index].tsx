@@ -34,6 +34,7 @@ export default function EditPassword() {
   const [showPinSection, setShowPinSection] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [folder, setFolder] = React.useState(existingPassword?.folder || '');
+  const [totpSecret, setTotpSecret] = React.useState(existingPassword?.totpSecret || '');
 
   const folderSuggestions = React.useMemo(() => {
     if (!vault) return [];
@@ -142,6 +143,7 @@ export default function EditPassword() {
         createdAt: existingPassword?.createdAt || Date.now(),
         modifiedAt: Date.now(),
         folder: folder.trim() || undefined,
+        totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
       };
 
       const updatedPasswords = [...vault.passwords];
@@ -299,6 +301,17 @@ export default function EditPassword() {
               ))}
             </ScrollView>
           )}
+
+          <Text style={[styles.label, { color: colors.mutedText }]}>2FA / TOTP Secret Key (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. JBSWY3DPEHPK3PXP"
+            placeholderTextColor={colors.mutedText}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            value={totpSecret}
+            onChangeText={(t) => setTotpSecret(t.replace(/\s+/g, '').toUpperCase())}
+          />
 
           {/* PIN Section Toggle */}
           <TouchableOpacity

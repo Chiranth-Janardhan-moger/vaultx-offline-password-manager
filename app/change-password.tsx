@@ -2,8 +2,8 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { savePasswordWrap, unwrapWithPin } from '@/lib/secure';
-import { decryptVaultWithKey, hashPassword, saveVault } from '@/lib/vault';
+import { loadMeta, saveMeta, savePasswordWrap, unwrapWithPin } from '@/lib/secure';
+import { decryptVaultWithKey, generateSaltHex, hashPassword, saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -65,14 +65,23 @@ export default function ChangePassword() {
       // Get current vault
       const vault = await decryptVaultWithKey(vaultKey);
       
-      // Update password hash in vault
-      vault.user.passwordHash = hashPassword(newPassword);
+      // Update password hash and salt in vault
+      const newSaltHex = generateSaltHex();
+      vault.user.passwordSaltHex = newSaltHex;
+      vault.user.passwordHash = hashPassword(newPassword, newSaltHex);
       
       // Save vault with updated password hash
       await saveVault(vault, vaultKey);
       
       // Save new password wrap
       await savePasswordWrap(vaultKey, newPassword);
+
+      const meta = await loadMeta();
+      if (meta) {
+        meta.passwordSaltHex = newSaltHex;
+        meta.passwordHash = vault.user.passwordHash;
+        await saveMeta(meta);
+      }
       
       showAlert({
         title: 'Success',
@@ -157,9 +166,13 @@ export default function ChangePassword() {
               placeholder="Enter new password (min 8 chars)"
               placeholderTextColor={colors.mutedText}
               secureTextEntry={!showPassword}
+              autoComplete="password-new"
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              keyboardType={showPassword ? 'visible-password' : 'default'}
               value={newPassword}
               onChangeText={setNewPassword}
-              autoCapitalize="none"
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
               <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
@@ -172,9 +185,13 @@ export default function ChangePassword() {
             placeholder="Confirm new password"
             placeholderTextColor={colors.mutedText}
             secureTextEntry={!showPassword}
+            autoComplete="password-new"
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            keyboardType={showPassword ? 'visible-password' : 'default'}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            autoCapitalize="none"
           />
 
           <TouchableOpacity

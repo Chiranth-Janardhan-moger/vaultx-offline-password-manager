@@ -2,7 +2,7 @@ import { useTheme } from '@/context/ThemeProvider';
 
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { Platform, View, ViewStyle } from 'react-native';
+import { View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Props = React.PropsWithChildren<{
@@ -15,13 +15,13 @@ export default function Screen({ children, style, forceResolved }: Props) {
   const r = forceResolved ?? resolved;
 
   const barStyle = r === 'dark' ? 'light' : 'dark';
-  const bg = r === 'dark' ? '#0b0b0c' : '#ffffff';
+  const bg = r === 'dark' ? '#000000' : '#ffffff';
 
 
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
-      <StatusBar style={barStyle} backgroundColor={bg} />
+      <StatusBar style={barStyle} />
       <View style={[{ flex: 1, backgroundColor: forceResolved ? bg : colors.background }, style]}>{children}</View>
     </SafeAreaView>
   );

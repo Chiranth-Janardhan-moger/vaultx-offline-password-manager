@@ -1,0 +1,8 @@
+Version 1.4.0:
+• Enhanced Cards UI with smooth card stacking, elevation, and refined borders
+• Fixed auto-lock timer real-time synchronization
+• Added TOTP 2FA secret key input and improved token generation
+• Removed unnecessary permissions including overlay and network access
+• Hardened cryptography routines against legacy cipher fallthrough
+• Optimized app size and excluded unused native library compilation
+• Added automated unit test suite

@@ -131,11 +131,11 @@ export default function UnlockPassword() {
               placeholder="Password"
               placeholderTextColor={colors.mutedText}
               secureTextEntry={!showPassword}
-              autoComplete="off"
-              textContentType="none"
-              importantForAutofill="no"
+              autoComplete="password"
               autoCapitalize="none"
               autoCorrect={false}
+              spellCheck={false}
+              keyboardType={showPassword ? 'visible-password' : 'default'}
               value={password}
               onChangeText={setPassword}
               autoFocus

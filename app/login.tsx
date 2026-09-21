@@ -13,14 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import autofillService from '@/lib/autofill';
 import { Animated, Easing, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import ReactNativeBiometrics from 'react-native-biometrics';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Login() {
   const router = useRouter();
   const { unlock } = useSession();
-  const { colors, resolved } = useTheme();
+  const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const [pin, setPin] = React.useState('');
@@ -175,16 +174,10 @@ export default function Login() {
       
       if (bioEnabled) {
         try {
-          const rnBiometrics = new ReactNativeBiometrics({ allowDeviceCredentials: false });
-          const { available, biometryType } = await rnBiometrics.isSensorAvailable();
-          
-          if (available && (biometryType === 'Biometrics' || biometryType === 'TouchID' || biometryType === 'FaceID')) {
-            const { keysExist } = await rnBiometrics.biometricKeysExist();
-            biometricAvailable = keysExist;
-            setCanBio(keysExist);
-          } else {
-            setCanBio(false);
-          }
+          const hasHardware = await LocalAuthentication.hasHardwareAsync();
+          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+          biometricAvailable = hasHardware && isEnrolled;
+          setCanBio(biometricAvailable);
         } catch (error) {
           console.error('Biometric check error:', error);
           setCanBio(false);
@@ -220,17 +213,7 @@ export default function Login() {
     failedAttemptsRef.current = 0;
     unlock(data, vaultKey);
     
-    try {
-      const autofillData = await autofillService.getAutofillIntentData();
-      if (autofillData.autofillMode) {
-        router.replace('/autofill' as any);
-      } else {
-        router.replace('/dashboard');
-      }
-    } catch (e) {
-      console.error('Autofill check failed, defaulting to dashboard', e);
-      router.replace('/dashboard');
-    }
+    router.replace('/dashboard');
   }, [unlock, router, scaleAnim, fadeAnim]);
 
   const unlockByPin = React.useCallback(async (pinValue: string) => {
@@ -274,10 +257,10 @@ export default function Login() {
     let shouldFocusInput = false;
     
     try {
-      const rnBiometrics = new ReactNativeBiometrics({ allowDeviceCredentials: false });
-      const { available } = await rnBiometrics.isSensorAvailable();
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
       
-      if (!available) {
+      if (!hasHardware || !isEnrolled) {
         showAlert({
           title: 'Biometric Not Available',
           message: 'Please use PIN to unlock',
@@ -288,14 +271,15 @@ export default function Login() {
         return;
       }
       
-      const { success, error } = await rnBiometrics.simplePrompt({
+      const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Unlock VaultX',
-        cancelButtonText: 'Cancel',
+        cancelLabel: 'Cancel',
+        disableDeviceFallback: true,
       });
       
-      if (!success) {
+      if (!result.success) {
         shouldFocusInput = true;
-        if (error && !error.includes('cancel') && !error.includes('Cancel') && !error.includes('User')) {
+        if (result.error && !result.error.includes('cancel') && !result.error.includes('Cancel') && !result.error.includes('user_cancel')) {
           showAlert({
             title: 'Biometric Error',
             message: 'Authentication failed. Please try again or use PIN',

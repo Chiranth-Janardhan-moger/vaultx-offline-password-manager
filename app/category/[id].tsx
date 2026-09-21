@@ -4,6 +4,7 @@ import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { categories, categorizeService, getCategoryById, type CategoryType } from '@/lib/categories';
 import { getServiceColor, getServiceIcon } from '@/lib/service-icons';
+import { getTOTPDetails } from '@/lib/totp';
 import { saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -31,8 +32,6 @@ const formatTimestamp = (timestamp?: number): string => {
   if (months < 12) return `${months}mo ago`;
   return `${years}y ago`;
 };
-
-import { getTOTPDetails } from '@/lib/totp';
 
 function TotpCodeDisplay({ secret, colors }: { secret: string; colors: any }) {
   const [details, setDetails] = React.useState(() => getTOTPDetails(secret));
@@ -231,31 +230,6 @@ export default function CategoryDetail() {
       });
     }
   }, [vault, vaultKey, selectedPasswordIndex, setVault, closeMoveModal]);
-
-  const toggleFavorite = async (globalIndex: number) => {
-    if (!vault || !vaultKey) return;
-    
-    const updatedPasswords = [...vault.passwords];
-    updatedPasswords[globalIndex] = {
-      ...updatedPasswords[globalIndex],
-      isFavorite: !updatedPasswords[globalIndex].isFavorite,
-      modifiedAt: Date.now(),
-    };
-    
-    const updatedVault = { ...vault, passwords: updatedPasswords };
-    
-    try {
-      await saveVault(updatedVault, vaultKey);
-      setVault(() => updatedVault);
-    } catch (error) {
-      showAlert({
-        title: 'Error',
-        message: 'Failed to update favorite',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-    }
-  };
 
   // Filter passwords for this category and sort alphabetically by service name
   const categoryPasswords = React.useMemo(() => {

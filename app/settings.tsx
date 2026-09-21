@@ -1,7 +1,7 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
+import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import autofillService from '@/lib/autofill';
 import { setScreenshotBlocking } from '@/lib/screen-security';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -10,25 +10,20 @@ import React from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import appConfig from '../app.json';
 
-const MASTER_PASSWORD_KEY = 'master_password_v1';
 const DOUBLE_TAP_LOCK_KEY = 'double_tap_lock';
 const BLOCK_SCREENSHOTS_KEY = 'block_screenshots';
-const AUTO_LOCK_TIMER_KEY = 'auto_lock_timer';
 
 export default function Settings() {
   const router = useRouter();
+  const { autoLockMinutes, updateAutoLockMinutes } = useSession();
   const { mode, setMode, colors, enhancedContrast, setEnhancedContrast, showBorders, setShowBorders, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
-  const [hasMasterPassword, setHasMasterPassword] = React.useState(false);
   const [showThemeOptions, setShowThemeOptions] = React.useState(false);
   const [showGeneralOptions, setShowGeneralOptions] = React.useState(false);
   const [showAppInfo, setShowAppInfo] = React.useState(false);
   const [doubleTapLock, setDoubleTapLock] = React.useState(false);
   const [blockScreenshots, setBlockScreenshots] = React.useState(true);
-  const [autoLockMinutes, setAutoLockMinutes] = React.useState<number>(0); // 0 = disabled
   const [showAutoLockOptions, setShowAutoLockOptions] = React.useState(false);
-  const [autofillAvailable, setAutofillAvailable] = React.useState(true); // Always show on Android
-  const [autofillEnabled, setAutofillEnabled] = React.useState(false);
   const [showAccountOptions, setShowAccountOptions] = React.useState(false);
 
   const footerColor = resolved === 'dark' ? '#D1D5DB' : '#9CA3AF';
@@ -37,33 +32,11 @@ export default function Settings() {
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
-        const mp = await SecureStore.getItemAsync(MASTER_PASSWORD_KEY);
-        setHasMasterPassword(!!mp);
-        
         const doubleTap = await SecureStore.getItemAsync(DOUBLE_TAP_LOCK_KEY);
         setDoubleTapLock(doubleTap === 'true');
         
         const blockSS = await SecureStore.getItemAsync(BLOCK_SCREENSHOTS_KEY);
         setBlockScreenshots(blockSS !== 'false');
-        
-        const autoLock = await SecureStore.getItemAsync(AUTO_LOCK_TIMER_KEY);
-        setAutoLockMinutes(autoLock ? parseInt(autoLock, 10) : 0);
-        
-        // Check autofill status
-        try {
-          const available = await autofillService.isAutofillAvailable();
-          console.log('Autofill available:', available);
-          // Always keep it true for UI visibility, actual functionality requires native build
-          // setAutofillAvailable(available);
-          if (available) {
-            const enabled = await autofillService.isAutofillEnabled();
-            console.log('Autofill enabled:', enabled);
-            setAutofillEnabled(enabled);
-          }
-        } catch (error) {
-          console.error('Error checking autofill:', error);
-          // Keep autofillAvailable as true to show the option
-        }
       })();
     }, [])
   );
@@ -106,13 +79,9 @@ export default function Settings() {
   };
 
   const setAutoLockTimer = async (minutes: number) => {
-    setAutoLockMinutes(minutes);
-    await SecureStore.setItemAsync(AUTO_LOCK_TIMER_KEY, minutes.toString());
+    await updateAutoLockMinutes(minutes);
     setShowAutoLockOptions(false);
     
-    setShowAutoLockOptions(false);
-    
-    // Force app reload to apply new timer
     showAlert({
       title: 'Auto-lock Updated',
       message: minutes === 0 
@@ -126,54 +95,6 @@ export default function Settings() {
   const getAutoLockLabel = () => {
     if (autoLockMinutes === 0) return 'Disabled';
     return `${autoLockMinutes} minute${autoLockMinutes > 1 ? 's' : ''}`;
-  };
-
-  const handleAutofillToggle = async () => {
-    try {
-      if (!autofillEnabled) {
-        // Open system settings to enable
-        const opened = await autofillService.openAutofillSettings();
-        if (opened) {
-          showAlert({
-            title: 'Enable Autofill',
-            message: 'Select VaultX from the list and enable it. Then return to the app.',
-            confirmText: 'OK',
-            onConfirm: () => {},
-          });
-        } else {
-          showAlert({
-            title: 'Not Available',
-            message: 'Autofill service is not available. Make sure you have built the app with the latest code.',
-            confirmText: 'OK',
-            onConfirm: () => {},
-          });
-        }
-      } else {
-        // Disable autofill
-        showAlert({
-          title: 'Disable Autofill?',
-          message: 'This will stop VaultX from suggesting passwords in other apps and browsers.',
-          cancelText: 'Cancel',
-          confirmText: 'Disable',
-          type: 'destructive',
-          onCancel: () => {},
-          onConfirm: async () => {
-            const success = await autofillService.disableAutofill();
-            if (success) {
-              setAutofillEnabled(false);
-            }
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Error toggling autofill:', error);
-      showAlert({
-        title: 'Error',
-        message: 'Could not toggle autofill. Make sure the app is built with the latest native code.',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-    }
   };
 
   const openGitHub = async () => {
@@ -296,31 +217,6 @@ export default function Settings() {
                   </TouchableOpacity>
                 ))}
               </View>
-            )}
-            
-            {autofillAvailable && (
-              <>
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                
-                <TouchableOpacity
-                  style={styles.optionItem}
-                  onPress={handleAutofillToggle}
-                >
-                  <Ionicons name="apps" size={20} color={colors.text} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.optionLabel, { color: colors.text }]}>System Autofill</Text>
-                    <Text style={[styles.optionSubtext, { color: colors.mutedText }]}>
-                      {autofillEnabled ? 'Fill passwords in apps & browsers' : 'Enable to autofill passwords'}
-                    </Text>
-                  </View>
-                  <View style={[styles.toggle, { backgroundColor: autofillEnabled ? colors.primary : colors.border }]}>
-                    <View style={[
-                      styles.toggleThumb,
-                      autofillEnabled ? styles.toggleThumbActive : null
-                    ]} />
-                  </View>
-                </TouchableOpacity>
-              </>
             )}
           </View>
         ) : null}
@@ -472,31 +368,6 @@ export default function Settings() {
             <Text style={[styles.menuSub, { color: colors.mutedText }]}>Restore from backup file</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={() => {
-            if (hasMasterPassword) {
-              router.push('/master-password-locked');
-            } else {
-              router.push('/master-password-intro');
-            }
-          }}
-        >
-          <View style={[styles.menuIcon, { backgroundColor: colors.primary }]}>
-            <Ionicons name="key" size={20} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.menuTitle, { color: colors.text }]}>Master Password</Text>
-            <Text style={[styles.menuSub, { color: colors.mutedText }]}>
-              {hasMasterPassword ? 'Already configured' : 'Generate strong passwords automatically'}
-            </Text>
-          </View>
-          <Ionicons 
-            name={hasMasterPassword ? 'checkmark-circle' : 'chevron-forward'} 
-            size={20} 
-            color={hasMasterPassword ? '#22c55e' : colors.mutedText} 
-          />
         </TouchableOpacity>
 
         <TouchableOpacity

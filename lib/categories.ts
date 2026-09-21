@@ -98,7 +98,11 @@ export const categorizeService = (serviceName: string): CategoryType => {
     if (category.id === 'other') continue;
     
     for (const keyword of category.keywords) {
-      if (service.includes(keyword)) {
+      if (keyword.length === 1) {
+        if (service === keyword || service.split(/[\s_-]+/).includes(keyword)) {
+          return category.id;
+        }
+      } else if (service.includes(keyword)) {
         return category.id;
       }
     }
