@@ -38,8 +38,33 @@ Builds:
     scandelete:
       - node_modules
 
+  - versionName: 1.4.0
+    versionCode: 249
+    commit: edcd644d9e7ef06ed44971eb9fb69cb231dbe1b0
+    subdir: android/app
+    sudo:
+      - apt-get update
+      - apt-get install -y npm
+    init:
+      - cd ../..
+      - npm install --legacy-peer-deps
+    gradle:
+      - yes
+    prebuild:
+      - cd ../..
+      - sed -i -e '1a "expo":{"autolinking":{"android":{"buildFromSource":[".*"]}}},' package.json
+      - sed -i '/jvmToolchain\|JavaVersion/s/17/21/' node_modules/@react-native/gradle-plugin/*/build.gradle.kts node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/JdkConfiguratorUtils.kt
+      - npx expo prebuild -p android --clean
+      - sed -i -e '/signingConfig /d' android/app/build.gradle
+    scanignore:
+      - node_modules/react-native/sdks/hermesc/linux64-bin/hermesc
+      - node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
+      - node_modules/expo-modules-autolinking/scripts/android/autolinking_implementation.gradle
+    scandelete:
+      - node_modules
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.3.4
-CurrentVersionCode: 248
+CurrentVersion: 1.4.0
+CurrentVersionCode: 249
 
