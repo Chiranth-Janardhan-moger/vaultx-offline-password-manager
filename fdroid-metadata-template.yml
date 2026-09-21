@@ -14,7 +14,7 @@ Repo: https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manage
 Builds:
   - versionName: 1.4.0
     versionCode: 249
-    commit: edcd644d9e7ef06ed44971eb9fb69cb231dbe1b0
+    commit: v1.4.0
     subdir: android/app
     sudo:
       - apt-get update
