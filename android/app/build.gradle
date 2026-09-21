@@ -100,7 +100,7 @@ android {
     splits {
         abi {
             reset()
-            enable true
+            enable gradle.startParameter.taskNames.any { it.contains("assemble") || it.contains("Assemble") } && !gradle.startParameter.taskNames.any { it.contains("bundle") || it.contains("Bundle") }
             universalApk true
             include "armeabi-v7a", "arm64-v8a"
         }
