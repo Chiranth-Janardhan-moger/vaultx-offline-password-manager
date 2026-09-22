@@ -31,7 +31,6 @@ Builds:
         package.json
       - sed -i '/jvmToolchain\|JavaVersion/s/17/21/' node_modules/@react-native/gradle-plugin/*/build.gradle.kts
         node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/JdkConfiguratorUtils.kt
-      - sed -i -e 's/"versionCode": 249/"versionCode": $$VERCODE$$/' app.json
       - npx expo prebuild -p android --clean
       - sed -i -e 's/versionCode 249/versionCode $$VERCODE$$/' android/app/build.gradle
       - sed -i -e '/signingConfig /d' android/app/build.gradle
@@ -66,7 +65,6 @@ Builds:
         package.json
       - sed -i '/jvmToolchain\|JavaVersion/s/17/21/' node_modules/@react-native/gradle-plugin/*/build.gradle.kts
         node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/JdkConfiguratorUtils.kt
-      - sed -i -e 's/"versionCode": 249/"versionCode": $$VERCODE$$/' app.json
       - npx expo prebuild -p android --clean
       - sed -i -e 's/versionCode 249/versionCode $$VERCODE$$/' android/app/build.gradle
       - sed -i -e '/signingConfig /d' android/app/build.gradle
@@ -101,7 +99,6 @@ Builds:
         package.json
       - sed -i '/jvmToolchain\|JavaVersion/s/17/21/' node_modules/@react-native/gradle-plugin/*/build.gradle.kts
         node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/JdkConfiguratorUtils.kt
-      - sed -i -e 's/"versionCode": 249/"versionCode": $$VERCODE$$/' app.json
       - npx expo prebuild -p android --clean
       - sed -i -e 's/versionCode 249/versionCode $$VERCODE$$/' android/app/build.gradle
       - sed -i -e '/signingConfig /d' android/app/build.gradle
@@ -136,7 +133,6 @@ Builds:
         package.json
       - sed -i '/jvmToolchain\|JavaVersion/s/17/21/' node_modules/@react-native/gradle-plugin/*/build.gradle.kts
         node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/JdkConfiguratorUtils.kt
-      - sed -i -e 's/"versionCode": 249/"versionCode": $$VERCODE$$/' app.json
       - npx expo prebuild -p android --clean
       - sed -i -e 's/versionCode 249/versionCode $$VERCODE$$/' android/app/build.gradle
       - sed -i -e '/signingConfig /d' android/app/build.gradle
