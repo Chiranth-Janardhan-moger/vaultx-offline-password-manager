@@ -41,6 +41,9 @@ Builds:
       - node_modules/@react-native-masked-view/masked-view/android/build.gradle
     scandelete:
       - node_modules
+    gradleprops:
+      - android.enableMinifyInReleaseBuilds=true
+      - android.enableShrinkResourcesInReleaseBuilds=true
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
