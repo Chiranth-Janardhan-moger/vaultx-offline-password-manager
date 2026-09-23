@@ -1,7 +1,7 @@
 
 <div align="center">
 
-# VaultX — Secure Open Source Password Manager
+# VaultX - Secure Open Source Password Manager
 
 **Military-grade encryption • Open Source Password Manager • Zero cloud dependency**
 
