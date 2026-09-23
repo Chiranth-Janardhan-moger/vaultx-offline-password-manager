@@ -4,11 +4,20 @@
 
 **Military-grade encryption • Open Source Password Manager • Zero cloud dependency**
 
-[![React Native](https://img.shields.io/badge/React%20Native-0.74-blue.svg)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-52-black.svg)](https://expo.dev/)
+[![F-Droid](https://img.shields.io/f-droid/v/com.chiranth7.vaultx?logo=f-droid&logoColor=white&color=blue)](https://f-droid.org/packages/com.chiranth7.vaultx/)
+[![React Native](https://img.shields.io/badge/React%20Native-0.86-blue.svg)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-56-black.svg)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-[Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Security](#-security) • [Build](#-build)
+<br><br>
+
+<a href="https://f-droid.org/packages/com.chiranth7.vaultx/">
+  <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">
+</a>
+
+<br><br>
+
+[Download](#download) • [Features](#features) • [Screenshots](#screenshots) • [Installation](#installation) • [Security](#security) • [Build](#build-apk)
 
 </div>
 
@@ -28,6 +37,29 @@ VaultX is a secure, **open source password manager** that is fully offline and p
 -  **Beautiful UI** — Modern, smooth animations, dark mode support
 -  **Smart Categories** — Auto-organize passwords by service type
 -  **Master Password System** — Generate consistent passwords deterministically
+---
+
+## Download
+
+VaultX is available on F-Droid and GitHub Releases for Android.
+
+<div align="center">
+
+<a href="https://f-droid.org/packages/com.chiranth7.vaultx/">
+  <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="75">
+</a>
+
+<p>
+  <a href="https://f-droid.org/packages/com.chiranth7.vaultx/"><strong>Get it on F-Droid</strong></a> &bull; 
+  <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases/latest"><strong>Download GitHub Release APK</strong></a>
+</p>
+
+</div>
+
+### Installation Channels
+
+- **F-Droid Store (Recommended)**: Install via the F-Droid client app or directly download from the [VaultX F-Droid Package Page](https://f-droid.org/packages/com.chiranth7.vaultx/). Automatic updates are delivered through the F-Droid repository.
+- **GitHub Releases**: Download standalone signed universal or per-architecture APKs (`arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`) from [GitHub Releases](https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases/latest).
 
 ---
 
@@ -349,7 +381,7 @@ If you find VaultX useful, please consider:
 
 VaultX — Your passwords, your device, your control.
 
-[ Back to Top](#-vaultx--secure-offline-password-manager)
+[Back to Top](#vaultx--secure-open-source-password-manager-offline-first)
 
 </div>
 
