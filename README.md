@@ -1,6 +1,7 @@
-# VaultX — Secure Open Source Password Manager (Offline-first)
 
 <div align="center">
+
+# VaultX — Secure Open Source Password Manager
 
 **Military-grade encryption • Open Source Password Manager • Zero cloud dependency**
 
@@ -9,13 +10,9 @@
 [![Expo](https://img.shields.io/badge/Expo-56-black.svg)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-<br><br>
-
 <a href="https://f-droid.org/packages/com.chiranth7.vaultx/">
   <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">
 </a>
-
-<br><br>
 
 [Download](#download) • [Features](#features) • [Screenshots](#screenshots) • [Installation](#installation) • [Security](#security) • [Build](#build-apk)
 
