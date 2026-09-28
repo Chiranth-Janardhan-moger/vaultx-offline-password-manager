@@ -22,7 +22,7 @@
     "expo": "^56.0.12",
     "expo-clipboard": "~56.0.4",
     "expo-constants": "~56.0.18",
-    "expo-crypto": "~56.0.4",
+    "expo-crypto": "~57.0.3",
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.8",
     "expo-font": "~56.0.7",
