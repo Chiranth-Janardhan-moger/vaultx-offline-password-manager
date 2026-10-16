@@ -51,37 +51,41 @@ jobs:
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@3f131e8634966bd73d06cc69884922b02e6faf92 # v4.3.0
 
-      - name: Decode Android Keystore
+      - name: Setup Keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
-        # Mark step as sensitive to prevent exposing file creation details
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          chmod +x android/gradlew
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "${GITHUB_WORKSPACE}/release.keystore"
+          else
+            keytool -genkey -v -keystore "${GITHUB_WORKSPACE}/release.keystore" -alias vaultx -keyalg RSA -keysize 2048 -validity 10000 -storepass vaultx123 -keypass vaultx123 -dname "CN=VaultX, OU=Mobile, O=Chiranth, L=Bangalore, ST=Karnataka, C=IN"
+          fi
 
       - name: Build Release APK & AAB
         run: |
           cd android
-          ./gradlew assembleRelease
-          ./gradlew bundleRelease
+          ./gradlew assembleRelease --no-configuration-cache
+          ./gradlew bundleRelease --no-configuration-cache
         env:
-          ANDROID_KEYSTORE_FILE: release.keystore
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'vaultx123' }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'vaultx' }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'vaultx123' }}
 
       - name: Clean Up Keystore File (Always Run)
         if: always()
         run: |
-          rm -f android/app/release.keystore
+          rm -f "${GITHUB_WORKSPACE}/release.keystore"
           echo "Temporary keystore file securely removed."
 
-      - name: Rename Build Artifacts
+      - name: Prepare Release Artifacts
         run: |
           mkdir -p build-assets
           if [ -f android/app/build/outputs/apk/release/app-universal-release.apk ]; then
             cp android/app/build/outputs/apk/release/app-universal-release.apk build-assets/vaultx-${{ env.RELEASE_TAG }}.apk
+            cp android/app/build/outputs/apk/release/app-universal-release.apk build-assets/app-release.apk
           elif [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
             cp android/app/build/outputs/apk/release/app-release.apk build-assets/vaultx-${{ env.RELEASE_TAG }}.apk
+            cp android/app/build/outputs/apk/release/app-release.apk build-assets/app-release.apk
           fi
           if [ -f android/app/build/outputs/apk/release/app-arm64-v8a-release.apk ]; then
             cp android/app/build/outputs/apk/release/app-arm64-v8a-release.apk build-assets/vaultx-${{ env.RELEASE_TAG }}-arm64-v8a.apk
@@ -96,12 +100,13 @@ jobs:
       - name: Generate SHA256 Checksums
         run: |
           cd build-assets
+          sha256sum *.apk *.aab > checksums-sha256.txt
           for f in *.apk *.aab; do
             if [ -f "$f" ]; then
               sha256sum "$f" > "${f}-sha256.txt"
             fi
           done
-          cat *-sha256.txt
+          cat checksums-sha256.txt
 
       - name: Upload Artifacts to GitHub Run
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
@@ -120,13 +125,21 @@ jobs:
             
             This release was compiled and signed automatically via our secure GitHub Actions CD pipeline.
             
+            ### Included Binaries
+            - `app-release.apk`: Universal release APK for direct install and F-Droid.
+            - `vaultx-${{ env.RELEASE_TAG }}.apk`: Versioned universal release APK.
+            - `vaultx-${{ env.RELEASE_TAG }}-arm64-v8a.apk`: Optimized for 64-bit ARM devices.
+            - `vaultx-${{ env.RELEASE_TAG }}-armeabi-v7a.apk`: Optimized for 32-bit ARM devices.
+            - `vaultx-${{ env.RELEASE_TAG }}.aab`: Android App Bundle.
+            
             ### Checksums for Verification
-            Refer to the attached `*-sha256.txt` files to verify downloaded assets locally.
+            Refer to the attached `checksums-sha256.txt` file to verify downloaded assets locally.
           files: build-assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Release to GitLab
+        if: env.GITLAB_PAT != ''
         run: |
           python scripts/gitlab_release_upload.py build-assets/*
         env:

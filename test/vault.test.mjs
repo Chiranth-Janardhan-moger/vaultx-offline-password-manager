@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import CryptoJS from 'crypto-js';
+import '../lib/crypto-shim.ts';
 import {
   generateSaltHex,
   hashPassword,
@@ -166,3 +168,22 @@ test('Vault - Identity Cards Saving and Retrieval', async () => {
   assert.strictEqual(decrypted.cards[0].fields.length, 3);
   assert.strictEqual(decrypted.cards[0].folder, 'Government IDs');
 });
+
+test('Backup - Encrypt and Decrypt Backup with Passphrase (WordArray.random salt generation)', () => {
+  const backupData = {
+    passwords: [{ service: 'GitHub', username: 'user', password: 'secretPassword123' }],
+    cards: [{ id: 'card-1', title: 'Test Card' }],
+  };
+  const backupPassword = 'BackupPassphrase2026!';
+
+  // Encrypt with passphrase (calls CryptoJS.lib.WordArray.random for salt)
+  const encrypted = CryptoJS.AES.encrypt(JSON.stringify(backupData), backupPassword).toString();
+  assert.ok(typeof encrypted === 'string');
+  assert.ok(encrypted.length > 0);
+
+  // Decrypt with passphrase
+  const decryptedStr = CryptoJS.AES.decrypt(encrypted, backupPassword).toString(CryptoJS.enc.Utf8);
+  const decryptedData = JSON.parse(decryptedStr);
+  assert.deepStrictEqual(decryptedData, backupData);
+});
+

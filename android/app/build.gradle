@@ -92,8 +92,8 @@ android {
         applicationId 'com.chiranth7.vaultx'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 249
-        versionName "1.4.0"
+        versionCode 250
+        versionName "1.4.1"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -113,11 +113,22 @@ android {
             keyPassword 'android'
         }
         release {
-            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+            def customKeystore = System.getenv("KEYSTORE_PATH")
+            if (customKeystore && file(customKeystore).exists()) {
+                storeFile file(customKeystore)
+                storePassword System.getenv("STORE_PASSWORD") ?: "vaultx123"
+                keyAlias System.getenv("KEY_ALIAS") ?: "vaultx"
+                keyPassword System.getenv("KEY_PASSWORD") ?: "vaultx123"
+            } else if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE') && file(MYAPP_UPLOAD_STORE_FILE).exists()) {
                 storeFile file(MYAPP_UPLOAD_STORE_FILE)
                 storePassword MYAPP_UPLOAD_STORE_PASSWORD
                 keyAlias MYAPP_UPLOAD_KEY_ALIAS
                 keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+            } else if (file('release.keystore').exists()) {
+                storeFile file('release.keystore')
+                storePassword System.getenv("STORE_PASSWORD") ?: "vaultx123"
+                keyAlias System.getenv("KEY_ALIAS") ?: "vaultx"
+                keyPassword System.getenv("KEY_PASSWORD") ?: "vaultx123"
             } else {
                 storeFile file('debug.keystore')
                 storePassword 'android'

@@ -44,8 +44,17 @@ if (/^\d+\.\d+\.\d+$/.test(arg)) {
   }
   
   newVersion = versionParts.join('.');
-  console.log(`✅ Version bumped (${arg}): ${currentVersion} → ${newVersion}`);
+  if (appJson.expo.android && typeof appJson.expo.android.versionCode === 'number') {
+    appJson.expo.android.versionCode++;
+  }
+  console.log(`Version bumped (${arg}): ${currentVersion} -> ${newVersion} (versionCode: ${appJson.expo.android?.versionCode})`);
 }
+
+// Update package.json
+const pkgJsonPath = path.join(__dirname, '../package.json');
+const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+pkgJson.version = newVersion;
+fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + '\n');
 
 // Update app.json
 appJson.expo.version = newVersion;
@@ -64,6 +73,7 @@ if (appJson.expo.android && appJson.expo.android.versionCode) {
 }
 fs.writeFileSync(buildGradlePath, updatedBuildGradle);
 
+console.log(`   - package.json updated`);
 console.log(`   - app.json updated`);
 console.log(`   - android/app/build.gradle updated`);
 
