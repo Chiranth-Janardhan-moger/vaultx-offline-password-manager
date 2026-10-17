@@ -56,8 +56,16 @@ jobs:
           chmod +x android/gradlew
           if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "${GITHUB_WORKSPACE}/release.keystore"
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/release.keystore" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD || 'vaultx123' }}" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS || 'vaultx' }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD || 'vaultx123' }}" >> $GITHUB_ENV
           else
-            keytool -genkey -v -keystore "${GITHUB_WORKSPACE}/release.keystore" -alias vaultx -keyalg RSA -keysize 2048 -validity 10000 -storepass vaultx123 -keypass vaultx123 -dname "CN=VaultX, OU=Mobile, O=Chiranth, L=Bangalore, ST=Karnataka, C=IN"
+            echo "Using repository debug.keystore for consistent signature across releases"
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/android/app/debug.keystore" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=android" >> $GITHUB_ENV
+            echo "KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
           fi
 
       - name: Build Release APK & AAB
@@ -66,16 +74,18 @@ jobs:
           ./gradlew assembleRelease --no-configuration-cache
           ./gradlew bundleRelease --no-configuration-cache
         env:
-          KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'vaultx123' }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'vaultx' }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'vaultx123' }}
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          STORE_PASSWORD: ${{ env.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ env.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
 
       - name: Clean Up Keystore File (Always Run)
         if: always()
         run: |
-          rm -f "${GITHUB_WORKSPACE}/release.keystore"
-          echo "Temporary keystore file securely removed."
+          if [ -f "${GITHUB_WORKSPACE}/release.keystore" ]; then
+            rm -f "${GITHUB_WORKSPACE}/release.keystore"
+            echo "Temporary release.keystore file securely removed."
+          fi
 
       - name: Prepare Release Artifacts
         run: |
