@@ -77,6 +77,24 @@ export default function EditPassword() {
     setOtherPins(otherPins.filter((_, i) => i !== idx));
   };
 
+  const moveOtherPinUp = (idx: number) => {
+    if (idx <= 0) return;
+    const updated = [...otherPins];
+    const temp = updated[idx];
+    updated[idx] = updated[idx - 1];
+    updated[idx - 1] = temp;
+    setOtherPins(updated);
+  };
+
+  const moveOtherPinDown = (idx: number) => {
+    if (idx >= otherPins.length - 1) return;
+    const updated = [...otherPins];
+    const temp = updated[idx];
+    updated[idx] = updated[idx + 1];
+    updated[idx + 1] = temp;
+    setOtherPins(updated);
+  };
+
   const updateOtherPinLabel = (idx: number, label: string) => {
     const updated = [...otherPins];
     updated[idx].label = label;
@@ -387,12 +405,38 @@ export default function EditPassword() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.removeBtn, { backgroundColor: '#ef4444' }]}
-                    onPress={() => removeOtherPin(idx)}
-                  >
-                    <Ionicons name="trash" size={16} color="#fff" />
-                  </TouchableOpacity>
+                  <View style={styles.pinActionsCol}>
+                    {otherPins.length > 1 && (
+                      <>
+                        <TouchableOpacity
+                          disabled={idx === 0}
+                          onPress={() => moveOtherPinUp(idx)}
+                          style={[
+                            styles.orderBtn,
+                            { backgroundColor: colors.inputBg, opacity: idx === 0 ? 0.3 : 1 }
+                          ]}
+                        >
+                          <Ionicons name="chevron-up" size={16} color={colors.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          disabled={idx === otherPins.length - 1}
+                          onPress={() => moveOtherPinDown(idx)}
+                          style={[
+                            styles.orderBtn,
+                            { backgroundColor: colors.inputBg, opacity: idx === otherPins.length - 1 ? 0.3 : 1 }
+                          ]}
+                        >
+                          <Ionicons name="chevron-down" size={16} color={colors.text} />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.removeBtn, { backgroundColor: '#ef4444' }]}
+                      onPress={() => removeOtherPin(idx)}
+                    >
+                      <Ionicons name="trash" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
 
@@ -436,8 +480,21 @@ const styles = StyleSheet.create({
   pinToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 12 },
   pinToggleText: { flex: 1, fontSize: 14, fontWeight: '700' },
   pinSection: { marginTop: 12 },
-  otherPinRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  removeBtn: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 32 },
+  otherPinRow: { flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' },
+  pinActionsCol: {
+    flexDirection: 'column',
+    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderBtn: {
+    width: 36,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeBtn: { width: 36, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   addPinBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 12, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', marginTop: 12 },
   addPinText: { fontSize: 14, fontWeight: '700' },
   suggestionChip: {

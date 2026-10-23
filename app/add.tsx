@@ -71,6 +71,24 @@ export default function AddPassword() {
     setOtherPins(otherPins.filter((_, i) => i !== index));
   };
 
+  const moveOtherPinUp = (index: number) => {
+    if (index <= 0) return;
+    const updated = [...otherPins];
+    const temp = updated[index];
+    updated[index] = updated[index - 1];
+    updated[index - 1] = temp;
+    setOtherPins(updated);
+  };
+
+  const moveOtherPinDown = (index: number) => {
+    if (index >= otherPins.length - 1) return;
+    const updated = [...otherPins];
+    const temp = updated[index];
+    updated[index] = updated[index + 1];
+    updated[index + 1] = temp;
+    setOtherPins(updated);
+  };
+
   const updateOtherPinLabel = (index: number, label: string) => {
     const updated = [...otherPins];
     updated[index].label = label;
@@ -424,12 +442,38 @@ export default function AddPassword() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => removeOtherPin(index)}
-                    style={[styles.removeBtn, { backgroundColor: colors.inputBg }]}
-                  >
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                  </TouchableOpacity>
+                  <View style={styles.pinActionsCol}>
+                    {otherPins.length > 1 && (
+                      <>
+                        <TouchableOpacity
+                          disabled={index === 0}
+                          onPress={() => moveOtherPinUp(index)}
+                          style={[
+                            styles.orderBtn,
+                            { backgroundColor: colors.inputBg, opacity: index === 0 ? 0.3 : 1 }
+                          ]}
+                        >
+                          <Ionicons name="chevron-up" size={16} color={colors.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          disabled={index === otherPins.length - 1}
+                          onPress={() => moveOtherPinDown(index)}
+                          style={[
+                            styles.orderBtn,
+                            { backgroundColor: colors.inputBg, opacity: index === otherPins.length - 1 ? 0.3 : 1 }
+                          ]}
+                        >
+                          <Ionicons name="chevron-down" size={16} color={colors.text} />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                    <TouchableOpacity
+                      onPress={() => removeOtherPin(index)}
+                      style={[styles.removeBtn, { backgroundColor: colors.inputBg }]}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
 
@@ -504,15 +548,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 12,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
-  removeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  pinActionsCol: {
+    flexDirection: 'column',
+    gap: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+  },
+  orderBtn: {
+    width: 36,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeBtn: {
+    width: 36,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addPinBtn: {
     flexDirection: 'row',

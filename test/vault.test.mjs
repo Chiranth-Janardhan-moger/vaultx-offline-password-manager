@@ -222,3 +222,31 @@ test("Vault - Custom Fields / Additional PINs with Text and Numeric Values", asy
   assert.strictEqual(parsedFields[2].label, "App PIN");
   assert.strictEqual(parsedFields[2].pin, "123456");
 });
+
+test("Vault - Custom Fields Reordering Up and Down", async () => {
+  const fields = [
+    { label: "First", pin: "1" },
+    { label: "Second", pin: "2" },
+    { label: "Third", pin: "3" },
+  ];
+
+  // Move "Third" up (swap index 2 with 1)
+  const movedUp = [...fields];
+  const temp1 = movedUp[2];
+  movedUp[2] = movedUp[1];
+  movedUp[1] = temp1;
+
+  assert.strictEqual(movedUp[0].label, "First");
+  assert.strictEqual(movedUp[1].label, "Third");
+  assert.strictEqual(movedUp[2].label, "Second");
+
+  // Move "First" down (swap index 0 with 1)
+  const movedDown = [...movedUp];
+  const temp2 = movedDown[0];
+  movedDown[0] = movedDown[1];
+  movedDown[1] = temp2;
+
+  assert.strictEqual(movedDown[0].label, "Third");
+  assert.strictEqual(movedDown[1].label, "First");
+  assert.strictEqual(movedDown[2].label, "Second");
+});
