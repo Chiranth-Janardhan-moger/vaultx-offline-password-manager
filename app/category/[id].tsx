@@ -495,7 +495,7 @@ export default function CategoryDetail() {
                         </View>
                       ) : null}
 
-                      {/* Other PINs */}
+                      {/* Custom Fields / Additional PINs */}
                       {item.otherPin ? (() => {
                         try {
                           const otherPins = JSON.parse(item.otherPin) as Array<{label: string; pin: string}>;
@@ -506,7 +506,7 @@ export default function CategoryDetail() {
                                 <Text style={[styles.detailText, { color: colors.text }]} numberOfLines={1}>
                                   {showPasswordIndex === item.globalIndex 
                                     ? pin.pin 
-                                    : '●'.repeat(pin.pin.length)}
+                                    : '●'.repeat(Math.min(pin.pin.length, 12))}
                                 </Text>
                                 <TouchableOpacity onPress={() => copyToClipboard(pin.pin, pin.label)}>
                                   <Ionicons name="copy-outline" size={18} color={colors.primary} />

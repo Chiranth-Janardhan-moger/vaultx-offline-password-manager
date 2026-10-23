@@ -187,3 +187,38 @@ test('Backup - Encrypt and Decrypt Backup with Passphrase (WordArray.random salt
   assert.deepStrictEqual(decryptedData, backupData);
 });
 
+test("Vault - Custom Fields / Additional PINs with Text and Numeric Values", async () => {
+  const phone = "9876543210";
+  const password = "MasterPassword2026!";
+  const vaultKey = generateSaltHex(32);
+
+  const vault = await createNewVault(phone, password, vaultKey);
+
+  const customFields = [
+    { label: "Security Question", pin: "Blueberry Muffin" },
+    { label: "Client ID", pin: "CL-9876-XYZ" },
+    { label: "App PIN", pin: "123456" }
+  ];
+
+  vault.passwords.push({
+    service: "Corporate Portal",
+    username: "employee@company.com",
+    password: "Password123!",
+    otherPin: JSON.stringify(customFields),
+  });
+
+  await saveVault(vault, vaultKey);
+
+  const decrypted = await decryptVaultWithKey(vaultKey);
+  assert.strictEqual(decrypted.passwords.length, 1);
+  assert.ok(decrypted.passwords[0].otherPin);
+
+  const parsedFields = JSON.parse(decrypted.passwords[0].otherPin);
+  assert.strictEqual(parsedFields.length, 3);
+  assert.strictEqual(parsedFields[0].label, "Security Question");
+  assert.strictEqual(parsedFields[0].pin, "Blueberry Muffin");
+  assert.strictEqual(parsedFields[1].label, "Client ID");
+  assert.strictEqual(parsedFields[1].pin, "CL-9876-XYZ");
+  assert.strictEqual(parsedFields[2].label, "App PIN");
+  assert.strictEqual(parsedFields[2].pin, "123456");
+});

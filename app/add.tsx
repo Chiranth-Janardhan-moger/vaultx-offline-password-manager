@@ -79,7 +79,7 @@ export default function AddPassword() {
 
   const updateOtherPinValue = (index: number, pin: string) => {
     const updated = [...otherPins];
-    updated[index].pin = pin.replace(/[^0-9]/g, '');
+    updated[index].pin = pin;
     setOtherPins(updated);
   };
 
@@ -124,7 +124,7 @@ export default function AddPassword() {
     if (!pw && !hasAnyPin) {
       showAlert({
         title: 'Required',
-        message: 'Please provide either a password or at least one PIN',
+        message: 'Please provide either a password or at least one PIN / custom field',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -224,7 +224,7 @@ export default function AddPassword() {
             autoCorrect={false}
           />
 
-          <Text style={[styles.label, { color: colors.mutedText }]}>Password {loginPin || transactionPin || otherPins.length > 0 ? '(Optional if PINs provided)' : ''}</Text>
+          <Text style={[styles.label, { color: colors.mutedText }]}>Password {loginPin || transactionPin || otherPins.length > 0 ? '(Optional if PIN/custom field provided)' : ''}</Text>
           <View style={styles.inputWrap}>
             <TextInput
               style={[...inputStyle, { paddingRight: 44 }]}
@@ -326,7 +326,7 @@ export default function AddPassword() {
           >
             <Ionicons name="keypad" size={20} color={colors.primary} />
             <Text style={[styles.pinToggleText, { color: colors.text }]}>
-              {showPinSection ? 'Hide' : 'Add'} PINs (Banking, UPI, etc.)
+              {showPinSection ? 'Hide' : 'Add'} PINs & Custom Fields
             </Text>
             <Ionicons 
               name={showPinSection ? 'chevron-up' : 'chevron-down'} 
@@ -338,10 +338,10 @@ export default function AddPassword() {
           {showPinSection ? (
             <View style={styles.pinSection}>
               <Text style={[styles.pinSectionTitle, { color: colors.text }]}>
-                Store your app PINs securely
+                Store your PINs & custom fields securely
               </Text>
               <Text style={[styles.pinSectionSub, { color: colors.mutedText }]}>
-                Never forget your banking, UPI, or transaction PINs again
+                Never forget your banking PINs, security answers, or custom keys again
               </Text>
 
               {/* Login PIN */}
@@ -391,14 +391,14 @@ export default function AddPassword() {
               </View>
 
               {/* Other PIN with custom label */}
-              <Text style={[styles.label, { color: colors.mutedText, marginTop: 12 }]}>Additional PINs</Text>
+              <Text style={[styles.label, { color: colors.mutedText, marginTop: 12 }]}>Custom Fields / Additional PINs</Text>
               
               {otherPins.map((otherPin, index) => (
                 <View key={index} style={styles.otherPinItem}>
                   <View style={{ flex: 1 }}>
                     <TextInput
                       style={[inputStyle, { marginBottom: 8 }]}
-                      placeholder="PIN Label (e.g. Booking PIN)"
+                      placeholder="Field Label (e.g. Security Question, Client ID, PIN)"
                       placeholderTextColor={colors.mutedText}
                       value={otherPin.label}
                       onChangeText={(text) => updateOtherPinLabel(index, text)}
@@ -406,11 +406,11 @@ export default function AddPassword() {
                     <View style={styles.inputWrap}>
                       <TextInput
                         style={[...inputStyle, { paddingRight: 44 }]}
-                        placeholder="Enter PIN"
+                        placeholder="Field Value"
                         placeholderTextColor={colors.mutedText}
                         secureTextEntry={!otherPin.show}
-                        keyboardType="number-pad"
-                        maxLength={6}
+                        autoCapitalize="none"
+                        autoCorrect={false}
                         autoComplete="off"
                         textContentType="none"
                         value={otherPin.pin}
@@ -438,7 +438,7 @@ export default function AddPassword() {
                 onPress={addOtherPin}
               >
                 <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-                <Text style={[styles.addPinText, { color: colors.primary }]}>Add Another PIN</Text>
+                <Text style={[styles.addPinText, { color: colors.primary }]}>Add Custom Field / PIN</Text>
               </TouchableOpacity>
             </View>
           ) : null}

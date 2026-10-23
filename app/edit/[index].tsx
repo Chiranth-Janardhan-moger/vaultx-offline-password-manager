@@ -121,7 +121,7 @@ export default function EditPassword() {
     if (!pw && !hasAnyPin) {
       showAlert({
         title: 'Required',
-        message: 'Password or at least one PIN is required',
+        message: 'Password or at least one PIN / custom field is required',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -223,7 +223,7 @@ export default function EditPassword() {
             autoCorrect={false}
           />
 
-          <Text style={[styles.label, { color: colors.mutedText }]}>Password {loginPin || transactionPin || otherPins.length > 0 ? '(Optional if PINs provided)' : ''}</Text>
+          <Text style={[styles.label, { color: colors.mutedText }]}>Password {loginPin || transactionPin || otherPins.length > 0 ? '(Optional if PIN/custom field provided)' : ''}</Text>
           <View style={styles.inputWrap}>
             <TextInput
               style={[...inputStyle, { paddingRight: 44 }]}
@@ -320,7 +320,7 @@ export default function EditPassword() {
           >
             <Ionicons name="keypad" size={18} color={colors.primary} />
             <Text style={[styles.pinToggleText, { color: colors.text }]}>
-              {showPinSection ? 'Hide' : 'Add'} PINs (Banking/UPI)
+              {showPinSection ? 'Hide' : 'Add'} PINs & Custom Fields
             </Text>
             <Ionicons name={showPinSection ? 'chevron-up' : 'chevron-down'} size={18} color={colors.mutedText} />
           </TouchableOpacity>
@@ -362,22 +362,23 @@ export default function EditPassword() {
               {otherPins.map((pin, idx) => (
                 <View key={idx} style={styles.otherPinRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.label, { color: colors.mutedText }]}>PIN Label</Text>
+                    <Text style={[styles.label, { color: colors.mutedText }]}>Field Label</Text>
                     <TextInput
                       style={inputStyle}
-                      placeholder="e.g. MPIN, ATM PIN"
+                      placeholder="e.g. Security Question, Client ID, PIN"
                       placeholderTextColor={colors.mutedText}
                       value={pin.label}
                       onChangeText={(text) => updateOtherPinLabel(idx, text)}
                     />
-                    <Text style={[styles.label, { color: colors.mutedText }]}>PIN Value</Text>
+                    <Text style={[styles.label, { color: colors.mutedText }]}>Field Value</Text>
                     <View style={styles.inputWrap}>
                       <TextInput
                         style={[...inputStyle, { paddingRight: 44 }]}
-                        placeholder="Enter PIN"
+                        placeholder="Field Value"
                         placeholderTextColor={colors.mutedText}
                         secureTextEntry={!pin.show}
-                        keyboardType="numeric"
+                        autoCapitalize="none"
+                        autoCorrect={false}
                         value={pin.pin}
                         onChangeText={(text) => updateOtherPinValue(idx, text)}
                       />
@@ -400,7 +401,7 @@ export default function EditPassword() {
                 onPress={addOtherPin}
               >
                 <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                <Text style={[styles.addPinText, { color: colors.primary }]}>Add Another PIN</Text>
+                <Text style={[styles.addPinText, { color: colors.primary }]}>Add Custom Field / PIN</Text>
               </TouchableOpacity>
             </View>
           ) : null}

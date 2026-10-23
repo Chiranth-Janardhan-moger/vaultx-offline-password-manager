@@ -11,7 +11,7 @@ export type PasswordItem = {
   category?: CategoryType;
   loginPin?: string;
   transactionPin?: string;
-  otherPin?: string; // JSON string of array: [{label: string, pin: string}]
+  otherPin?: string; // JSON string of array: [{label: string, pin: string}] (custom fields / additional PINs)
   createdAt?: number; // Unix timestamp
   modifiedAt?: number; // Unix timestamp
   isFavorite?: boolean; // Star/pin for quick access
