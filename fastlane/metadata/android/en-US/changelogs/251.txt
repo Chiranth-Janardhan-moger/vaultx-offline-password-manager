@@ -1,0 +1,5 @@
+Version 1.4.2:
+• Added support for alphanumeric custom fields and secret entry values
+• Added up and down reordering controls to rearrange custom fields in add and edit views
+• Improved card layouts with responsive clamp limits for long custom field values
+• Maintained 100% backward compatibility with existing encrypted vaults and backups
