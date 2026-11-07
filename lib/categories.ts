@@ -20,14 +20,14 @@ export interface Category {
 export const categories: Category[] = [
   {
     id: 'google',
-    name: 'Google Services',
+    name: 'Google',
     icon: 'logo-google',
     gradient: ['#4285F4', '#DB4437'],
     keywords: ['google', 'gmail', 'drive', 'youtube', 'photos', 'maps', 'chrome', 'play','playstore'],
   },
   {
     id: 'banking',
-    name: 'Banking & Finance',
+    name: 'Banking',
     icon: 'card',
     gradient: ['#10b981', '#059669'],
     keywords: [
@@ -49,7 +49,7 @@ export const categories: Category[] = [
   },
   {
     id: 'work',
-    name: 'Work & Productivity',
+    name: 'Work',
     icon: 'briefcase',
     gradient: ['#f59e0b', '#d97706'],
     keywords: [
@@ -91,11 +91,34 @@ export const categories: Category[] = [
   },
 ];
 
-export const categorizeService = (serviceName: string): CategoryType => {
+export const DEFAULT_DELETE_CATEGORY_KEY = 'default_delete_category';
+export const DEFAULT_DELETE_CATEGORY: CategoryType = 'google';
+
+export const getEffectiveCategories = (
+  deletedCategories?: string[],
+  categoryOverrides?: { [categoryId: string]: string }
+): Category[] => {
+  const deleted = deletedCategories || [];
+  const overrides = categoryOverrides || {};
+  return categories
+    .filter((cat) => !deleted.includes(cat.id))
+    .map((cat) => ({
+      ...cat,
+      name: overrides[cat.id] || cat.name,
+    }));
+};
+
+export const categorizeService = (
+  serviceName: string,
+  deletedCategories?: string[],
+  fallbackCategory: CategoryType = 'google'
+): CategoryType => {
   const service = serviceName.toLowerCase().trim();
+  const deleted = deletedCategories || [];
   
   for (const category of categories) {
     if (category.id === 'other') continue;
+    if (deleted.includes(category.id)) continue;
     
     for (const keyword of category.keywords) {
       if (keyword.length === 1) {
@@ -108,9 +131,19 @@ export const categorizeService = (serviceName: string): CategoryType => {
     }
   }
   
+  if (deleted.includes('other')) {
+    return fallbackCategory;
+  }
   return 'other';
 };
 
-export const getCategoryById = (id: CategoryType): Category => {
-  return categories.find(c => c.id === id) || categories[categories.length - 1];
+export const getCategoryById = (
+  id: string,
+  categoryOverrides?: { [categoryId: string]: string }
+): Category => {
+  const base = categories.find((c) => c.id === id) || categories[categories.length - 1];
+  if (categoryOverrides && categoryOverrides[base.id]) {
+    return { ...base, name: categoryOverrides[base.id] };
+  }
+  return base;
 };

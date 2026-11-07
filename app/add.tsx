@@ -1,20 +1,29 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
+import SwipeToGenerate from '@/components/SwipeToGenerate';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { categorizeService } from '@/lib/categories';
-import { checkPasswordStrength, getStrengthLabel } from '@/lib/password-strength';
+import { categories, categorizeService, getEffectiveCategories, CategoryType } from '@/lib/categories';
+import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '@/lib/password-strength';
 import { normalizeServiceName } from '@/lib/service-icons';
-import { PasswordItem, saveVault } from '@/lib/vault';
+import { PasswordItem, saveVault, getEffectiveWorkspaces, type VaultData } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function AddPassword() {
   const router = useRouter();
-  const { unlocked, vault, vaultKey, setVault } = useSession();
-  const { colors } = useTheme();
+  const { unlocked, vault, vaultKey, setVault, activeWorkspace } = useSession();
+  const { colors, resolved } = useTheme();
+
+  // Dull / light-gray card tokens for dialogs
+  const dullCardBg = resolved === 'dark' ? '#1c2027' : '#f1f3f6';
+  const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#d8dce2';
+  const dullInputBg = resolved === 'dark' ? '#13161c' : '#ffffff';
+  const dullInputBorder = resolved === 'dark' ? '#2e3440' : '#cfd4dc';
+  const dullCancelBg = resolved === 'dark' ? '#252a34' : '#e4e7eb';
+  const dullCancelBorder = resolved === 'dark' ? '#333a48' : '#d1d6de';
   const { showAlert, AlertComponent } = useCustomAlert();
   const params = useLocalSearchParams();
 
@@ -31,20 +40,116 @@ export default function AddPassword() {
   const [showPinSection, setShowPinSection] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [folder, setFolder] = React.useState('');
-  const [totpSecret, setTotpSecret] = React.useState('');
+  const [selectedCategory, setSelectedCategory] = React.useState<CategoryType | null>(null);
+  const userManuallySelectedTagRef = React.useRef(false);
+  const [workspace, setWorkspace] = React.useState<string>(
+    (params.workspace as string) || activeWorkspace || 'Personal'
+  );
+  const [showAddTagModal, setShowAddTagModal] = React.useState(false);
+  const [newTagName, setNewTagName] = React.useState('');
 
-  const folderSuggestions = React.useMemo(() => {
-    if (!vault) return [];
-    const pFolders = vault.passwords.map(p => p.folder).filter(Boolean);
-    const cFolders = (vault.cards || []).map(c => c.folder).filter(Boolean);
-    return Array.from(new Set([...pFolders, ...cFolders])) as string[];
+  const effectiveWorkspaces = React.useMemo(() => {
+    return getEffectiveWorkspaces(vault);
   }, [vault]);
+
+  const effectiveCats = React.useMemo(() => {
+    return getEffectiveCategories(vault?.deletedCategories, vault?.categoryOverrides);
+  }, [vault?.deletedCategories, vault?.categoryOverrides]);
+
+  const handleServiceChange = React.useCallback(
+    (text: string) => {
+      setService(text);
+      if (!userManuallySelectedTagRef.current) {
+        const trimmed = text.trim();
+        if (trimmed.length >= 2) {
+          const matchedCatId = categorizeService(trimmed, vault?.deletedCategories);
+          if (matchedCatId && matchedCatId !== 'other') {
+            const cat = effectiveCats.find((c) => c.id === matchedCatId);
+            if (cat) {
+              setSelectedCategory(cat.id);
+              setFolder(cat.name);
+            }
+          }
+        } else if (trimmed.length === 0) {
+          setSelectedCategory(null);
+          setFolder('');
+        }
+      }
+    },
+    [vault?.deletedCategories, effectiveCats]
+  );
+
+  const customTags = React.useMemo(() => {
+    if (!vault) return [];
+    const pFolders = (vault.passwords || []).map((p) => p.folder).filter(Boolean) as string[];
+    const cFolders = (vault.cards || []).map((c) => c.folder).filter(Boolean) as string[];
+    const custom = vault.customTags || [];
+    const all = Array.from(new Set([...custom, ...pFolders, ...cFolders]));
+    const catNames = new Set(effectiveCats.map((c) => c.name.toLowerCase()));
+    return all.filter((t) => !catNames.has(t.toLowerCase()));
+  }, [vault, effectiveCats]);
+
+  const handleCreateTag = React.useCallback(async () => {
+    const trimmed = newTagName.trim();
+    if (!trimmed) {
+      showAlert({
+        title: 'Empty Name',
+        message: 'Please enter a name for the tag.',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    const existingNames = [
+      ...effectiveCats.map((c) => c.name.toLowerCase()),
+      ...customTags.map((t) => t.toLowerCase()),
+    ];
+    if (existingNames.includes(trimmed.toLowerCase())) {
+      showAlert({
+        title: 'Tag Already Exists',
+        message: `A tag named "${trimmed}" already exists.`,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    if (!vault || !vaultKey) return;
+
+    const currentCustom = vault.customTags || [];
+    const updatedCustom = [...currentCustom, trimmed];
+    const updatedVault: VaultData = { ...vault, customTags: updatedCustom };
+
+    try {
+      await saveVault(updatedVault, vaultKey);
+      setVault(() => updatedVault);
+      setShowAddTagModal(false);
+      setNewTagName('');
+      setFolder(trimmed);
+      setSelectedCategory(null);
+      userManuallySelectedTagRef.current = true;
+    } catch {
+      showAlert({
+        title: 'Error',
+        message: 'Failed to create tag. Please try again.',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    }
+  }, [newTagName, effectiveCats, customTags, vault, vaultKey, setVault, showAlert]);
 
   // Password strength check
   const passwordStrength = React.useMemo(() => {
     if (!pw) return null;
     return checkPasswordStrength(pw);
   }, [pw]);
+
+  const handleSwipeGeneratePassword = React.useCallback(() => {
+    const generated = generateSecurePassword(16);
+    setPw(generated);
+    setShowPw(true);
+  }, []);
 
   // Show normalized service name suggestion
   const normalizedSuggestion = React.useMemo(() => {
@@ -54,14 +159,6 @@ export default function AddPassword() {
     if (normalized.toLowerCase() === service.toLowerCase()) return null;
     return normalized;
   }, [service]);
-
-  // Handle deep link with password from clipboard
-  React.useEffect(() => {
-    if (params.password && typeof params.password === 'string') {
-      setPw(decodeURIComponent(params.password));
-      setShowPw(true); // Show password so user can verify
-    }
-  }, [params.password]);
 
   const addOtherPin = () => {
     setOtherPins([...otherPins, { label: '', pin: '', show: false }]);
@@ -149,10 +246,41 @@ export default function AddPassword() {
       return;
     }
 
+    let finalCategory = selectedCategory;
+    let finalFolder = folder;
+    if (!finalFolder && !finalCategory) {
+      const autoCat = categorizeService(service.trim(), vault?.deletedCategories);
+      if (autoCat) {
+        finalCategory = autoCat;
+        const matched = effectiveCats.find((c) => c.id === autoCat);
+        if (matched) finalFolder = matched.name;
+      }
+    }
+
+    if (!finalFolder && !finalCategory) {
+      showAlert({
+        title: 'Required',
+        message: 'Please select a tag',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Auto-categorize based on service name
-      const category = categorizeService(service);
+      // Determine category based on user selection or fallback
+      let category: CategoryType;
+      if (finalCategory) {
+        category = finalCategory;
+      } else if (finalFolder) {
+        const matched = effectiveCats.find(
+          (c) => c.name.toLowerCase() === finalFolder.toLowerCase() || c.id === finalFolder.toLowerCase()
+        );
+        category = matched ? matched.id : 'other';
+      } else {
+        category = categorizeService(service);
+      }
       
       // Prepare other pins data
       const otherPinsData = otherPins
@@ -170,8 +298,8 @@ export default function AddPassword() {
         otherPin: otherPinsData.length > 0 ? JSON.stringify(otherPinsData) : undefined,
         createdAt: Date.now(),
         modifiedAt: Date.now(),
-        folder: folder.trim() || undefined,
-        totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
+        folder: finalFolder.trim() || undefined,
+        workspace: workspace.trim() || 'Personal',
       };
       const next = { ...vault, passwords: [...vault.passwords, item] };
       await saveVault(next, vaultKey);
@@ -187,7 +315,7 @@ export default function AddPassword() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, totpSecret, setVault, router]);
+  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, setVault, router, showAlert]);
 
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
@@ -200,7 +328,7 @@ export default function AddPassword() {
         alwaysBounceVertical={true}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Add Password</Text>
@@ -208,18 +336,131 @@ export default function AddPassword() {
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* Tags (1st) */}
+          <Text style={[styles.label, { color: colors.mutedText }]}>Tags *</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagChipsScroll}
+            style={{ marginBottom: 16 }}
+          >
+            {/* Built-in Categories */}
+            {effectiveCats.map((cat) => {
+              const isSelected = selectedCategory === cat.id || folder.toLowerCase() === cat.name.toLowerCase();
+              return (
+                <TouchableOpacity
+                  key={`cat-${cat.id}`}
+                  style={[
+                    styles.tagChip,
+                    isSelected
+                      ? [styles.tagChipActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
+                      : { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  ]}
+                  onPress={() => {
+                    userManuallySelectedTagRef.current = true;
+                    if (isSelected) {
+                      setFolder('');
+                      setSelectedCategory(null);
+                    } else {
+                      setFolder(cat.name);
+                      setSelectedCategory(cat.id);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={(isSelected ? 'checkmark-circle' : (cat.icon || 'folder-outline')) as any}
+                    size={15}
+                    color={isSelected ? colors.primary : colors.mutedText}
+                  />
+                  <Text
+                    style={[
+                      styles.tagChipText,
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                    ]}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* Custom User Tags */}
+            {customTags.map((tagName) => {
+              const isSelected = !selectedCategory && folder.toLowerCase() === tagName.toLowerCase();
+              return (
+                <TouchableOpacity
+                  key={`tag-${tagName}`}
+                  style={[
+                    styles.tagChip,
+                    isSelected
+                      ? [styles.tagChipActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
+                      : { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  ]}
+                  onPress={() => {
+                    userManuallySelectedTagRef.current = true;
+                    if (isSelected) {
+                      setFolder('');
+                      setSelectedCategory(null);
+                    } else {
+                      setFolder(tagName);
+                      setSelectedCategory(null);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isSelected ? 'checkmark-circle' : 'pricetag-outline'}
+                    size={15}
+                    color={isSelected ? colors.primary : colors.mutedText}
+                  />
+                  <Text
+                    style={[
+                      styles.tagChipText,
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                    ]}
+                  >
+                    {tagName}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* Quick Add New Tag */}
+            <TouchableOpacity
+              style={[
+                styles.tagChip,
+                {
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.primary,
+                  borderStyle: 'dashed',
+                },
+              ]}
+              onPress={() => {
+                setNewTagName('');
+                setShowAddTagModal(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={15} color={colors.primary} />
+              <Text style={[styles.tagChipText, { color: colors.primary, fontWeight: '700' }]}>
+                New Tag
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+
           <Text style={[styles.label, { color: colors.mutedText }]}>Website / App name</Text>
           <TextInput
             style={inputStyle}
             placeholder="e.g. Google"
             placeholderTextColor={colors.mutedText}
             value={service}
-            onChangeText={setService}
+            onChangeText={handleServiceChange}
           />
           {normalizedSuggestion ? (
             <TouchableOpacity 
               style={[styles.suggestionChip, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}
-              onPress={() => setService(normalizedSuggestion)}
+              onPress={() => handleServiceChange(normalizedSuggestion)}
             >
               <Ionicons name="sparkles" size={14} color={colors.primary} />
               <Text style={[styles.suggestionText, { color: colors.primary }]}>
@@ -266,6 +507,9 @@ export default function AddPassword() {
               <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
             </TouchableOpacity>
           </View>
+
+          {/* Circular Swipe to Generate Password */}
+          <SwipeToGenerate onGenerate={handleSwipeGeneratePassword} />
           
           {passwordStrength && (
             <View style={styles.strengthContainer}>
@@ -304,39 +548,42 @@ export default function AddPassword() {
             onChangeText={setNotes}
           />
 
-          <Text style={[styles.label, { color: colors.mutedText }]}>Folder (Optional)</Text>
-          <TextInput
-            style={inputStyle}
-            placeholder="e.g. Personal, Taxes, Server Keys"
-            placeholderTextColor={colors.mutedText}
-            value={folder}
-            onChangeText={setFolder}
-          />
-          {folderSuggestions.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.folderSuggestionsScroll}>
-              {folderSuggestions.map((f, idx) => (
+          {/* Workspace Selection */}
+          <Text style={[styles.label, { color: colors.mutedText }]}>Workspace</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagChipsScroll}
+            style={{ marginBottom: 16 }}
+          >
+            {effectiveWorkspaces.map((wsName) => {
+              const isSelected = (workspace || 'Personal').toLowerCase() === wsName.toLowerCase();
+              return (
                 <TouchableOpacity
-                  key={idx}
-                  style={[styles.folderChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-                  onPress={() => setFolder(f)}
+                  key={wsName}
+                  style={[
+                    styles.tagChip,
+                    isSelected
+                      ? [styles.tagChipActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
+                      : { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  ]}
+                  onPress={() => setWorkspace(wsName)}
+                  activeOpacity={0.7}
                 >
-                  <Text style={[styles.folderChipText, { color: colors.text }]}>{f}</Text>
+                  <Text
+                    style={[
+                      styles.tagChipText,
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                    ]}
+                  >
+                    {wsName}
+                  </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
+              );
+            })}
+          </ScrollView>
 
-          <Text style={[styles.label, { color: colors.mutedText }]}>2FA / TOTP Secret Key (Optional)</Text>
-          <TextInput
-            style={inputStyle}
-            placeholder="e.g. JBSWY3DPEHPK3PXP"
-            placeholderTextColor={colors.mutedText}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            value={totpSecret}
-            onChangeText={(t) => setTotpSecret(t.replace(/\s+/g, '').toUpperCase())}
-          />
-
+          
           {/* PIN Section Toggle */}
           <TouchableOpacity
             style={[styles.pinToggle, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
@@ -497,12 +744,82 @@ export default function AddPassword() {
         </View>
       </ScrollView>
 
+      {/* Create Tag Modal */}
+      <Modal
+        visible={showAddTagModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddTagModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowAddTagModal(false)}
+          />
+          <View style={[styles.modalContent, { backgroundColor: dullCardBg, borderColor: dullCardBorder }]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <View style={[styles.modalIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="add" size={20} color={colors.primary} />
+                </View>
+                <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={1}>
+                  Create New Tag
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.modalCloseBtn, { backgroundColor: dullCancelBg, borderColor: dullCancelBorder }]}
+                onPress={() => setShowAddTagModal(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Close"
+              >
+                <Ionicons name="close" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={[
+                styles.tagInput,
+                {
+                  backgroundColor: dullInputBg,
+                  borderColor: dullInputBorder,
+                  color: colors.text,
+                },
+              ]}
+              placeholder="Tag name (e.g., Personal, Taxes)"
+              placeholderTextColor={colors.mutedText}
+              value={newTagName}
+              onChangeText={setNewTagName}
+              autoFocus
+              maxLength={25}
+            />
+
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: dullCancelBg, borderColor: dullCancelBorder }]}
+                onPress={() => setShowAddTagModal(false)}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                onPress={handleCreateTag}
+              >
+                <Text style={[styles.modalBtnText, { color: '#fff', fontWeight: '700' }]}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <AlertComponent />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   NoiconBtn: { width: 40, height: 40 ,borderColor: 'transparent'},
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
@@ -627,19 +944,111 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  folderSuggestionsScroll: {
-    paddingVertical: 6,
+  tagsHeaderRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    marginTop: 4,
   },
-  folderChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+  tagChipsScroll: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
     borderWidth: 1,
   },
-  folderChipText: {
-    fontSize: 12,
-    fontWeight: '700',
+  tagChipActive: {
+    borderWidth: 1.5,
+  },
+  tagChipText: {
+    fontSize: 13,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalHeaderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginRight: 12,
+  },
+  modalIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    flex: 1,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagInput: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    marginBottom: 16,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  modalBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

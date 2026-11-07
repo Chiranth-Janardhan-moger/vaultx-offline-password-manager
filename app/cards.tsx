@@ -1,12 +1,14 @@
+import BottomNavBar from '@/components/BottomNavBar';
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { CardField, CardItem, CardType, saveVault } from '@/lib/vault';
+import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
 import {
   Modal,
@@ -20,57 +22,6 @@ import {
   KeyboardAvoidingView,
   Share,
 } from 'react-native';
-
-const CARD_TEMPLATES: Record<CardType, { title: string; gradient: [string, string]; fields: CardField[] }> = {
-  aadhaar: {
-    title: 'Aadhaar Card',
-    gradient: ['#FF9933', '#128807'] as [string, string],
-    fields: [
-      { label: 'Date of Birth', value: '', isSensitive: false },
-      { label: 'Gender', value: '', isSensitive: false },
-      { label: 'VID', value: '', isSensitive: true },
-    ],
-  },
-  pan: {
-    title: 'PAN Card',
-    gradient: ['#0f2027', '#2c5364'] as [string, string],
-    fields: [
-      { label: 'Date of Birth', value: '', isSensitive: false },
-      { label: 'Father\'s Name', value: '', isSensitive: false },
-    ],
-  },
-  voter_id: {
-    title: 'Voter ID',
-    gradient: ['#00c6ff', '#0072ff'] as [string, string],
-    fields: [
-      { label: 'Assembly Constituency', value: '', isSensitive: false },
-      { label: 'Date of Birth', value: '', isSensitive: false },
-    ],
-  },
-  credit_card: {
-    title: 'Credit Card',
-    gradient: ['#141e30', '#243b55'] as [string, string],
-    fields: [
-      { label: 'Expiry Date (MM/YY)', value: '', isSensitive: true },
-      { label: 'CVV', value: '', isSensitive: true },
-      { label: 'Card PIN', value: '', isSensitive: true },
-    ],
-  },
-  debit_card: {
-    title: 'Debit Card',
-    gradient: ['#3a7bd5', '#3a6073'] as [string, string],
-    fields: [
-      { label: 'Expiry Date (MM/YY)', value: '', isSensitive: true },
-      { label: 'CVV', value: '', isSensitive: true },
-      { label: 'ATM PIN', value: '', isSensitive: true },
-    ],
-  },
-  custom: {
-    title: 'Custom Card',
-    gradient: ['#da1b60', '#ff8a00'] as [string, string],
-    fields: [],
-  },
-};
 
 const PREMIUM_GRADIENTS: [string, string][] = [
   ['#141e30', '#243b55'], // Midnight Blue
@@ -87,7 +38,7 @@ const PREMIUM_GRADIENTS: [string, string][] = [
   ['#29323c', '#485563'], // Gunmetal
 ];
 
-export default function CardsScreen({ isTab }: { isTab?: boolean }) {
+export default function CardsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { unlocked, vault, vaultKey, setVault } = useSession();
@@ -97,37 +48,21 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
     if (!unlocked) router.replace('/login');
   }, [unlocked, router]);
 
-  const Wrapper = isTab ? View : Screen;
-
   const [cards, setCards] = React.useState<CardItem[]>([]);
   const [selectedCard, setSelectedCard] = React.useState<CardItem | null>(null);
-  const [isAddModalVisible, setIsAddModalVisible] = React.useState(false);
   const [reorderingCardId, setReorderingCardId] = React.useState<string | null>(null);
-  const [folder, setFolder] = React.useState('');
-
-  const folderSuggestions = React.useMemo(() => {
-    if (!vault) return [];
-    const pFolders = vault.passwords.map(p => p.folder).filter(Boolean);
-    const cFolders = (vault.cards || []).map(c => c.folder).filter(Boolean);
-    return Array.from(new Set([...pFolders, ...cFolders])) as string[];
-  }, [vault]);
-
-  // Form States
-  const [cardType, setCardType] = React.useState<CardType | null>(null);
-  const [cardTitle, setCardTitle] = React.useState('');
-  const [holderName, setHolderName] = React.useState('');
-  const [cardNumber, setCardNumber] = React.useState('');
-  const [customFields, setCustomFields] = React.useState<CardField[]>([]);
 
   // Revealed Fields State (maps "cardId_fieldIndex" -> boolean, and "cardId_number" -> boolean)
   const [revealedFields, setRevealedFields] = React.useState<{ [key: string]: boolean }>({});
 
-  // Load cards from vault on mount
-  React.useEffect(() => {
-    if (vault?.cards) {
-      setCards(vault.cards);
-    }
-  }, [vault]);
+  // Sync cards from vault on mount and when screen regains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (vault?.cards) {
+        setCards(vault.cards);
+      }
+    }, [vault])
+  );
 
   const toggleFieldReveal = (key: string) => {
     setRevealedFields(prev => ({ ...prev, [key]: !prev[key] }));
@@ -177,118 +112,12 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
 
   const copyToClipboard = async (text: string, label: string) => {
     if (!text) return;
-    await Clipboard.setStringAsync(text);
+    await copyToClipboardWithAutoClear(text);
     showAlert({
       title: 'Copied',
-      message: `${label} copied to clipboard`,
+      message: `${label} copied to clipboard (auto-clears in 45s)`,
       confirmText: 'OK',
     });
-  };
-
-  const handleCreateCard = async () => {
-    if (!cardType) {
-      showAlert({
-        title: 'Error',
-        message: 'Please select a card template',
-        confirmText: 'OK',
-      });
-      return;
-    }
-
-    if (!cardTitle.trim()) {
-      showAlert({
-        title: 'Error',
-        message: 'Card title is required',
-        confirmText: 'OK',
-      });
-      return;
-    }
-
-    if (!cardNumber.trim()) {
-      showAlert({
-        title: 'Error',
-        message: 'Card number is required',
-        confirmText: 'OK',
-      });
-      return;
-    }
-
-    if (cardType === 'aadhaar' && cardNumber.trim().length !== 12) {
-      showAlert({
-        title: 'Error',
-        message: 'Aadhaar Card number must be exactly 12 digits',
-        confirmText: 'OK',
-      });
-      return;
-    }
-
-    if (cardType === 'pan' && cardNumber.trim().length !== 10) {
-      showAlert({
-        title: 'Error',
-        message: 'PAN Card number must be exactly 10 alphanumeric characters',
-        confirmText: 'OK',
-      });
-      return;
-    }
-
-    if ((cardType === 'credit_card' || cardType === 'debit_card') && cardNumber.trim().length !== 16) {
-      showAlert({
-        title: 'Error',
-        message: 'Card number must be exactly 16 digits',
-        confirmText: 'OK',
-      });
-      return;
-    }
-
-    const template = CARD_TEMPLATES[cardType];
-    const cardGradient = cardType === 'aadhaar'
-      ? template.gradient
-      : PREMIUM_GRADIENTS[cards.length % PREMIUM_GRADIENTS.length];
-
-    const newCard: CardItem = {
-      id: Math.random().toString(36).slice(2),
-      type: cardType,
-      title: cardTitle.trim(),
-      holderName: holderName.trim() || 'Not Specified',
-      number: cardNumber.trim(),
-      fields: customFields.filter(f => f.label.trim() && f.value.trim()),
-      gradient: cardGradient,
-      createdAt: Date.now(),
-      folder: folder.trim() || undefined,
-    };
-
-    if (!vault || !vaultKey) {
-      showAlert({
-        title: 'Session Expired',
-        message: 'Please log in again to save your card',
-        confirmText: 'OK',
-        onConfirm: () => router.replace('/login'),
-      });
-      return;
-    }
-
-    const currentCards = vault.cards || cards;
-    const nextCards = [...currentCards, newCard];
-    try {
-      const updatedVault = { ...vault, cards: nextCards };
-      await saveVault(updatedVault, vaultKey);
-      setVault(() => updatedVault);
-      setCards(nextCards);
-      setIsAddModalVisible(false);
-      resetForm();
-      showAlert({
-        title: 'Success',
-        message: 'Identity Card saved successfully',
-        confirmText: 'OK',
-      });
-    } catch (error) {
-      console.error('Failed to save card:', error);
-      showAlert({
-        title: 'Error',
-        message: (error as Error)?.message || 'Failed to save card data',
-        confirmText: 'OK',
-      });
-    }
   };
 
   const handleDeleteCard = (cardId: string) => {
@@ -342,29 +171,6 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
     } catch (error) {
       console.error('Failed to reorder card:', error);
     }
-  };
-
-  const resetForm = () => {
-    setCardType(null);
-    setHolderName('');
-    setCardNumber('');
-    setCardTitle('');
-    setCustomFields([]);
-    setFolder('');
-  };
-
-  const addCustomField = () => {
-    setCustomFields([...customFields, { label: '', value: '', isSensitive: false }]);
-  };
-
-  const removeCustomField = (index: number) => {
-    setCustomFields(customFields.filter((_, i) => i !== index));
-  };
-
-  const updateCustomField = (index: number, key: keyof CardField, val: any) => {
-    const updated = [...customFields];
-    updated[index] = { ...updated[index], [key]: val };
-    setCustomFields(updated);
   };
 
   const formatCardNumber = (num: string, type: CardType, rev: boolean) => {
@@ -676,7 +482,10 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
           colors={card.gradient}
           style={[
             styles.cardFace,
-            isReorderingMode && { elevation: 8 },
+            isReorderingMode && Platform.select({
+              ios: { shadowOpacity: 0.35, shadowRadius: 10 },
+              android: { elevation: 0 },
+            }),
           ]}
         >
           {renderCardFaceContent(card, false, undefined, isExpanded, isReorderingMode)}
@@ -735,271 +544,67 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
   };
 
   return (
-    <Wrapper style={isTab ? { flex: 1 } : undefined}>
-      <View style={[styles.container, { backgroundColor: colors.background }, isTab && { paddingBottom: 60 }]}>
-        <View style={styles.header}>
-          {!isTab ? (
+    <Screen edges={['top', 'left', 'right']}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.bodyWrap}>
+          <View style={styles.header}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Wallet</Text>
             <TouchableOpacity
-              style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => router.back()}
+              style={[styles.addBtn, { backgroundColor: colors.primary }]}
+              onPress={() => router.push('/add-card' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Add Card"
             >
-              <Ionicons name="arrow-down" size={22} color={colors.text} />
+              <Ionicons name="add" size={22} color="#ffffff" />
             </TouchableOpacity>
+          </View>
+
+          {cards.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={[styles.emptyIconCircle, { backgroundColor: colors.card }]}>
+                <Ionicons name="wallet-outline" size={60} color={colors.mutedText} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>Your Wallet is Empty</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.mutedText }]}>
+                Store payment cards, IDs, and membership passes securely. Fully encrypted and offline.
+              </Text>
+              <TouchableOpacity
+                style={[styles.createBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/add-card' as any)}
+              >
+                <Ionicons name="add-circle" size={22} color="#ffffff" />
+                <Text style={styles.createBtnText}>Add First Card</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
-            <View style={{ width: 8 }} />
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.scrollContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {selectedCard ? (
+                // If a card is selected/expanded, show it on top centered, and show close details button
+                <View style={styles.expandedContainer}>
+                  {renderCardItem(selectedCard, 0, true)}
+                  <TouchableOpacity
+                    style={[styles.closeDetailBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={() => setSelectedCard(null)}
+                  >
+                    <Text style={[styles.closeDetailText, { color: colors.text }]}>Collapse Wallet Stack</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // Normal peeking stack list
+                <View style={styles.stackContainer}>
+                  {cards.map((card, idx) => renderCardItem(card, idx, false))}
+                </View>
+              )}
+            </ScrollView>
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Identity Wallet</Text>
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => setIsAddModalVisible(true)}
-          >
-            <Ionicons name="add" size={22} color={colors.text} />
-          </TouchableOpacity>
         </View>
 
-        {cards.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <View style={[styles.emptyIconCircle, { backgroundColor: colors.card }]}>
-              <Ionicons name="wallet-outline" size={60} color={colors.mutedText} />
-            </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Your Wallet is Empty</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.mutedText }]}>
-              Add Aadhaar, PAN, Debit/Credit cards securely. Fully encrypted and offline.
-            </Text>
-            <TouchableOpacity
-              style={[styles.createBtn, { backgroundColor: colors.primary }]}
-              onPress={() => setIsAddModalVisible(true)}
-            >
-              <Ionicons name="add-circle" size={22} color="#ffffff" />
-              <Text style={styles.createBtnText}>Add First Card</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {selectedCard ? (
-              // If a card is selected/expanded, show it on top centered, and show close details button
-              <View style={styles.expandedContainer}>
-                {renderCardItem(selectedCard, 0, true)}
-                <TouchableOpacity
-                  style={[styles.closeDetailBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => setSelectedCard(null)}
-                >
-                  <Text style={[styles.closeDetailText, { color: colors.text }]}>Collapse Wallet Stack</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              // Normal peeking stack list
-              <View style={styles.stackContainer}>
-                {cards.map((card, idx) => renderCardItem(card, idx, false))}
-              </View>
-            )}
-          </ScrollView>
-        )}
-
-        {/* Modal form to add a card */}
-        <Modal
-          visible={isAddModalVisible}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setIsAddModalVisible(false)}
-        >
-          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-            <KeyboardAvoidingView 
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              style={[styles.modalContent, { backgroundColor: colors.background }]}
-            >
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>Add Identity Card</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setIsAddModalVisible(false);
-                    resetForm();
-                  }}
-                  style={[styles.modalCloseBtn, { backgroundColor: colors.card }]}
-                >
-                  <Ionicons name="close" size={20} color={colors.text} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
-                {/* Type Selection */}
-                <Text style={[styles.label, { color: colors.mutedText }]}>Card Type</Text>
-                <View style={styles.typeSelectorRow}>
-                  {Object.keys(CARD_TEMPLATES).map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.typeChip,
-                        {
-                          backgroundColor: cardType === type ? colors.primary : colors.card,
-                          borderColor: cardType === type ? colors.primary : colors.border,
-                        },
-                      ]}
-                      onPress={() => {
-                        setCardType(type as CardType);
-                        const template = CARD_TEMPLATES[type as CardType];
-                        setCardTitle(template.title);
-                        setCustomFields(template.fields.map((f: CardField) => ({ ...f })));
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.typeChipText,
-                          { color: cardType === type ? '#ffffff' : colors.text },
-                        ]}
-                      >
-                        {type.toUpperCase().replace('_', ' ')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {cardType ? (
-                  <>
-                    {/* Card Title */}
-                    <Text style={[styles.label, { color: colors.mutedText }]}>Card Name / Title</Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-                      placeholder="e.g. My Aadhaar Card"
-                      placeholderTextColor={colors.mutedText}
-                      value={cardTitle}
-                      onChangeText={setCardTitle}
-                    />
-
-                    {/* Holder Name */}
-                    <Text style={[styles.label, { color: colors.mutedText }]}>Card Holder Name</Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-                      placeholder="Full name as printed"
-                      placeholderTextColor={colors.mutedText}
-                      value={holderName}
-                      onChangeText={setHolderName}
-                    />
-
-                    {/* Card Number */}
-                    <Text style={[styles.label, { color: colors.mutedText }]}>
-                      {cardType === 'aadhaar' ? 'Aadhaar Number (12 digits)' : 
-                       cardType === 'pan' ? 'PAN Number (10 alphanumeric)' : 
-                       cardType?.includes('card') ? 'Card Number (16 digits)' : 
-                       'Card Number (Primary)'}
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-                      placeholder={cardType === 'aadhaar' ? '12-digit number' : 
-                                   cardType === 'pan' ? '10-char alphanumeric' : 
-                                   cardType?.includes('card') ? '16-digit card number' : 
-                                   'Enter primary card number'}
-                      placeholderTextColor={colors.mutedText}
-                      keyboardType={cardType === 'aadhaar' || cardType?.includes('card') ? 'numeric' : 'default'}
-                      maxLength={cardType === 'aadhaar' ? 12 : cardType === 'pan' ? 10 : cardType?.includes('card') ? 16 : undefined}
-                      autoCapitalize={cardType === 'pan' ? 'characters' : 'none'}
-                      value={cardNumber}
-                      onChangeText={(t) => {
-                        if (cardType === 'aadhaar' || cardType?.includes('card')) {
-                          setCardNumber(t.replace(/[^0-9]/g, ''));
-                        } else if (cardType === 'pan') {
-                          setCardNumber(t.toUpperCase().replace(/[^A-Z0-9]/g, ''));
-                        } else {
-                          setCardNumber(t);
-                        }
-                      }}
-                    />
-
-                    {/* Folder (Optional) */}
-                    <Text style={[styles.label, { color: colors.mutedText }]}>Folder (Optional)</Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-                      placeholder="e.g. Personal, Taxes, Server Keys"
-                      placeholderTextColor={colors.mutedText}
-                      value={folder}
-                      onChangeText={setFolder}
-                    />
-                    {folderSuggestions.length > 0 && (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.folderSuggestionsScroll}>
-                        {folderSuggestions.map((f, idx) => (
-                          <TouchableOpacity
-                            key={idx}
-                            style={[styles.folderChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-                            onPress={() => setFolder(f)}
-                          >
-                            <Text style={[styles.folderChipText, { color: colors.text }]}>{f}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    )}
-
-                    {/* Template / Custom Fields Section */}
-                    <View style={styles.fieldsHeader}>
-                      <Text style={[styles.label, { color: colors.text, marginVertical: 0 }]}>Additional Fields</Text>
-                      <TouchableOpacity onPress={addCustomField} style={styles.addFieldBtn}>
-                        <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-                        <Text style={[styles.addFieldBtnText, { color: colors.primary }]}>Add Field</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {customFields.map((field, index) => (
-                      <View key={index} style={styles.customFieldRow}>
-                        <View style={{ flex: 1, gap: 8 }}>
-                          <TextInput
-                            style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-                            placeholder="Label (e.g. Expiry Date)"
-                            placeholderTextColor={colors.mutedText}
-                            value={field.label}
-                            onChangeText={(t) => updateCustomField(index, 'label', t)}
-                          />
-                          <TextInput
-                            style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-                            placeholder="Value (e.g. 12/29)"
-                            placeholderTextColor={colors.mutedText}
-                            value={field.value}
-                            onChangeText={(t) => updateCustomField(index, 'value', t)}
-                          />
-                          <TouchableOpacity
-                            style={styles.sensitiveToggleRow}
-                            onPress={() => updateCustomField(index, 'isSensitive', !field.isSensitive)}
-                          >
-                            <Ionicons
-                              name={field.isSensitive ? 'checkbox' : 'square-outline'}
-                              size={18}
-                              color={colors.primary}
-                            />
-                            <Text style={[styles.sensitiveToggleText, { color: colors.text }]}>Blur this field by default</Text>
-                          </TouchableOpacity>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => removeCustomField(index)}
-                          style={[styles.removeFieldBtn, { backgroundColor: colors.inputBg }]}
-                        >
-                          <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-
-                    {/* Save Button */}
-                    <TouchableOpacity
-                      style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-                      onPress={handleCreateCard}
-                    >
-                      <Text style={styles.saveBtnText}>Save Identity Card</Text>
-                    </TouchableOpacity>
-                    <View style={{ height: 40 }} />
-                  </>
-                ) : (
-                  <View style={{ alignItems: 'center', paddingVertical: 40, gap: 12 }}>
-                    <Ionicons name="card-outline" size={48} color={colors.mutedText} style={{ alignSelf: 'center', marginVertical: 20 }} />
-                    <Text style={{ color: colors.mutedText, fontSize: 14, textAlign: 'center' }}>
-                      Please select a card type above to start.
-                    </Text>
-                  </View>
-                )}
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </View>
-        </Modal>
+        {/* Bottom Navigation Bar */}
+        <BottomNavBar activeTab="cards" />
 
         {/* Share Config Modal */}
         <Modal
@@ -1094,29 +699,49 @@ export default function CardsScreen({ isTab }: { isTab?: boolean }) {
         </Modal>
       </View>
       <AlertComponent />
-    </Wrapper>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1 },
+  bodyWrap: { flex: 1, paddingHorizontal: 20, paddingTop: 14 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 14,
   },
-  headerTitle: { fontSize: 20, fontWeight: '900' },
+  headerTitle: { fontSize: 28, fontWeight: '900' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
-  scrollContainer: { paddingBottom: 60 },
-  stackContainer: { marginTop: 12, paddingBottom: 100 },
+  addBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.18,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
+  scrollContainer: { paddingBottom: 24 },
+  stackContainer: { marginTop: 12, paddingBottom: 24 },
   expandedContainer: { marginTop: 12 },
   cardWrapper: {
     marginBottom: 20,
@@ -1132,11 +757,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   aadhaarTricolorAccent: {
     position: 'absolute',
@@ -1521,11 +1152,17 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 20,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   brandBadge: {
     paddingVertical: 4,

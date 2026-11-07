@@ -27,7 +27,7 @@ const slides = [
   {
     icon: 'finger-print' as const,
     title: 'Biometric Protection',
-    description: 'Unlock with your fingerprint. Multiple layers of security: PIN, password, and biometric authentication.',
+    description: 'Unlock with your fingerprint. Multiple layers of security: master password and biometric authentication.',
     color: '#f59e0b',
   },
 ];

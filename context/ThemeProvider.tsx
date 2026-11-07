@@ -1,7 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useColorScheme } from 'react-native';
 
-type ThemeMode = 'light' | 'dark';
+type ThemeMode = 'system' | 'light' | 'dark';
 
 type ThemeColors = {
   background: string;
@@ -100,6 +101,7 @@ const darkColorsEnhancedWithBorder: ThemeColors = {
 };
 
 export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const systemColorScheme = useColorScheme();
   const [mode, setModeState] = useState<ThemeMode>('dark');
   const [enhancedContrast, setEnhancedContrastState] = useState(false);
   const [showBorders, setShowBordersState] = useState(false);
@@ -107,7 +109,9 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
   useEffect(() => {
     (async () => {
       const saved = await SecureStore.getItemAsync(THEME_MODE_KEY);
-      if (saved === 'light' || saved === 'dark') setModeState(saved);
+      if (saved === 'system' || saved === 'light' || saved === 'dark') {
+        setModeState(saved as ThemeMode);
+      }
       
       const savedContrast = await SecureStore.getItemAsync(ENHANCED_CONTRAST_KEY);
       if (savedContrast === 'true') setEnhancedContrastState(true);
@@ -137,7 +141,7 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
     SecureStore.setItemAsync(SHOW_BORDERS_KEY, enabled ? 'true' : 'false');
   };
 
-  const resolved = mode;
+  const resolved = mode === 'system' ? (systemColorScheme === 'light' ? 'light' : 'dark') : mode;
 
   let colors: ThemeColors;
   if (enhancedContrast) {

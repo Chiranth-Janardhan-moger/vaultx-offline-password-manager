@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkPasswordStrength, getStrengthLabel } from '../lib/password-strength.ts';
+import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '../lib/password-strength.ts';
 
 test('Password Strength - Empty and Null Handling', () => {
   const result = checkPasswordStrength('');
@@ -46,4 +46,30 @@ test('Password Strength - Label Mapping', () => {
   assert.strictEqual(getStrengthLabel('good'), 'Good');
   assert.strictEqual(getStrengthLabel('strong'), 'Strong');
   assert.strictEqual(getStrengthLabel('very-strong'), 'Very Strong');
+});
+
+test('Password Generation - Length and Cryptographic Randomness', () => {
+  const p16 = generateSecurePassword(16);
+  assert.strictEqual(p16.length, 16);
+
+  const p32 = generateSecurePassword(32);
+  assert.strictEqual(p32.length, 32);
+
+  const p64 = generateSecurePassword(64);
+  assert.strictEqual(p64.length, 64);
+
+  // Diverse character pool check
+  assert.match(p32, /[A-Z]/);
+  assert.match(p32, /[a-z]/);
+  assert.match(p32, /[0-9]/);
+
+  // Strength check
+  const strength = checkPasswordStrength(p16);
+  assert.ok(strength.strength === 'strong' || strength.strength === 'very-strong');
+});
+
+test('Password Generation - Custom Option Constraints', () => {
+  const numbersOnly = generateSecurePassword(12, { uppercase: false, lowercase: false, numbers: true, symbols: false });
+  assert.strictEqual(numbersOnly.length, 12);
+  assert.match(numbersOnly, /^[0-9]+$/);
 });

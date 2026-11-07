@@ -6,10 +6,7 @@ const polyfillGetRandomValues = <T extends ArrayBufferView | null>(array: T): T 
     try {
       Crypto.getRandomValues(array as any);
     } catch {
-      const u8 = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
-      for (let i = 0; i < u8.length; i++) {
-        u8[i] = Math.floor(Math.random() * 256);
-      }
+      throw new Error('Cryptographically secure PRNG is unavailable in this environment');
     }
   }
   return array;
@@ -43,11 +40,8 @@ export const getRandomBytes = (byteCount: number): Uint8Array => {
     return array;
   } catch {}
 
-  // Safe fallback if native module is not ready
-  for (let i = 0; i < byteCount; i++) {
-    array[i] = Math.floor(Math.random() * 256);
-  }
-  return array;
+  // Fail closed if cryptographically secure PRNG is unavailable
+  throw new Error('Cryptographically secure PRNG is unavailable in this environment');
 };
 
 export const getRandomHex = (byteCount: number): string => {

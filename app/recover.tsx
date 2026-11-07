@@ -25,7 +25,7 @@ export default function Recover() {
       if (!q || q.length === 0) {
         showAlert({
           title: 'Recovery not configured',
-          message: 'Please unlock using PIN or fingerprint.',
+          message: 'Please unlock using your password or biometric.',
           confirmText: 'OK',
           onConfirm: () => {},
         });

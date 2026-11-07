@@ -3,17 +3,31 @@ import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import {
-  hasPinUnlock,
+  hasPasswordUnlock,
   isBiometricEnabled,
   loadBiometricKey,
-  unwrapWithPin,
+  unwrapWithPassword,
+  isSelectWorkspaceOnLoginEnabled,
+  getLockoutState,
+  recordFailedAttempt,
+  clearLockoutState,
 } from '@/lib/secure';
 import { decryptVaultWithKey, vaultExists } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Animated, Easing, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function Login() {
@@ -22,143 +36,69 @@ export default function Login() {
   const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  const [pin, setPin] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [pinFocused, setPinFocused] = React.useState(false);
+  const [lockedUntil, setLockedUntil] = React.useState<number>(0);
+  const [canBio, setCanBio] = React.useState(false);
+  const [hasUnlockMethod, setHasUnlockMethod] = React.useState(false);
   const inputRef = React.useRef<TextInput>(null);
 
-  const failedAttemptsRef = React.useRef(0);
-  const [lockedUntil, setLockedUntil] = React.useState<number>(0);
-
-  // Advanced animations
+  // Smooth, high-performance UI animations
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(50)).current;
-  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
-  const lockRotate = React.useRef(new Animated.Value(0)).current;
-  const glowPulse = React.useRef(new Animated.Value(0)).current;
-  
-  // Particle animations (floating elements)
-  const particle1 = React.useRef(new Animated.Value(0)).current;
-  const particle2 = React.useRef(new Animated.Value(0)).current;
-  const particle3 = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = React.useRef(new Animated.Value(0.94)).current;
+  const shakeAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    // Entry animations
+    // Elegant, crisp entry animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
+        duration: 400,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 50,
-        friction: 7,
+        tension: 65,
+        friction: 9,
         useNativeDriver: true,
       }),
     ]).start();
+  }, [fadeAnim, scaleAnim]);
 
-    // Lock rotation animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(lockRotate, {
-          toValue: 1,
-          duration: 3000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(lockRotate, {
-          toValue: 0,
-          duration: 3000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Glow pulse animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowPulse, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowPulse, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Floating particles
-    const createParticleAnimation = (particle: Animated.Value, delay: number) => {
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(particle, {
-            toValue: 1,
-            duration: 4000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(particle, {
-            toValue: 0,
-            duration: 4000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ])
-      );
-    };
-
-    createParticleAnimation(particle1, 0).start();
-    createParticleAnimation(particle2, 1300).start();
-    createParticleAnimation(particle3, 2600).start();
-  }, []);
-
-  const ensureNotLocked = React.useCallback(() => {
-    if (Date.now() < lockedUntil) {
-      const secs = Math.ceil((lockedUntil - Date.now()) / 1000);
+  const ensureNotLocked = React.useCallback(async () => {
+    const lockout = await getLockoutState();
+    const now = Date.now();
+    if (lockout.lockedUntil > now) {
+      setLockedUntil(lockout.lockedUntil);
+      const secs = Math.ceil((lockout.lockedUntil - now) / 1000);
       showAlert({
-        title: 'Try again later',
-        message: `Too many attempts. Wait ${secs}s.`,
+        title: 'Account Locked',
+        message: `Too many failed attempts. Please wait ${secs} seconds before trying again.`,
         confirmText: 'OK',
         onConfirm: () => {},
       });
       return false;
     }
     return true;
-  }, [lockedUntil, showAlert]);
+  }, [showAlert]);
 
-  const registerFailure = React.useCallback(() => {
-    failedAttemptsRef.current += 1;
-    
-    // Shake animation on failure
+  const registerFailure = React.useCallback(async () => {
+    // Natural horizontal shake animation on incorrect password
     Animated.sequence([
-      Animated.timing(slideAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -14, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 14, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -4, duration: 45, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 45, useNativeDriver: true }),
     ]).start();
-    
-    if (failedAttemptsRef.current >= 5) {
-      failedAttemptsRef.current = 0;
-      setLockedUntil(Date.now() + 30_000);
-    }
-  }, [slideAnim]);
 
-  const [canPin, setCanPin] = React.useState(false);
-  const [canBio, setCanBio] = React.useState(false);
+    const state = await recordFailedAttempt(5, 30_000);
+    if (state.lockedUntil > Date.now()) {
+      setLockedUntil(state.lockedUntil);
+    }
+  }, [shakeAnim]);
 
   React.useEffect(() => {
     (async () => {
@@ -167,346 +107,273 @@ export default function Login() {
         router.replace('/setup');
         return;
       }
-      setCanPin(await hasPinUnlock());
-      
+
+      // Check persistent lockout state
+      const lockout = await getLockoutState();
+      if (lockout.lockedUntil > Date.now()) {
+        setLockedUntil(lockout.lockedUntil);
+      }
+
+      const hasPass = await hasPasswordUnlock();
+      setHasUnlockMethod(hasPass);
+
       const bioEnabled = await isBiometricEnabled();
       let biometricAvailable = false;
-      
+
       if (bioEnabled) {
         try {
           const hasHardware = await LocalAuthentication.hasHardwareAsync();
           const isEnrolled = await LocalAuthentication.isEnrolledAsync();
           biometricAvailable = hasHardware && isEnrolled;
           setCanBio(biometricAvailable);
-        } catch (error) {
-          console.error('Biometric check error:', error);
+        } catch {
           setCanBio(false);
         }
       } else {
         setCanBio(false);
       }
-      
+
       if (biometricAvailable) {
-        setTimeout(() => unlockByBio(), 500);
+        setTimeout(() => unlockByBio(), 400);
       } else {
         setTimeout(() => inputRef.current?.focus(), 300);
       }
     })();
   }, [router]);
 
-  const unlockWithVaultKey = React.useCallback(async (vaultKey: string) => {
-    // Success animation
-    Animated.parallel([
-      Animated.timing(scaleAnim, {
-        toValue: 1.2,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    const data = await decryptVaultWithKey(vaultKey);
-    failedAttemptsRef.current = 0;
-    unlock(data, vaultKey);
-    
-    router.replace('/dashboard');
-  }, [unlock, router, scaleAnim, fadeAnim]);
+  const unlockWithVaultKey = React.useCallback(
+    async (vaultKey: string) => {
+      // Smooth exit transition
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 1.04,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-  const unlockByPin = React.useCallback(async (pinValue: string) => {
-    if (!ensureNotLocked()) return;
+      await clearLockoutState();
+      const data = await decryptVaultWithKey(vaultKey);
+      unlock(data, vaultKey);
+
+      const showSpaces = await isSelectWorkspaceOnLoginEnabled();
+      if (showSpaces) {
+        router.replace({ pathname: '/spaces', params: { fromLogin: '1' } });
+      } else {
+        router.replace('/dashboard');
+      }
+    },
+    [unlock, router, scaleAnim, fadeAnim]
+  );
+
+  const handleUnlock = React.useCallback(async () => {
+    if (!(await ensureNotLocked())) return;
     if (loading) return;
-    
-    if (!/^\d{6}$/.test(pinValue)) return;
-    
+
+    const trimmed = password.trim();
+    if (!trimmed) {
+      showAlert({
+        title: 'Password Required',
+        message: 'Please enter your master password to unlock your vault',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
     setLoading(true);
+    let vaultKey: string | null = null;
+
     try {
-      const vaultKey = await unwrapWithPin(pinValue);
+      vaultKey = await unwrapWithPassword(trimmed);
+    } catch {
+      vaultKey = null;
+    }
+
+    if (vaultKey) {
+      await unlockWithVaultKey(vaultKey);
+    } else {
+      await registerFailure();
+      setPassword('');
+      showAlert({
+        title: 'Incorrect Password',
+        message: 'The password you entered is incorrect. Please try again.',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    }
+    setLoading(false);
+  }, [ensureNotLocked, loading, password, unlockWithVaultKey, registerFailure, showAlert]);
+
+  const unlockByBio = React.useCallback(async () => {
+    if (!(await ensureNotLocked())) return;
+    if (loading) return;
+
+    try {
+      setLoading(true);
+      const vaultKey = await loadBiometricKey();
       await unlockWithVaultKey(vaultKey);
     } catch (e: any) {
-      registerFailure();
-      setPin('');
+      const msg = (e?.message || '').toLowerCase();
+      if (
+        msg.includes('cancel') ||
+        msg.includes('user_cancel') ||
+        e?.code === 'ERR_SECURE_STORE_USER_CANCELED' ||
+        e?.code === 'ERR_KEYSTORE_USER_CANCELED' ||
+        e?.code === 'ERR_AUTH_CANCELLED'
+      ) {
+        return;
+      }
       showAlert({
-        title: 'Error',
-        message: e?.message ?? 'Incorrect PIN',
+        title: 'Biometric Failed',
+        message: e?.message ?? 'Biometric verification unsuccessful. Please enter your master password.',
         confirmText: 'OK',
         onConfirm: () => {},
       });
     } finally {
       setLoading(false);
     }
-  }, [ensureNotLocked, loading, unlockWithVaultKey, registerFailure]);
-
-  const handlePinChange = React.useCallback((value: string) => {
-    const digits = value.replace(/[^0-9]/g, '').slice(0, 6);
-    setPin(digits);
-    
-    if (digits.length === 6) {
-      setTimeout(() => unlockByPin(digits), 100);
-    }
-  }, [unlockByPin]);
-
-  const unlockByBio = React.useCallback(async () => {
-    if (!ensureNotLocked()) return;
-    if (loading) return;
-    setLoading(true);
-    
-    let shouldFocusInput = false;
-    
-    try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      
-      if (!hasHardware || !isEnrolled) {
-        showAlert({
-          title: 'Biometric Not Available',
-          message: 'Please use PIN to unlock',
-          confirmText: 'OK',
-          onConfirm: () => {},
-        });
-        shouldFocusInput = true;
-        return;
-      }
-      
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock VaultX',
-        cancelLabel: 'Cancel',
-        disableDeviceFallback: true,
-      });
-      
-      if (!result.success) {
-        shouldFocusInput = true;
-        if (result.error && !result.error.includes('cancel') && !result.error.includes('Cancel') && !result.error.includes('user_cancel')) {
-          showAlert({
-            title: 'Biometric Error',
-            message: 'Authentication failed. Please try again or use PIN',
-            confirmText: 'OK',
-            onConfirm: () => {},
-          });
-        }
-        return;
-      }
-      
-      const vaultKey = await loadBiometricKey();
-      await unlockWithVaultKey(vaultKey);
-    } catch (e: any) {
-      console.error('Biometric unlock error:', e);
-      const errorMsg = e?.message ?? '';
-      shouldFocusInput = true;
-      
-      if (!errorMsg.toLowerCase().includes('cancel') && 
-          !errorMsg.toLowerCase().includes('user') &&
-          !errorMsg.toLowerCase().includes('authentication failed')) {
-        registerFailure();
-        showAlert({
-          title: 'Biometric Error',
-          message: 'Please try again or use PIN',
-          confirmText: 'OK',
-          onConfirm: () => {},
-        });
-      }
-    } finally {
-      setLoading(false);
-      if (shouldFocusInput) {
-        setTimeout(() => inputRef.current?.focus(), 500);
-      }
-    }
-  }, [ensureNotLocked, loading, unlockWithVaultKey, registerFailure]);
-
-  const pinDigits = pin.split('');
-  while (pinDigits.length < 6) {
-    pinDigits.push('');
-  }
-
-  const lockRotation = lockRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['-5deg', '5deg'],
-  });
-
-  const glowOpacity = glowPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.8],
-  });
+  }, [ensureNotLocked, loading, showAlert, unlockWithVaultKey]);
 
   return (
-    <Screen>
-      <Animated.View style={[styles.container, { backgroundColor: colors.background, opacity: fadeAnim }]}>
-        {/* Floating particles background */}
-        <Animated.View
-          style={[
-            styles.particle,
-            {
-              backgroundColor: colors.primary + '20',
-              top: '10%',
-              left: '10%',
-              opacity: particle1.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.6] }),
-              transform: [{
-                translateY: particle1.interpolate({ inputRange: [0, 1], outputRange: [0, -30] })
-              }],
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.particle,
-            {
-              backgroundColor: colors.primary + '15',
-              top: '70%',
-              right: '15%',
-              width: 80,
-              height: 80,
-              opacity: particle2.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.5] }),
-              transform: [{
-                translateY: particle2.interpolate({ inputRange: [0, 1], outputRange: [0, 40] })
-              }],
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.particle,
-            {
-              backgroundColor: colors.primary + '10',
-              top: '40%',
-              right: '10%',
-              width: 60,
-              height: 60,
-              opacity: particle3.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.4] }),
-              transform: [{
-                translateY: particle3.interpolate({ inputRange: [0, 1], outputRange: [0, -20] })
-              }],
-            },
-          ]}
-        />
-
-        <Animated.View style={[styles.content, { transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
-          {/* Lock icon with gradient glow */}
-          <View style={styles.lockSection}>
-            <Animated.View style={[styles.glowCircle, { opacity: glowOpacity }]}>
-              <LinearGradient
-                colors={[colors.primary + '40', colors.primary + '00']}
-                style={styles.gradient}
-                start={{ x: 0.5, y: 0.5 }}
-                end={{ x: 1, y: 1 }}
-              />
-            </Animated.View>
-            
-            <Animated.View
-              style={[
-                styles.lockContainer,
-                {
-                  backgroundColor: colors.card,
-                  shadowColor: colors.primary,
-                  transform: [{ rotate: lockRotation }],
-                },
-              ]}
-            >
-              <Ionicons name="lock-closed" size={56} color={colors.primary} />
-            </Animated.View>
-          </View>
-
-          <Text style={[styles.title, { color: colors.text }]}>Welcome Back</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedText }]}>
-            Unlock your vault to continue
-          </Text>
-
-          {canPin ? (
-            <View style={styles.pinSection}>
-              <View style={styles.pinBoxes}>
-                {pinDigits.map((digit, idx) => {
-                  const isFilled = digit !== '';
-                  const isCurrentBox = pinFocused && idx === pin.length;
-                  
-                  return (
-                    <TouchableOpacity
-                      key={idx}
-                      onPress={() => inputRef.current?.focus()}
-                      activeOpacity={0.7}
-                    >
-                      <Animated.View
-                        style={[
-                          styles.pinBox,
-                          { backgroundColor: colors.card, borderColor: colors.border },
-                          isFilled && { 
-                            borderColor: colors.primary, 
-                            borderWidth: 2.5,
-                            backgroundColor: colors.primary + '10',
-                          },
-                          isCurrentBox && { 
-                            borderColor: colors.primary, 
-                            borderWidth: 2.5,
-                            shadowColor: colors.primary,
-                            shadowOpacity: 0.3,
-                            shadowRadius: 8,
-                            elevation: 4,
-                          },
-                        ]}
-                      >
-                        {isFilled ? (
-                          <View style={[styles.filledDot, { backgroundColor: colors.primary }]} />
-                        ) : null}
-                      </Animated.View>
-                    </TouchableOpacity>
-                  );
-                })}
+    <Screen edges={['top', 'left', 'right', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }, { translateX: shakeAnim }],
+              },
+            ]}
+          >
+            {/* Stable, Premium Lock Badge */}
+            <View style={styles.lockSection}>
+              <View
+                style={[
+                  styles.lockContainer,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    shadowColor: colors.primary,
+                  },
+                ]}
+              >
+                <LinearGradient
+                  colors={[colors.primary + '22', colors.primary + '06']}
+                  style={styles.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+                <Ionicons name="lock-closed" size={42} color={colors.primary} />
               </View>
-              
-              <TextInput
-                ref={inputRef}
-                style={styles.hiddenInput}
-                keyboardType="number-pad"
-                autoComplete="off"
-                textContentType="none"
-                maxLength={6}
-                value={pin}
-                onChangeText={handlePinChange}
-                onFocus={() => setPinFocused(true)}
-                onBlur={() => setPinFocused(false)}
-              />
+            </View>
 
-              {canBio ? (
+            <Text style={[styles.title, { color: colors.text }]}>VaultX</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedText }]}>
+              Sign in with your master password
+            </Text>
+
+            {hasUnlockMethod ? (
+              <View style={styles.formSection}>
+                {/* Master Password */}
+                <View
+                  style={[
+                    styles.inputCard,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  ]}
+                >
+                  <Ionicons name="key-outline" size={20} color={colors.primary} style={styles.inputIcon} />
+                  <TextInput
+                    ref={inputRef}
+                    style={[styles.inputField, { color: colors.text }]}
+                    placeholder="Master password"
+                    placeholderTextColor={colors.mutedText}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={password}
+                    onChangeText={setPassword}
+                    returnKeyType="go"
+                    onSubmitEditing={handleUnlock}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((v) => !v)}
+                    style={styles.eyeBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color={colors.mutedText} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Primary Unlock Button */}
                 <TouchableOpacity
-                  style={[styles.bioBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={unlockByBio}
+                  style={[
+                    styles.unlockBtn,
+                    { backgroundColor: colors.primary },
+                    loading && { opacity: 0.7 },
+                  ]}
+                  onPress={handleUnlock}
                   disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.unlockBtnText}>{loading ? 'Unlocking...' : 'Unlock Vault'}</Text>
+                </TouchableOpacity>
+
+                {/* Biometric Button */}
+                {canBio ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.bioBtn,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                    onPress={unlockByBio}
+                    disabled={loading}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="finger-print" size={22} color={colors.primary} />
+                    <Text style={[styles.bioText, { color: colors.text }]}>Unlock with Biometrics</Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                {/* Recovery Link */}
+                <TouchableOpacity
+                  onPress={() => router.push('/recover')}
+                  style={styles.forgotLink}
                   activeOpacity={0.7}
                 >
-                  <LinearGradient
-                    colors={[colors.primary + '15', colors.primary + '05']}
-                    style={styles.bioBtnGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Ionicons name="finger-print" size={28} color={colors.primary} />
-                    <Text style={[styles.bioText, { color: colors.text }]}>Use Biometric</Text>
-                  </LinearGradient>
+                  <Text style={[styles.forgotText, { color: colors.mutedText }]}>
+                    Forgot password? Use Recovery Questions →
+                  </Text>
                 </TouchableOpacity>
-              ) : null}
+              </View>
+            ) : null}
 
-              <TouchableOpacity 
-                onPress={() => router.push('/unlock-password')} 
-                style={styles.forgotLink}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.forgotText, { color: colors.mutedText }]}>
-                  Forgot PIN? Use password →
+            {!hasUnlockMethod ? (
+              <TouchableOpacity onPress={() => router.replace('/setup')} style={styles.setupLink}>
+                <Text style={[styles.setupText, { color: colors.mutedText }]}>
+                  No unlock methods found. Create a new VaultX.
                 </Text>
               </TouchableOpacity>
-            </View>
-          ) : null}
-
-          {!canPin ? (
-            <TouchableOpacity onPress={() => router.replace('/setup')} style={styles.setupLink}>
-              <Text style={[styles.setupText, { color: colors.mutedText }]}>
-                No unlock methods found. Create a new VaultX.
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </Animated.View>
-      </Animated.View>
+            ) : null}
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <AlertComponent />
     </Screen>
@@ -514,121 +381,136 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  particle: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
   content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 380,
     alignItems: 'center',
   },
   lockSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 40,
-    height: 180,
-    width: 180,
-  },
-  glowCircle: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    overflow: 'hidden',
-  },
-  gradient: {
-    width: '100%',
-    height: '100%',
-  },
-  lockContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  title: { 
-    fontSize: 32, 
-    fontWeight: '900',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  subtitle: { 
-    fontSize: 15, 
-    fontWeight: '600',
-    marginBottom: 48,
-  },
-  pinSection: { 
-    alignItems: 'center', 
-    width: '100%',
-  },
-  pinBoxes: { 
-    flexDirection: 'row', 
-    gap: 12, 
-    marginBottom: 32,
-  },
-  pinBox: {
-    width: 52,
-    height: 64,
-    borderRadius: 16,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filledDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    height: 1,
-    width: 1,
-    top: -1000,
-  },
-  bioBtn: {
-    width: '100%',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    overflow: 'hidden',
     marginBottom: 20,
   },
-  bioBtnGradient: {
-    flexDirection: 'row',
+  lockContainer: {
+    width: 88,
+    height: 88,
+    borderRadius: 26,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 14,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
-  bioText: {
+  gradient: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 25,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    marginTop: 6,
+    marginBottom: 28,
+    textAlign: 'center',
+  },
+  formSection: {
+    width: '100%',
+  },
+  inputCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 16,
+    height: 56,
+  },
+  inputIcon: {
+    marginLeft: 16,
+    marginRight: 4,
+  },
+  inputField: {
+    flex: 1,
+    height: 56,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  eyeBtn: {
+    height: 56,
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unlockBtn: {
+    marginTop: 20,
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
+  unlockBtnText: {
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
   },
+  bioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 12,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  bioText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
   forgotLink: {
-    paddingVertical: 12,
+    marginTop: 22,
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   forgotText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   setupLink: {
-    paddingVertical: 12,
+    marginTop: 24,
+    alignItems: 'center',
   },
-  setupText: { 
-    fontSize: 14, 
-    fontWeight: '700',
-    textAlign: 'center',
+  setupText: {
+    fontSize: 14,
   },
 });
-

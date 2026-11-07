@@ -11,6 +11,9 @@ import {
   createNewVault,
   vaultExists,
   toCsv,
+  getEffectiveWorkspaces,
+  encryptBackupData,
+  decryptBackupData,
 } from '../lib/vault.ts';
 import { _clearFiles } from './mocks/expo-file-system.mjs';
 
@@ -48,14 +51,13 @@ test('Vault - Legacy Password Hashing (Without Salt)', () => {
 });
 
 test('Vault - Create, Encrypt, Save, and Decrypt Vault Lifecycle', async () => {
-  const phone = '9876543210';
   const password = 'MasterPassword2026!';
   const vaultKey = generateSaltHex(32); // 256-bit key
 
   assert.strictEqual(await vaultExists(), false);
 
-  const initialVault = await createNewVault(phone, password, vaultKey);
-  assert.strictEqual(initialVault.user.phone, phone);
+  const initialVault = await createNewVault(password, vaultKey);
+  assert.strictEqual(initialVault.user.phone, undefined);
   assert.strictEqual(initialVault.passwords.length, 0);
   assert.strictEqual(initialVault.cards.length, 0);
 
@@ -64,7 +66,7 @@ test('Vault - Create, Encrypt, Save, and Decrypt Vault Lifecycle', async () => {
 
   // Decrypt vault with correct key
   const decrypted = await decryptVaultWithKey(vaultKey);
-  assert.strictEqual(decrypted.user.phone, phone);
+  assert.strictEqual(decrypted.user.phone, undefined);
   assert.strictEqual(verifyPassword(password, decrypted.user.passwordHash, decrypted.user.passwordSaltHex), true);
 
   // Add password item and card item
@@ -73,7 +75,6 @@ test('Vault - Create, Encrypt, Save, and Decrypt Vault Lifecycle', async () => {
     username: 'testuser',
     password: 'github_password_123',
     category: 'work',
-    totpSecret: 'JBSWY3DPEHPK3PXP',
     isFavorite: true,
   });
 
@@ -94,18 +95,16 @@ test('Vault - Create, Encrypt, Save, and Decrypt Vault Lifecycle', async () => {
   const reloaded = await decryptVaultWithKey(vaultKey);
   assert.strictEqual(reloaded.passwords.length, 1);
   assert.strictEqual(reloaded.passwords[0].service, 'GitHub');
-  assert.strictEqual(reloaded.passwords[0].totpSecret, 'JBSWY3DPEHPK3PXP');
   assert.strictEqual(reloaded.cards.length, 1);
   assert.strictEqual(reloaded.cards[0].title, 'HDFC Millennia');
 });
 
 test('Vault - Decryption Fails With Incorrect Key', async () => {
-  const phone = '9876543210';
   const password = 'MasterPassword2026!';
   const correctKey = generateSaltHex(32);
   const wrongKey = generateSaltHex(32);
 
-  await createNewVault(phone, password, correctKey);
+  await createNewVault(password, correctKey);
 
   await assert.rejects(async () => {
     await decryptVaultWithKey(wrongKey);
@@ -134,11 +133,10 @@ test('Vault - Export to CSV Format', () => {
 });
 
 test('Vault - Identity Cards Saving and Retrieval', async () => {
-  const phone = '9876543210';
   const password = 'MasterPassword2026!';
   const vaultKey = generateSaltHex(32);
 
-  const vault = await createNewVault(phone, password, vaultKey);
+  const vault = await createNewVault(password, vaultKey);
   assert.deepStrictEqual(vault.cards, []);
 
   const identityCard = {
@@ -169,30 +167,49 @@ test('Vault - Identity Cards Saving and Retrieval', async () => {
   assert.strictEqual(decrypted.cards[0].folder, 'Government IDs');
 });
 
-test('Backup - Encrypt and Decrypt Backup with Passphrase (WordArray.random salt generation)', () => {
+test('Backup - Encrypt and Decrypt Backup with Passphrase (v2.1 PBKDF2 + HMAC)', async () => {
   const backupData = {
     passwords: [{ service: 'GitHub', username: 'user', password: 'secretPassword123' }],
     cards: [{ id: 'card-1', title: 'Test Card' }],
   };
   const backupPassword = 'BackupPassphrase2026!';
 
-  // Encrypt with passphrase (calls CryptoJS.lib.WordArray.random for salt)
-  const encrypted = CryptoJS.AES.encrypt(JSON.stringify(backupData), backupPassword).toString();
-  assert.ok(typeof encrypted === 'string');
-  assert.ok(encrypted.length > 0);
+  // Encrypt with new PBKDF2 + HMAC hardened function
+  const encryptedJson = await encryptBackupData(backupData, backupPassword);
+  assert.ok(typeof encryptedJson === 'string');
+  const parsedContainer = JSON.parse(encryptedJson);
+  assert.strictEqual(parsedContainer.version, '2.1');
+  assert.strictEqual(parsedContainer.iterations, 100000);
+  assert.ok(parsedContainer.salt.length === 32); // 16 bytes hex
+  assert.ok(parsedContainer.iv.length === 32);
+  assert.ok(parsedContainer.hmac.length === 64); // SHA-256 hex
 
-  // Decrypt with passphrase
-  const decryptedStr = CryptoJS.AES.decrypt(encrypted, backupPassword).toString(CryptoJS.enc.Utf8);
-  const decryptedData = JSON.parse(decryptedStr);
-  assert.deepStrictEqual(decryptedData, backupData);
+  // Decrypt with correct passphrase
+  const decrypted = await decryptBackupData(encryptedJson, backupPassword);
+  assert.deepStrictEqual(decrypted, backupData);
+
+  // Decrypt with incorrect passphrase rejects
+  await assert.rejects(async () => {
+    await decryptBackupData(encryptedJson, 'WrongPassphrase');
+  }, /Incorrect backup password/);
+
+  // Legacy v2.0 format backwards compatibility test
+  const legacyPassphrase = 'LegacyPassword123';
+  const legacyCiphertext = CryptoJS.AES.encrypt(JSON.stringify(backupData), legacyPassphrase).toString();
+  const legacyBackup = {
+    passwords: legacyCiphertext,
+    version: '2.0',
+    timestamp: Date.now(),
+  };
+  const decryptedLegacy = await decryptBackupData(legacyBackup, legacyPassphrase);
+  assert.deepStrictEqual(decryptedLegacy, backupData);
 });
 
 test("Vault - Custom Fields / Additional PINs with Text and Numeric Values", async () => {
-  const phone = "9876543210";
   const password = "MasterPassword2026!";
   const vaultKey = generateSaltHex(32);
 
-  const vault = await createNewVault(phone, password, vaultKey);
+  const vault = await createNewVault(password, vaultKey);
 
   const customFields = [
     { label: "Security Question", pin: "Blueberry Muffin" },
@@ -249,4 +266,41 @@ test("Vault - Custom Fields Reordering Up and Down", async () => {
   assert.strictEqual(movedDown[0].label, "Third");
   assert.strictEqual(movedDown[1].label, "First");
   assert.strictEqual(movedDown[2].label, "Second");
+});
+
+test('Vault - Backwards Compatibility with Legacy Vaults Containing Phone', async () => {
+  const legacyPhone = '9876543210';
+  const password = 'LegacyPassword2026!';
+  const vaultKey = generateSaltHex(32);
+  const saltHex = generateSaltHex(16);
+
+  const legacyVault = {
+    user: {
+      phone: legacyPhone,
+      passwordHash: hashPassword(password, saltHex),
+      passwordSaltHex: saltHex,
+    },
+    passwords: [],
+    cards: [],
+  };
+
+  await saveVault(legacyVault, vaultKey);
+  const loaded = await decryptVaultWithKey(vaultKey);
+  assert.strictEqual(loaded.user.phone, legacyPhone);
+  assert.strictEqual(verifyPassword(password, loaded.user.passwordHash, loaded.user.passwordSaltHex), true);
+});
+
+test('Vault - Effective Workspaces and Defaults', () => {
+  assert.deepStrictEqual(getEffectiveWorkspaces(null), ['Personal', 'Work']);
+  assert.deepStrictEqual(getEffectiveWorkspaces({}), ['Personal', 'Work']);
+
+  const vaultWithCustom = {
+    customSpaces: ['Freelance', 'Side Projects'],
+  };
+  assert.deepStrictEqual(getEffectiveWorkspaces(vaultWithCustom), [
+    'Personal',
+    'Work',
+    'Freelance',
+    'Side Projects',
+  ]);
 });

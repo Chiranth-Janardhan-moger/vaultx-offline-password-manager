@@ -90,7 +90,7 @@ export default function ExportScreen() {
       }
 
       // Decrypt vault to get passwords and cards
-      const { decryptVaultWithKey } = await import('@/lib/vault');
+      const { decryptVaultWithKey, encryptBackupData } = await import('@/lib/vault');
       const vaultData = await decryptVaultWithKey(vaultKey);
 
       // Create backup with passwords and cards (no phone, no password hash)
@@ -99,20 +99,13 @@ export default function ExportScreen() {
         cards: vaultData.cards || [],
       };
       
-      // Encrypt the data with backup password
-      const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(backupData), backupPassword).toString();
-      
-      // Create complete backup
-      const completeBackup = {
-        passwords: encryptedData,
-        version: '2.0',
-        timestamp: Date.now(),
-      };
+      // Encrypt with salted PBKDF2 (100,000 iterations) and AES-256-CBC + HMAC
+      const backupJson = await encryptBackupData(backupData, backupPassword);
       
       const base = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory || '';
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filePath = `${base}vaultx-backup-${timestamp}.vxb`;
-      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(completeBackup));
+      await FileSystem.writeAsStringAsync(filePath, backupJson);
       await ensureShare(filePath, 'application/json');
       
       // Record backup date
@@ -149,8 +142,8 @@ export default function ExportScreen() {
         alwaysBounceVertical={true}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Export Backup</Text>
           <View style={styles.NoiconBtn} />
@@ -234,6 +227,7 @@ export default function ExportScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16, paddingBottom: 40 },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { categories, categorizeService, getCategoryById } from '../lib/categories.ts';
+import { categories, categorizeService, getCategoryById, getEffectiveCategories } from '../lib/categories.ts';
 
 test('Categories - Schema and Integrity', () => {
   assert.ok(Array.isArray(categories));
@@ -54,7 +54,7 @@ test('Categories - Service Categorization', () => {
 test('Categories - getCategoryById Retrieval', () => {
   const googleCat = getCategoryById('google');
   assert.strictEqual(googleCat.id, 'google');
-  assert.strictEqual(googleCat.name, 'Google Services');
+  assert.strictEqual(googleCat.name, 'Google');
 
   const bankingCat = getCategoryById('banking');
   assert.strictEqual(bankingCat.id, 'banking');
@@ -63,4 +63,34 @@ test('Categories - getCategoryById Retrieval', () => {
   const fallback = getCategoryById('non_existent');
   assert.ok(fallback);
   assert.strictEqual(fallback.id, 'other');
+});
+
+test('Categories - getEffectiveCategories and Overrides', () => {
+  const all = getEffectiveCategories();
+  assert.strictEqual(all.length, categories.length);
+
+  // Exclude deleted categories
+  const filtered = getEffectiveCategories(['shopping', 'entertainment']);
+  assert.strictEqual(filtered.length, categories.length - 2);
+  assert.ok(!filtered.some((c) => c.id === 'shopping' || c.id === 'entertainment'));
+
+  // Custom name override
+  const overridden = getEffectiveCategories([], { banking: 'Finances' });
+  const bankingCat = overridden.find((c) => c.id === 'banking');
+  assert.ok(bankingCat);
+  assert.strictEqual(bankingCat.name, 'Finances');
+});
+
+test('Categories - categorizeService with Deleted Categories Fallback', () => {
+  // Normally Amazon is shopping
+  assert.strictEqual(categorizeService('Amazon Shopping'), 'shopping');
+
+  // If shopping is deleted, unclassified service defaults to other
+  assert.strictEqual(categorizeService('Amazon Shopping', ['shopping']), 'other');
+
+  // If both shopping and other are deleted, falls back to google
+  assert.strictEqual(categorizeService('Amazon Shopping', ['shopping', 'other']), 'google');
+
+  // If both shopping and other are deleted with custom fallback
+  assert.strictEqual(categorizeService('Amazon Shopping', ['shopping', 'other'], 'work'), 'work');
 });

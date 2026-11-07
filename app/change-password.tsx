@@ -2,8 +2,8 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { loadMeta, saveMeta, savePasswordWrap, unwrapWithPin } from '@/lib/secure';
-import { decryptVaultWithKey, generateSaltHex, hashPassword, saveVault } from '@/lib/vault';
+import { loadMeta, saveMeta, savePasswordWrap, unwrapWithPassword } from '@/lib/secure';
+import { decryptVaultWithKey, generateSaltHex, hashPasswordAsync, saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -15,24 +15,23 @@ export default function ChangePassword() {
   const { unlocked } = useSession();
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  const [currentPin, setCurrentPin] = React.useState('');
+  const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [showPassword, setShowPassword] = React.useState(false);
+  const [showCurrent, setShowCurrent] = React.useState(false);
+  const [showNew, setShowNew] = React.useState(false);
+  const [showConfirm, setShowConfirm] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-
-  const [pinFocused, setPinFocused] = React.useState(false);
-  const pinRef = React.useRef<TextInput>(null);
 
   React.useEffect(() => {
     if (!unlocked) router.replace('/login');
   }, [unlocked, router]);
 
   const handleChangePassword = async () => {
-    if (!/^\d{6}$/.test(currentPin)) {
+    if (!currentPassword.trim()) {
       showAlert({
-        title: 'Invalid VPin',
-        message: 'VPin must be exactly 6 digits',
+        title: 'Current Password Required',
+        message: 'Please enter your current master password',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -41,7 +40,7 @@ export default function ChangePassword() {
     if (newPassword.length < 8) {
       showAlert({
         title: 'Password Too Short',
-        message: 'Password must be at least 8 characters',
+        message: 'New password must be at least 8 characters',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -50,7 +49,7 @@ export default function ChangePassword() {
     if (newPassword !== confirmPassword) {
       showAlert({
         title: 'Passwords Don\'t Match',
-        message: 'Please make sure both passwords match',
+        message: 'New password and confirmation do not match',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -59,8 +58,8 @@ export default function ChangePassword() {
 
     setLoading(true);
     try {
-      // Verify current PIN and get vault key
-      const vaultKey = await unwrapWithPin(currentPin);
+      // Verify current password and get vault key
+      const vaultKey = await unwrapWithPassword(currentPassword.trim());
       
       // Get current vault
       const vault = await decryptVaultWithKey(vaultKey);
@@ -68,7 +67,7 @@ export default function ChangePassword() {
       // Update password hash and salt in vault
       const newSaltHex = generateSaltHex();
       vault.user.passwordSaltHex = newSaltHex;
-      vault.user.passwordHash = hashPassword(newPassword, newSaltHex);
+      vault.user.passwordHash = await hashPasswordAsync(newPassword, newSaltHex);
       
       // Save vault with updated password hash
       await saveVault(vault, vaultKey);
@@ -85,14 +84,14 @@ export default function ChangePassword() {
       
       showAlert({
         title: 'Success',
-        message: 'Your password has been changed successfully',
+        message: 'Your master password has been changed successfully',
         confirmText: 'OK',
         onConfirm: () => router.back(),
       });
-    } catch (error) {
+    } catch {
       showAlert({
         title: 'Error',
-        message: 'Incorrect VPin or failed to change password',
+        message: 'Incorrect current password or failed to change password',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -101,105 +100,80 @@ export default function ChangePassword() {
     }
   };
 
-  const pinDigits = currentPin.split('');
-  while (pinDigits.length < 6) pinDigits.push('');
+  const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
   return (
     <Screen>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Change Password</Text>
-          <View style={styles.NoiconBtn} />
+          <Text style={[styles.title, { color: colors.text }]}>Change Master Password</Text>
+          <View style={styles.noIconBtn} />
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.label, { color: colors.mutedText }]}>Current VPin</Text>
-          <TouchableOpacity 
-            style={styles.pinBoxes}
-            onPress={() => pinRef.current?.focus()}
-            activeOpacity={1}
-          >
-            {pinDigits.map((digit, idx) => {
-              const isFilled = digit !== '';
-              const isCurrentBox = pinFocused && idx === currentPin.length;
-              
-              return (
-                <View
-                  key={idx}
-                  style={[
-                    styles.pinBox,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                    isFilled && { borderColor: colors.primary, borderWidth: 2 },
-                    isCurrentBox && { borderColor: colors.primary, borderWidth: 2 },
-                  ]}
-                >
-                  <Text style={[styles.pinDigit, { color: colors.text }]}>
-                    {isFilled ? '●' : ''}
-                  </Text>
-                </View>
-              );
-            })}
-          </TouchableOpacity>
-          <TextInput
-            ref={pinRef}
-            style={styles.hiddenInput}
-            value={currentPin}
-            onChangeText={setCurrentPin}
-            keyboardType="number-pad"
-            maxLength={6}
-            autoComplete="off"
-            textContentType="none"
-            secureTextEntry={false}
-            caretHidden
-            autoFocus={true}
-            onFocus={() => setPinFocused(true)}
-            onBlur={() => setPinFocused(false)}
-          />
+          <Text style={[styles.label, { color: colors.mutedText }]}>Current Password</Text>
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={[...inputStyle, { paddingRight: 44 }]}
+              placeholder="Enter current password"
+              placeholderTextColor={colors.mutedText}
+              secureTextEntry={!showCurrent}
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+            />
+            <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={styles.eyeBtn}>
+              <Ionicons name={showCurrent ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
+            </TouchableOpacity>
+          </View>
 
           <Text style={[styles.label, { color: colors.mutedText }]}>New Password</Text>
           <View style={styles.inputWrap}>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
+              style={[...inputStyle, { paddingRight: 44 }]}
               placeholder="Enter new password (min 8 chars)"
               placeholderTextColor={colors.mutedText}
-              secureTextEntry={!showPassword}
-              autoComplete="password-new"
+              secureTextEntry={!showNew}
               autoCapitalize="none"
               autoCorrect={false}
               spellCheck={false}
-              keyboardType={showPassword ? 'visible-password' : 'default'}
               value={newPassword}
               onChangeText={setNewPassword}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-              <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
+            <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeBtn}>
+              <Ionicons name={showNew ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
             </TouchableOpacity>
           </View>
 
           <Text style={[styles.label, { color: colors.mutedText }]}>Confirm New Password</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }]}
-            placeholder="Confirm new password"
-            placeholderTextColor={colors.mutedText}
-            secureTextEntry={!showPassword}
-            autoComplete="password-new"
-            autoCapitalize="none"
-            autoCorrect={false}
-            spellCheck={false}
-            keyboardType={showPassword ? 'visible-password' : 'default'}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={[...inputStyle, { paddingRight: 44 }]}
+              placeholder="Confirm new password"
+              placeholderTextColor={colors.mutedText}
+              secureTextEntry={!showConfirm}
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+            <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeBtn}>
+              <Ionicons name={showConfirm ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.primary }, loading && { opacity: 0.6 }]}
             disabled={loading}
             onPress={handleChangePassword}
           >
-            <Text style={styles.buttonText}>{loading ? 'Changing...' : 'Change Password'}</Text>
+            <Text style={styles.buttonText}>{loading ? 'Changing...' : 'Update Password'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -211,19 +185,15 @@ export default function ChangePassword() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 18 },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  iconBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-    NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  noIconBtn: { width: 40, height: 40 },
   title: { fontSize: 20, fontWeight: '900' },
   card: { borderWidth: 1, borderRadius: 16, padding: 16 },
-  label: { fontSize: 12, fontWeight: '800', marginBottom: 8, marginTop: 12 },
-  input: { borderWidth: 1, padding: 12, borderRadius: 12, fontSize: 15, marginBottom: 12 },
-  inputWrap: { position: 'relative', marginBottom: 8 },
+  label: { fontSize: 13, fontWeight: '700', marginBottom: 6, marginTop: 10 },
+  input: { borderWidth: 1, padding: 12, borderRadius: 12, fontSize: 15 },
+  inputWrap: { position: 'relative', marginBottom: 6 },
   eyeBtn: { position: 'absolute', right: 2, top: 0, height: 44, width: 44, alignItems: 'center', justifyContent: 'center' },
-  pinBoxes: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  pinBox: { width: 48, height: 56, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  pinDigit: { fontSize: 32, fontWeight: '900' },
-  hiddenInput: { position: 'absolute', opacity: 0, height: 1, width: 1, top: 0, left: 0 },
-  button: { padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
+  button: { padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
 });

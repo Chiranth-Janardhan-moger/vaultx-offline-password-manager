@@ -1,3 +1,5 @@
+import { getRandomBytes } from './crypto-shim';
+
 export type PasswordStrength = 'weak' | 'fair' | 'good' | 'strong' | 'very-strong';
 
 export interface PasswordStrengthResult {
@@ -6,6 +8,68 @@ export interface PasswordStrengthResult {
   feedback: string;
   color: string;
 }
+
+export interface GeneratePasswordOptions {
+  uppercase?: boolean;
+  lowercase?: boolean;
+  numbers?: boolean;
+  symbols?: boolean;
+}
+
+const UPPERCASE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const LOWERCASE_CHARS = 'abcdefghijkmnopqrstuvwxyz';
+const NUMBER_CHARS = '23456789';
+const SYMBOL_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+export const generateSecurePassword = (
+  length = 16,
+  options: GeneratePasswordOptions = { uppercase: true, lowercase: true, numbers: true, symbols: true }
+): string => {
+  let pool = '';
+  const mandatoryChars: string[] = [];
+
+  if (options.uppercase !== false) {
+    pool += UPPERCASE_CHARS;
+    const b = getRandomBytes(1);
+    mandatoryChars.push(UPPERCASE_CHARS[b[0] % UPPERCASE_CHARS.length]);
+  }
+  if (options.lowercase !== false) {
+    pool += LOWERCASE_CHARS;
+    const b = getRandomBytes(1);
+    mandatoryChars.push(LOWERCASE_CHARS[b[0] % LOWERCASE_CHARS.length]);
+  }
+  if (options.numbers !== false) {
+    pool += NUMBER_CHARS;
+    const b = getRandomBytes(1);
+    mandatoryChars.push(NUMBER_CHARS[b[0] % NUMBER_CHARS.length]);
+  }
+  if (options.symbols !== false) {
+    pool += SYMBOL_CHARS;
+    const b = getRandomBytes(1);
+    mandatoryChars.push(SYMBOL_CHARS[b[0] % SYMBOL_CHARS.length]);
+  }
+
+  if (!pool) {
+    pool = LOWERCASE_CHARS + NUMBER_CHARS;
+  }
+
+  const remainingLength = Math.max(0, length - mandatoryChars.length);
+  const randomBytes = getRandomBytes(remainingLength);
+  const chars: string[] = [...mandatoryChars];
+  for (let i = 0; i < remainingLength; i++) {
+    chars.push(pool[randomBytes[i] % pool.length]);
+  }
+
+  const shuffleBytes = getRandomBytes(chars.length);
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = shuffleBytes[i] % (i + 1);
+    const temp = chars[i];
+    chars[i] = chars[j];
+    chars[j] = temp;
+  }
+
+  return chars.join('');
+};
 
 export const checkPasswordStrength = (password: string): PasswordStrengthResult => {
   if (!password) {

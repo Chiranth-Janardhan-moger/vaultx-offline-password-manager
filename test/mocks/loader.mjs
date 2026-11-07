@@ -3,6 +3,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export async function resolve(specifier, context, nextResolve) {
+  if (specifier === 'expo-clipboard') {
+    return {
+      shortCircuit: true,
+      url: new URL('./expo-clipboard.mjs', import.meta.url).href,
+    };
+  }
   if (specifier === 'expo-secure-store') {
     return {
       shortCircuit: true,
@@ -19,6 +25,12 @@ export async function resolve(specifier, context, nextResolve) {
     return {
       shortCircuit: true,
       url: new URL('./expo-file-system.mjs', import.meta.url).href,
+    };
+  }
+  if (specifier === 'react-native') {
+    return {
+      shortCircuit: true,
+      url: new URL('./react-native.mjs', import.meta.url).href,
     };
   }
 

@@ -1,0 +1,5 @@
+Version 1.4.3:
+• Simplified login flow: master password and hardware biometric authentication
+• Real-time smart tag matching and unified tag management across vault
+• Hardened security: JVM memory zeroization, persistent lockout, and 45s clipboard auto-clear
+• Complete privacy: 100% offline architecture with zero network permissions

@@ -2,8 +2,8 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { generateVaultKey, saveBiometricKey, saveMeta, savePasswordWrap, savePinWrap, saveRecoveryWrap } from '@/lib/secure';
-import { createNewVault, generateSaltHex, hashPassword, vaultExists } from '@/lib/vault';
+import { generateVaultKey, saveBiometricKey, saveMeta, savePasswordWrap, saveRecoveryWrap } from '@/lib/secure';
+import { createNewVault, generateSaltHex, hashPasswordAsync, vaultExists } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -22,12 +22,12 @@ const QUESTIONS = [
 export default function Setup() {
   const router = useRouter();
   const { unlock } = useSession();
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  const [step, setStep] = React.useState<0 | 1 | 2 | 3>(0);
+  const [step, setStep] = React.useState<0 | 1 | 2>(0);
 
-  const [phone, setPhone] = React.useState('');
+  const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirm, setConfirm] = React.useState('');
 
@@ -37,13 +37,6 @@ export default function Setup() {
   const [selectedQuestion, setSelectedQuestion] = React.useState(0);
   const [answer, setAnswer] = React.useState('');
   const [showQuestionPicker, setShowQuestionPicker] = React.useState(false);
-  const [pin, setPin] = React.useState('');
-  const [pin2, setPin2] = React.useState('');
-  const [pinFocused, setPinFocused] = React.useState(false);
-  const [pin2Focused, setPin2Focused] = React.useState(false);
-
-  const pinInputRef = React.useRef<TextInput>(null);
-  const pin2InputRef = React.useRef<TextInput>(null);
 
   const [bioSupported, setBioSupported] = React.useState(false);
   const [enableBio, setEnableBio] = React.useState(false);
@@ -61,7 +54,6 @@ export default function Setup() {
       try {
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
         const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-        console.log('Biometric hardware:', hasHardware, 'enrolled:', isEnrolled);
         setBioSupported(hasHardware && isEnrolled);
       } catch (error) {
         console.error('Biometric check failed:', error);
@@ -71,10 +63,21 @@ export default function Setup() {
   }, [router]);
 
   const nextFromAccount = React.useCallback(async () => {
-    if (!phone.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       showAlert({
-        title: 'Required',
-        message: 'Phone is required',
+        title: 'Email Required',
+        message: 'Please enter your email address',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      showAlert({
+        title: 'Invalid Email',
+        message: 'Please enter a valid email address',
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -100,7 +103,7 @@ export default function Setup() {
     }
 
     setStep(1);
-  }, [phone, password, confirm]);
+  }, [email, password, confirm, showAlert]);
 
   const nextFromRecovery = React.useCallback(() => {
     if (!answer.trim()) {
@@ -115,43 +118,21 @@ export default function Setup() {
     setStep(2);
   }, [answer, showAlert]);
 
-  const nextFromPin = React.useCallback(() => {
-    if (!/^\d{6}$/.test(pin)) {
-      showAlert({
-        title: 'Invalid PIN',
-        message: 'PIN must be 6 digits',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-      return;
-    }
-    if (pin !== pin2) {
-      showAlert({
-        title: 'PINs Don\'t Match',
-        message: 'PINs do not match',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-      return;
-    }
-    setStep(3);
-  }, [pin, pin2, showAlert]);
-
   const finishSetup = React.useCallback(async () => {
     if (loading) return;
     setLoading(true);
     try {
       const vaultKey = await generateVaultKey();
       const passwordSaltHex = generateSaltHex();
-      const passwordHash = hashPassword(password, passwordSaltHex);
+      const passwordHash = await hashPasswordAsync(password, passwordSaltHex);
+      const cleanEmail = email.trim().toLowerCase();
 
-      await saveMeta({ phone: phone.trim(), passwordHash, passwordSaltHex });
+      await saveMeta({ email: cleanEmail, passwordHash, passwordSaltHex });
       await savePasswordWrap(vaultKey, password);
       await saveRecoveryWrap(vaultKey, [QUESTIONS[selectedQuestion]], [answer]);
-      await savePinWrap(vaultKey, pin);
       if (enableBio && bioSupported) await saveBiometricKey(vaultKey);
 
-      const vault = await createNewVault(phone.trim(), password, vaultKey, passwordSaltHex);
+      const vault = await createNewVault(password, vaultKey, passwordSaltHex, { email: cleanEmail });
       unlock(vault, vaultKey);
       router.replace('/dashboard');
     } catch (e: any) {
@@ -164,7 +145,7 @@ export default function Setup() {
     } finally {
       setLoading(false);
     }
-  }, [loading, phone, password, selectedQuestion, answer, pin, enableBio, bioSupported, unlock, router]);
+  }, [loading, email, password, selectedQuestion, answer, enableBio, bioSupported, unlock, router, showAlert]);
 
   const passwordStrength = React.useMemo(() => {
     const pw = password;
@@ -186,7 +167,7 @@ export default function Setup() {
           <Text style={[styles.kicker, { color: colors.mutedText }]}>Setup</Text>
           <Text style={[styles.title, { color: colors.text }]}>Create your secure VaultX</Text>
           <View style={styles.dots}>
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2].map((i) => (
               <View
                 key={i}
                 style={[
@@ -200,19 +181,29 @@ export default function Setup() {
 
         {step === 0 ? (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Credentials</Text>
+            <Text style={[styles.helper, { color: colors.mutedText, marginBottom: 16 }]}>
+              Enter your email and master password. You will use this password to log in.
+            </Text>
+
             <TextInput
               style={inputStyle}
-              placeholder="Phone Number"
+              placeholder="Email address"
               placeholderTextColor={colors.mutedText}
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
+              autoComplete="email"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              selectionColor={colors.primary}
+              value={email}
+              onChangeText={setEmail}
             />
+
             <View style={styles.inputWrap}>
               <TextInput
                 style={[...inputStyle, { paddingRight: 44 }]}
-                placeholder="Create Password"
+                placeholder="Master Password (8+ characters)"
                 placeholderTextColor={colors.mutedText}
                 secureTextEntry={!showPassword}
                 autoComplete="password-new"
@@ -256,7 +247,7 @@ export default function Setup() {
             <View style={styles.inputWrap}>
               <TextInput
                 style={[...inputStyle, { paddingRight: 44 }]}
-                placeholder="Confirm Password"
+                placeholder="Confirm Master Password"
                 placeholderTextColor={colors.mutedText}
                 secureTextEntry={!showConfirm}
                 autoComplete="password-new"
@@ -291,7 +282,7 @@ export default function Setup() {
         {step === 1 ? (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Security Question</Text>
-            <Text style={[styles.helper, { color: colors.mutedText }]}>This helps you recover access if you forget your PIN.</Text>
+            <Text style={[styles.helper, { color: colors.mutedText }]}>This helps you recover access if you ever forget your password.</Text>
 
             <Text style={[styles.question, { color: colors.text }]}>Select a question</Text>
             <TouchableOpacity
@@ -348,92 +339,22 @@ export default function Setup() {
 
         {step === 2 ? (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>VaultX PIN</Text>
-            <Text style={[styles.helper, { color: colors.mutedText }]}>Use a 6-digit PIN for quick unlock.</Text>
-            
-            <View style={{ position: 'relative' }}>
-              <Text style={[styles.pinLabel, { color: colors.text }]}>Create PIN</Text>
-              <TouchableOpacity 
-                style={styles.pinBoxes}
-                onPress={() => pinInputRef.current?.focus()}
-                activeOpacity={1}
-              >
-                {pin.padEnd(6, ' ').split('').map((digit, idx) => {
-                  const isFilled = digit.trim() !== '';
-                  const isCurrentBox = pinFocused && idx === pin.length;
-                  
-                  return (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.pinBox,
-                        { backgroundColor: colors.inputBg, borderColor: colors.border },
-                        isFilled && { borderColor: colors.primary, borderWidth: 2 },
-                        isCurrentBox && { borderColor: colors.primary, borderWidth: 2 },
-                      ]}
-                    >
-                      <Text style={[styles.pinDigit, { color: colors.text }]}>
-                        {isFilled ? '●' : ''}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </TouchableOpacity>
-              <TextInput
-                ref={pinInputRef}
-                style={styles.hiddenInput}
-                keyboardType="number-pad"
-                autoComplete="off"
-                textContentType="none"
-                importantForAutofill="no"
-                maxLength={6}
-                value={pin}
-                onChangeText={(t) => setPin(t.replace(/[^0-9]/g, ''))}
-                onFocus={() => setPinFocused(true)}
-                onBlur={() => setPinFocused(false)}
-              />
-            </View>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Biometric Unlock</Text>
+            <Text style={[styles.helper, { color: colors.mutedText }]}>You can enable fingerprint or biometric unlock for quick access.</Text>
 
-            <View style={{ position: 'relative' }}>
-              <Text style={[styles.pinLabel, { color: colors.text, marginTop: 16 }]}>Confirm PIN</Text>
-              <TouchableOpacity 
-                style={styles.pinBoxes}
-                onPress={() => pin2InputRef.current?.focus()}
-                activeOpacity={1}
-              >
-                {pin2.padEnd(6, ' ').split('').map((digit, idx) => {
-                  const isFilled = digit.trim() !== '';
-                  const isCurrentBox = pin2Focused && idx === pin2.length;
-                  
-                  return (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.pinBox,
-                        { backgroundColor: colors.inputBg, borderColor: colors.border },
-                        isFilled && { borderColor: colors.primary, borderWidth: 2 },
-                        isCurrentBox && { borderColor: colors.primary, borderWidth: 2 },
-                      ]}
-                    >
-                      <Text style={[styles.pinDigit, { color: colors.text }]}>
-                        {isFilled ? '●' : ''}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </TouchableOpacity>
-              <TextInput
-                ref={pin2InputRef}
-                style={styles.hiddenInput}
-                keyboardType="number-pad"
-                autoComplete="off"
-                textContentType="none"
-                importantForAutofill="no"
-                maxLength={6}
-                value={pin2}
-                onChangeText={(t) => setPin2(t.replace(/[^0-9]/g, ''))}
-                onFocus={() => setPin2Focused(true)}
-                onBlur={() => setPin2Focused(false)}
+            <View style={[styles.switchRow, { borderColor: colors.border }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.switchTitle, { color: colors.text }]}>Enable biometric unlock</Text>
+                <Text style={[styles.switchSub, { color: colors.mutedText }]}>
+                  {bioSupported ? 'Uses your device biometrics.' : 'Not available on this device.'}
+                </Text>
+              </View>
+              <Switch
+                value={enableBio}
+                onValueChange={setEnableBio}
+                disabled={!bioSupported}
+                trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
+                thumbColor={enableBio ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
               />
             </View>
 
@@ -442,41 +363,11 @@ export default function Setup() {
                 <Text style={[styles.linkText, { color: colors.mutedText }]}>Back</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.primaryBtn, styles.primaryBtnRow, { backgroundColor: colors.primary }]}
-                onPress={nextFromPin}
-              >
-                <Text style={styles.primaryBtnText}>Next</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
-
-        {step === 3 ? (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Fingerprint</Text>
-            <Text style={[styles.helper, { color: colors.mutedText }]}>You can unlock with fingerprint instead of typing your PIN.</Text>
-
-            <View style={[styles.switchRow, { borderColor: colors.border }]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.switchTitle, { color: colors.text }]}>Enable fingerprint unlock</Text>
-                <Text style={[styles.switchSub, { color: colors.mutedText }]}>
-                  {bioSupported ? 'Uses your device biometrics.' : 'Not available on this device.'}
-                </Text>
-              </View>
-              <Switch value={enableBio} onValueChange={setEnableBio} disabled={!bioSupported} />
-            </View>
-
-            <View style={styles.row}>
-              <TouchableOpacity onPress={() => setStep(2)} style={styles.linkBtn}>
-                <Text style={[styles.linkText, { color: colors.mutedText }]}>Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={[styles.primaryBtn, styles.primaryBtnRow, { backgroundColor: colors.primary }, loading && { opacity: 0.6 }]}
                 disabled={loading}
                 onPress={finishSetup}
               >
-                <Text style={styles.primaryBtnText}>{loading ? 'Creating...' : 'Finish'}</Text>
+                <Text style={styles.primaryBtnText}>{loading ? 'Creating...' : 'Create Vault'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -510,57 +401,14 @@ const styles = StyleSheet.create({
   primaryBtnRow: { marginTop: 0, paddingHorizontal: 18, minWidth: 140 },
   primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 6 },
-  linkBtn: { paddingVertical: 12, paddingHorizontal: 8 },
-  linkText: { fontSize: 14, fontWeight: '700' },
-  switchRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 12, marginTop: 4 },
-  switchTitle: { fontSize: 14, fontWeight: '800' },
-  switchSub: { fontSize: 12, marginTop: 2 },
-  dropdown: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    borderWidth: 1, 
-    padding: 12, 
-    borderRadius: 12, 
-    marginBottom: 10 
-  },
-  dropdownText: { fontSize: 15, flex: 1 },
-  picker: { 
-    borderWidth: 1, 
-    borderRadius: 12, 
-    marginBottom: 10, 
-    overflow: 'hidden' 
-  },
-  pickerItem: { 
-    padding: 14, 
-    borderBottomWidth: 1, 
-    borderBottomColor: 'rgba(0,0,0,0.05)' 
-  },
+  linkBtn: { padding: 10 },
+  linkText: { fontSize: 15, fontWeight: '700' },
+  dropdown: { borderWidth: 1, padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  dropdownText: { fontSize: 14, fontWeight: '600' },
+  picker: { borderWidth: 1, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
+  pickerItem: { padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#eee' },
   pickerText: { fontSize: 14 },
-  pinLabel: { fontSize: 14, fontWeight: '700', marginBottom: 12 },
-  pinBoxes: { 
-    flexDirection: 'row', 
-    gap: 8, 
-    marginBottom: 12,
-    justifyContent: 'center',
-  },
-  pinBox: {
-    width: 40,
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pinDigit: { 
-    fontSize: 28, 
-    fontWeight: '900',
-  },
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    height: 1,
-    width: 1,
-    top: -1000,
-  },
+  switchRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 14 },
+  switchTitle: { fontSize: 15, fontWeight: '700' },
+  switchSub: { fontSize: 12, marginTop: 2 },
 });

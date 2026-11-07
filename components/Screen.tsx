@@ -3,24 +3,23 @@ import { useTheme } from '@/context/ThemeProvider';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { View, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 type Props = React.PropsWithChildren<{
   style?: ViewStyle;
   forceResolved?: 'light' | 'dark';
+  edges?: readonly Edge[];
 }>;
 
-export default function Screen({ children, style, forceResolved }: Props) {
+export default function Screen({ children, style, forceResolved, edges }: Props) {
   const { resolved, colors } = useTheme();
   const r = forceResolved ?? resolved;
 
   const barStyle = r === 'dark' ? 'light' : 'dark';
   const bg = r === 'dark' ? '#000000' : '#ffffff';
 
-
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+    <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: bg }}>
       <StatusBar style={barStyle} />
       <View style={[{ flex: 1, backgroundColor: forceResolved ? bg : colors.background }, style]}>{children}</View>
     </SafeAreaView>

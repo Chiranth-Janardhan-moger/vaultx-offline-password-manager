@@ -2,6 +2,7 @@ import CryptoJS from 'crypto-js';
 import * as FileSystem from 'expo-file-system/legacy';
 import { type CategoryType } from './categories';
 import { getRandomHex, getRandomWordArray } from './crypto-shim';
+import { pbkdf2Key } from './secure';
 
 export type PasswordItem = {
   service: string;
@@ -16,6 +17,7 @@ export type PasswordItem = {
   modifiedAt?: number; // Unix timestamp
   isFavorite?: boolean; // Star/pin for quick access
   folder?: string; // Custom folder category
+  workspace?: string; // Workspace space (e.g. 'Personal', 'Work')
   totpSecret?: string; // Base32 2FA secret key
 };
 
@@ -37,17 +39,33 @@ export type CardItem = {
   gradient: [string, string];
   createdAt: number;
   folder?: string; // Custom folder category
+  workspace?: string; // Workspace space (e.g. 'Personal', 'Work')
 };
 
 export type VaultData = {
   user: {
-    phone: string;
+    email?: string;
+    phone?: string;
     passwordHash: string;
     passwordSaltHex?: string;
   };
   passwords: PasswordItem[];
   cards?: CardItem[];
-  folders?: string[]; // List of user-defined custom folders
+  customTags?: string[];
+  deletedCategories?: string[];
+  categoryOverrides?: { [categoryId: string]: string };
+  customSpaces?: string[];
+};
+
+export const DEFAULT_WORKSPACES = ['Personal', 'Work'] as const;
+
+export const getEffectiveWorkspaces = (vault?: VaultData | null): string[] => {
+  const custom = vault?.customSpaces || [];
+  const list: string[] = [...DEFAULT_WORKSPACES];
+  for (const s of custom) {
+    if (!list.includes(s)) list.push(s);
+  }
+  return list;
 };
 
 const VAULT_FILENAME = 'vault_v1.enc';
@@ -74,6 +92,13 @@ export const hashPassword = (pw: string, saltHex?: string): string => {
     iterations: 100000,
     hasher: CryptoJS.algo.SHA256,
   }).toString(CryptoJS.enc.Hex);
+};
+
+export const hashPasswordAsync = async (pw: string, saltHex?: string): Promise<string> => {
+  if (!saltHex) {
+    return CryptoJS.SHA256(pw).toString(CryptoJS.enc.Hex);
+  }
+  return pbkdf2Key(pw, saltHex, 100000);
 };
 
 export const verifyPassword = (password: string, storedHash: string, saltHex?: string): boolean => {
@@ -136,33 +161,33 @@ export const readEncryptedString = async () => {
 };
 
 export const createNewVault = async (
-  phone: string,
   password: string,
   vaultKey: string,
-  saltHex?: string
+  saltHex?: string,
+  emailOrPhone?: { email?: string; phone?: string } | string
 ): Promise<VaultData> => {
   const passwordSaltHex = saltHex || generateSaltHex();
+  let email: string | undefined;
+  let phone: string | undefined;
+  if (typeof emailOrPhone === 'object' && emailOrPhone !== null) {
+    email = emailOrPhone.email;
+    phone = emailOrPhone.phone;
+  } else if (typeof emailOrPhone === 'string') {
+    phone = emailOrPhone;
+  }
+  const passwordHash = await hashPasswordAsync(password, passwordSaltHex);
   const data: VaultData = {
     user: {
+      email,
       phone,
-      passwordHash: hashPassword(password, passwordSaltHex),
+      passwordHash,
       passwordSaltHex,
     },
     passwords: [],
     cards: [],
+    customTags: [],
   };
   await saveEncryptedVault(data, vaultKey);
-  return data;
-};
-
-export const unlockLegacyVaultWithPassword = async (password: string): Promise<VaultData> => {
-  const encrypted = await readEncryptedString();
-  const decrypted = decryptText(encrypted, password);
-  if (!decrypted) throw new Error('Incorrect password');
-  const data = JSON.parse(decrypted) as VaultData;
-  if (!data?.user?.passwordHash || !verifyPassword(password, data.user.passwordHash, data.user.passwordSaltHex)) {
-    throw new Error('Incorrect password');
-  }
   return data;
 };
 
@@ -204,4 +229,100 @@ export const toCsv = (vault: VaultData) => {
     ].join(','));
   }
   return lines.join('\n');
+};
+
+export const encryptBackupData = async (
+  backupData: { passwords: PasswordItem[]; cards?: CardItem[] },
+  passphrase: string
+): Promise<string> => {
+  const saltHex = getRandomHex(16);
+  const ivWordArray = getRandomWordArray(16);
+  const iterations = 100_000;
+
+  const derivedKeyHex = await pbkdf2Key(passphrase, saltHex, iterations);
+  const derivedKey = CryptoJS.enc.Hex.parse(derivedKeyHex);
+
+  const hmacKeyHex = await pbkdf2Key(passphrase, saltHex, 10_000);
+  const hmacKey = CryptoJS.enc.Hex.parse(hmacKeyHex);
+
+  const plaintext = JSON.stringify(backupData);
+  const encrypted = CryptoJS.AES.encrypt(plaintext, derivedKey, {
+    iv: ivWordArray,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  });
+
+  const ciphertext = encrypted.toString();
+  const ivHex = ivWordArray.toString(CryptoJS.enc.Hex);
+  const hmac = CryptoJS.HmacSHA256(ciphertext + ivHex, hmacKey).toString();
+
+  const container = {
+    version: '2.1',
+    timestamp: Date.now(),
+    salt: saltHex,
+    iv: ivHex,
+    iterations,
+    ciphertext,
+    hmac,
+  };
+
+  return JSON.stringify(container);
+};
+
+export const decryptBackupData = async (
+  backupJsonOrObj: string | any,
+  passphrase: string
+): Promise<{ passwords: PasswordItem[]; cards: CardItem[] }> => {
+  const container = typeof backupJsonOrObj === 'string' ? JSON.parse(backupJsonOrObj) : backupJsonOrObj;
+
+  // New hardened format (v2.1)
+  if (container.version === '2.1' || (container.salt && container.ciphertext && container.iv)) {
+    const saltHex = container.salt;
+    const iterations = container.iterations || 100_000;
+    const iv = CryptoJS.enc.Hex.parse(container.iv);
+
+    if (container.hmac) {
+      const hmacKeyHex = await pbkdf2Key(passphrase, saltHex, 10_000);
+      const hmacKey = CryptoJS.enc.Hex.parse(hmacKeyHex);
+      const expectedHmac = CryptoJS.HmacSHA256(container.ciphertext + container.iv, hmacKey).toString();
+      if (expectedHmac !== container.hmac) {
+        throw new Error('Incorrect backup password');
+      }
+    }
+
+    const derivedKeyHex = await pbkdf2Key(passphrase, saltHex, iterations);
+    const derivedKey = CryptoJS.enc.Hex.parse(derivedKeyHex);
+
+    const decrypted = CryptoJS.AES.decrypt(container.ciphertext, derivedKey, {
+      iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7,
+    });
+
+    const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    if (!decryptedText) {
+      throw new Error('Incorrect backup password');
+    }
+
+    const parsed = JSON.parse(decryptedText);
+    return {
+      passwords: parsed.passwords || [],
+      cards: parsed.cards || [],
+    };
+  }
+
+  // Legacy format (v2.0: passwords property encrypted with CryptoJS string passphrase)
+  if (container.passwords) {
+    const decrypted = CryptoJS.AES.decrypt(container.passwords, passphrase).toString(CryptoJS.enc.Utf8);
+    if (!decrypted) {
+      throw new Error('Incorrect backup password');
+    }
+    const parsed = JSON.parse(decrypted);
+    return {
+      passwords: parsed.passwords || [],
+      cards: parsed.cards || [],
+    };
+  }
+
+  throw new Error('Unrecognized backup format');
 };

@@ -15,12 +15,11 @@ export default function RootLayout() {
     (async () => {
       try {
         const blockSS = await SecureStore.getItemAsync(BLOCK_SCREENSHOTS_KEY);
-        const shouldBlock = blockSS !== 'false'; // Default: true (block screenshots)
+        const shouldBlock = blockSS === 'true'; // Default: false, can be toggled in Settings
         await setScreenshotBlocking(shouldBlock);
       } catch (error) {
         console.error('Failed to apply screenshot blocking:', error);
-        // Default to blocking on error for security
-        await setScreenshotBlocking(true);
+        await setScreenshotBlocking(false);
       }
     })();
   }, []);
@@ -43,12 +42,27 @@ export default function RootLayout() {
           }} 
         >
           <Stack.Screen 
+            name="dashboard" 
+            options={{ 
+              animation: 'none',
+            }} 
+          />
+          <Stack.Screen 
             name="cards" 
             options={{ 
-              presentation: 'modal', 
-              animation: 'slide_from_bottom',
-              gestureEnabled: true,
-              gestureDirection: 'vertical',
+              animation: 'none',
+            }} 
+          />
+          <Stack.Screen 
+            name="generate-password" 
+            options={{ 
+              animation: 'none',
+            }} 
+          />
+          <Stack.Screen 
+            name="settings/index" 
+            options={{ 
+              animation: 'none',
             }} 
           />
         </Stack>

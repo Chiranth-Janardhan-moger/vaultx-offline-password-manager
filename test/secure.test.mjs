@@ -5,12 +5,9 @@ import {
   saveMeta,
   loadMeta,
   hasPasswordUnlock,
-  hasPinUnlock,
   hasRecovery,
   savePasswordWrap,
   unwrapWithPassword,
-  savePinWrap,
-  unwrapWithPin,
   saveRecoveryWrap,
   loadRecoveryQuestions,
   unwrapWithRecovery,
@@ -69,23 +66,23 @@ test('Secure - Master Password Key Wrapping and Unwrapping', async () => {
   }, /Incorrect password/);
 });
 
-test('Secure - 6-Digit V-PIN Key Wrapping and Unwrapping', async () => {
+test('Secure - Master Password Key Wrapping and Unwrapping with Special Characters', async () => {
   const vaultKey = await generateVaultKey();
-  const pin = '839201';
+  const password = 'V@ultX#2026_Secure$Passphrase!';
 
-  assert.strictEqual(await hasPinUnlock(), false);
+  assert.strictEqual(await hasPasswordUnlock(), false);
 
-  await savePinWrap(vaultKey, pin);
-  assert.strictEqual(await hasPinUnlock(), true);
+  await savePasswordWrap(vaultKey, password);
+  assert.strictEqual(await hasPasswordUnlock(), true);
 
-  // Correct PIN unwrap
-  const unwrappedKey = await unwrapWithPin(pin);
+  // Correct password unwrap
+  const unwrappedKey = await unwrapWithPassword(password);
   assert.strictEqual(unwrappedKey, vaultKey);
 
-  // Incorrect PIN unwrap rejects
+  // Incorrect password unwrap rejects
   await assert.rejects(async () => {
-    await unwrapWithPin('000000');
-  }, /Incorrect PIN/);
+    await unwrapWithPassword('WrongPass#123');
+  }, /Incorrect password/);
 });
 
 test('Secure - Recovery Questions Key Wrapping and Unwrapping', async () => {
@@ -133,17 +130,71 @@ test('Secure - Biometrics Flag and Key Handling', async () => {
 test('Secure - clearAllSecure Resets Everything', async () => {
   const vaultKey = await generateVaultKey();
   await savePasswordWrap(vaultKey, 'password');
-  await savePinWrap(vaultKey, '123456');
+  await saveRecoveryWrap(vaultKey, ['Question?'], ['Answer']);
   await setBiometricEnabled(true);
 
   assert.strictEqual(await hasPasswordUnlock(), true);
-  assert.strictEqual(await hasPinUnlock(), true);
+  assert.strictEqual(await hasRecovery(), true);
   assert.strictEqual(await isBiometricEnabled(), true);
 
   await clearAllSecure();
 
   assert.strictEqual(await hasPasswordUnlock(), false);
-  assert.strictEqual(await hasPinUnlock(), false);
+  assert.strictEqual(await hasRecovery(), false);
   assert.strictEqual(await isBiometricEnabled(), false);
   assert.strictEqual(await loadMeta(), null);
+});
+
+test('Secure - Alphanumeric and Symbol Passcode Key Wrapping and Unwrapping', async () => {
+  const vaultKey = await generateVaultKey();
+  const complexPasscode = 'V@ultX#2026_Secure$';
+
+  await savePasswordWrap(vaultKey, complexPasscode);
+  assert.strictEqual(await hasPasswordUnlock(), true);
+
+  const unwrappedKey = await unwrapWithPassword(complexPasscode);
+  assert.strictEqual(unwrappedKey, vaultKey);
+
+  await assert.rejects(async () => {
+    await unwrapWithPassword('WrongPass#123');
+  }, /Incorrect password/);
+});
+
+test('Secure - Lockout State Persistence and Threshold', async () => {
+  const { getLockoutState, recordFailedAttempt, clearLockoutState } = await import('../lib/secure.ts');
+
+  await clearLockoutState();
+  const initial = await getLockoutState();
+  assert.strictEqual(initial.failedAttempts, 0);
+  assert.strictEqual(initial.lockedUntil, 0);
+
+  // Attempt 1 to 4: increments count without locking
+  let state = await recordFailedAttempt(5, 30000);
+  assert.strictEqual(state.failedAttempts, 1);
+  assert.strictEqual(state.lockedUntil, 0);
+
+  state = await recordFailedAttempt(5, 30000);
+  assert.strictEqual(state.failedAttempts, 2);
+
+  state = await recordFailedAttempt(5, 30000);
+  assert.strictEqual(state.failedAttempts, 3);
+
+  state = await recordFailedAttempt(5, 30000);
+  assert.strictEqual(state.failedAttempts, 4);
+  assert.strictEqual(state.lockedUntil, 0);
+
+  // Attempt 5: triggers 30s lockout and resets failedAttempts counter
+  state = await recordFailedAttempt(5, 30000);
+  assert.strictEqual(state.failedAttempts, 0);
+  assert.ok(state.lockedUntil > Date.now());
+
+  // State persists across reload
+  const persisted = await getLockoutState();
+  assert.strictEqual(persisted.lockedUntil, state.lockedUntil);
+
+  // Clearing lockout clears state
+  await clearLockoutState();
+  const cleared = await getLockoutState();
+  assert.strictEqual(cleared.failedAttempts, 0);
+  assert.strictEqual(cleared.lockedUntil, 0);
 });

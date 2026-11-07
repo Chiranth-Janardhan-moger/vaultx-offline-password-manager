@@ -8,11 +8,8 @@ import CryptoJS from 'crypto-js';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-
-const MASTER_PASSWORD_KEY = 'master_password_v1';
 
 export default function ImportScreen() {
   const router = useRouter();
@@ -104,36 +101,16 @@ export default function ImportScreen() {
       let passwordsToRestore = [];
       let cardsToRestore = [];
       
-      if (backup.version === '2.0') {
-        // New format: passwords only
-        if (!backup.passwords) {
-          showAlert({
-            title: 'Invalid Backup',
-            message: 'No passwords found in backup',
-            confirmText: 'OK',
-            onConfirm: () => {},
-          });
-          return;
-        }
-        
+      if (backup.version === '2.1' || backup.version === '2.0' || (backup.salt && backup.ciphertext)) {
         try {
-          const decryptedPasswords = CryptoJS.AES.decrypt(backup.passwords, backupPassword).toString(CryptoJS.enc.Utf8);
-          if (!decryptedPasswords) {
-            showAlert({
-              title: 'Incorrect Password',
-              message: 'The backup password you entered is incorrect',
-              confirmText: 'OK',
-              onConfirm: () => {},
-            });
-            return;
-          }
-          const passwordsData = JSON.parse(decryptedPasswords);
-          passwordsToRestore = passwordsData.passwords || [];
-          cardsToRestore = passwordsData.cards || [];
+          const { decryptBackupData } = await import('@/lib/vault');
+          const restored = await decryptBackupData(backup, backupPassword);
+          passwordsToRestore = restored.passwords || [];
+          cardsToRestore = restored.cards || [];
         } catch {
           showAlert({
             title: 'Incorrect Password',
-            message: 'The backup password you entered is incorrect',
+            message: 'The backup password you entered is incorrect or the backup is corrupted',
             confirmText: 'OK',
             onConfirm: () => {},
           });
@@ -175,18 +152,6 @@ export default function ImportScreen() {
       // Update session
       setVault(() => currentVault);
 
-      // Decrypt and save master password if present
-      if (backup.encryptedMasterPassword) {
-        try {
-          const decryptedMP = CryptoJS.AES.decrypt(backup.encryptedMasterPassword, backupPassword).toString(CryptoJS.enc.Utf8);
-          if (decryptedMP) {
-            await SecureStore.setItemAsync(MASTER_PASSWORD_KEY, decryptedMP);
-          }
-        } catch {
-          // Master password decryption failed, but passwords were restored
-        }
-      }
-
       showAlert({
         title: 'Restore Complete!',
         message: 'Your passwords have been restored successfully.',
@@ -214,8 +179,8 @@ export default function ImportScreen() {
         alwaysBounceVertical={true}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Import Backup</Text>
           <View style={styles.NoiconBtn} />
@@ -274,6 +239,7 @@ export default function ImportScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16, paddingBottom: 40 },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   title: { fontSize: 20, fontWeight: '900' },

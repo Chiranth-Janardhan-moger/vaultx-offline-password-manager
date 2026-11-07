@@ -51,6 +51,9 @@ android/app/src/main/res/drawable-*/
 android/app/src/main/res/raw/
 android/local.properties
 
+# Security audit
+security-audit/
+
 # Secrets, Keystores, and CI Build Artifacts
 *.keystore
 build-assets/
@@ -60,3 +63,7 @@ build-assets/
 .env.staging
 .env.local
 .env*.local
+
+# Agents and Skills
+.agents/
+skills-lock.json

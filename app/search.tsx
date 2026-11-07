@@ -5,6 +5,7 @@ import { useTheme } from '@/context/ThemeProvider';
 import { categories, categorizeService, CategoryType, getCategoryById } from '@/lib/categories';
 import { getServiceColor, getServiceIcon, normalizeServiceName } from '@/lib/service-icons';
 import { saveVault } from '@/lib/vault';
+import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -116,10 +117,10 @@ export default function SearchScreen() {
   };
 
   const copyToClipboard = async (text: string, label: string) => {
-    await Clipboard.setStringAsync(text);
+    await copyToClipboardWithAutoClear(text);
     showAlert({
       title: 'Copied',
-      message: `${label} copied to clipboard`,
+      message: `${label} copied to clipboard (auto-clears in 45s)`,
       confirmText: 'OK',
       onConfirm: () => {},
     });
@@ -207,7 +208,7 @@ export default function SearchScreen() {
       closeMoveModal();
       showAlert({
         title: 'Success',
-        message: `Moved to ${getCategoryById(newCategory).name}`,
+        message: `Moved to tag "${getCategoryById(newCategory).name}"`,
         confirmText: 'OK',
         onConfirm: () => {},
       });
@@ -541,7 +542,7 @@ export default function SearchScreen() {
       ]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
 
           <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -719,7 +720,7 @@ export default function SearchScreen() {
           >
             <View style={styles.modalHeader}>
               <Ionicons name="move" size={24} color={colors.primary} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Move to Category</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Move to Tag</Text>
               <TouchableOpacity onPress={closeMoveModal}>
                 <Ionicons name="close" size={24} color={colors.mutedText} />
               </TouchableOpacity>
