@@ -41,9 +41,15 @@ type SearchResult = {
 
 export default function SearchScreen() {
   const router = useRouter();
-  const { vault, vaultKey, setVault } = useSession();
+  const { unlocked, vault, vaultKey, setVault } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  React.useEffect(() => {
+    if (!unlocked) {
+      router.replace('/login');
+    }
+  }, [unlocked, router]);
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [recentSearches, setRecentSearches] = React.useState<string[]>([]);
@@ -509,6 +515,47 @@ export default function SearchScreen() {
                 </View>
               </View>
             ) : null}
+
+            {/* Custom Fields / Additional PINs */}
+            {item.otherPin
+              ? (() => {
+                  try {
+                    const otherPins = JSON.parse(item.otherPin) as { label: string; pin: string }[];
+                    return otherPins.map((customField, idx) => (
+                      <View key={idx} style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, { color: colors.mutedText }]}>{customField.label}</Text>
+                        <View style={styles.detailValue}>
+                          <Text style={[styles.detailText, { color: colors.text }]} numberOfLines={1}>
+                            {showPasswordIndex === item.globalIndex
+                              ? customField.pin
+                              : '●'.repeat(Math.min(customField.pin.length, 14))}
+                          </Text>
+                          <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <TouchableOpacity
+                              onPress={() =>
+                                setShowPasswordIndex(
+                                  showPasswordIndex === item.globalIndex ? null : item.globalIndex
+                                )
+                              }
+                            >
+                              <Ionicons
+                                name={showPasswordIndex === item.globalIndex ? 'eye-off-outline' : 'eye-outline'}
+                                size={18}
+                                color={colors.primary}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => copyToClipboard(customField.pin, customField.label)}>
+                              <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    ));
+                  } catch {
+                    return null;
+                  }
+                })()
+              : null}
 
             {item.notes ? (
               <View style={styles.detailRow}>

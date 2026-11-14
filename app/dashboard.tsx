@@ -1057,9 +1057,24 @@ export default function Dashboard() {
                                       ? customField.pin
                                       : '●'.repeat(Math.min(customField.pin.length, 14))}
                                   </Text>
-                                  <TouchableOpacity onPress={() => copyToClipboard(customField.pin, customField.label)}>
-                                    <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                                  </TouchableOpacity>
+                                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                                    <TouchableOpacity
+                                      onPress={() =>
+                                        setShowPasswordIndex(
+                                          showPasswordIndex === item.globalIndex ? null : item.globalIndex
+                                        )
+                                      }
+                                    >
+                                      <Ionicons
+                                        name={showPasswordIndex === item.globalIndex ? 'eye-off-outline' : 'eye-outline'}
+                                        size={18}
+                                        color={colors.primary}
+                                      />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => copyToClipboard(customField.pin, customField.label)}>
+                                      <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                                    </TouchableOpacity>
+                                  </View>
                                 </View>
                               </View>
                             ));
