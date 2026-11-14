@@ -1,0 +1,6 @@
+Version 1.4.4:
+• Added eye toggle to view and hide MPIN and custom fields on dashboard and search
+• Strengthened screenshot protection (FLAG_SECURE) by default on initial launch
+• Hardened session route guards on Settings, Spaces, and Search
+• Added brute-force lockout protection on security question recovery
+• Enhanced backup integrity verification and secure memory zeroization
