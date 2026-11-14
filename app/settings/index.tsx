@@ -1,5 +1,6 @@
 import BottomNavBar from '@/components/BottomNavBar';
 import Screen from '@/components/Screen';
+import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -47,7 +48,14 @@ const SETTING_CATEGORIES: SettingCategoryItem[] = [
 
 export default function SettingsIndex() {
   const router = useRouter();
+  const { unlocked } = useSession();
   const { colors, resolved } = useTheme();
+
+  React.useEffect(() => {
+    if (!unlocked) {
+      router.replace('/login');
+    }
+  }, [unlocked, router]);
 
   const footerColor = resolved === 'dark' ? '#D1D5DB' : '#9CA3AF';
   const lineColor = resolved === 'dark' ? '#2e3440' : '#E5E7EB';

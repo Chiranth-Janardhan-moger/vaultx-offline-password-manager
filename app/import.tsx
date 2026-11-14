@@ -105,8 +105,8 @@ export default function ImportScreen() {
         try {
           const { decryptBackupData } = await import('@/lib/vault');
           const restored = await decryptBackupData(backup, backupPassword);
-          passwordsToRestore = restored.passwords || [];
-          cardsToRestore = restored.cards || [];
+          passwordsToRestore = Array.isArray(restored.passwords) ? restored.passwords : [];
+          cardsToRestore = Array.isArray(restored.cards) ? restored.cards : [];
         } catch {
           showAlert({
             title: 'Incorrect Password',

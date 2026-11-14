@@ -15,7 +15,7 @@ export default function RootLayout() {
     (async () => {
       try {
         const blockSS = await SecureStore.getItemAsync(BLOCK_SCREENSHOTS_KEY);
-        const shouldBlock = blockSS === 'true'; // Default: false, can be toggled in Settings
+        const shouldBlock = blockSS !== 'false'; // Default: true (blocks screenshots until explicitly disabled in Settings)
         await setScreenshotBlocking(shouldBlock);
       } catch (error) {
         console.error('Failed to apply screenshot blocking:', error);

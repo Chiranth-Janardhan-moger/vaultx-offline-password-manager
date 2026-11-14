@@ -21,9 +21,15 @@ export default function WorkspacesScreen() {
   const params = useLocalSearchParams();
   const fromLogin = params.fromLogin === '1';
 
-  const { vault, vaultKey, setVault, activeWorkspace, setActiveWorkspace } = useSession();
+  const { unlocked, vault, vaultKey, setVault, activeWorkspace, setActiveWorkspace } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  React.useEffect(() => {
+    if (!unlocked) {
+      router.replace('/login');
+    }
+  }, [unlocked, router]);
 
   // Dull card theme tokens
   const dullCardBg = resolved === 'dark' ? '#1c2027' : '#f1f3f6';

@@ -89,6 +89,11 @@ export const SessionProvider: React.FC<React.PropsWithChildren> = ({ children })
         }
         targetVault.cards.length = 0;
       }
+      if (targetVault.user) {
+        targetVault.user.email = '';
+        targetVault.user.passwordHash = '';
+        targetVault.user.passwordSaltHex = '';
+      }
     } catch {}
   };
 

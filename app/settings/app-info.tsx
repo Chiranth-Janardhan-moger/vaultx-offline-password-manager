@@ -1,5 +1,6 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
+import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -9,8 +10,15 @@ import appConfig from '../../app.json';
 
 export default function AppInfoSettings() {
   const router = useRouter();
+  const { unlocked } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  React.useEffect(() => {
+    if (!unlocked) {
+      router.replace('/login');
+    }
+  }, [unlocked, router]);
 
   const openGitHub = async () => {
     const url = 'https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager';

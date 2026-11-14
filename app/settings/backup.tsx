@@ -1,4 +1,5 @@
 import Screen from '@/components/Screen';
+import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,7 +8,14 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 
 export default function BackupSettings() {
   const router = useRouter();
+  const { unlocked } = useSession();
   const { colors } = useTheme();
+
+  React.useEffect(() => {
+    if (!unlocked) {
+      router.replace('/login');
+    }
+  }, [unlocked, router]);
 
   return (
     <Screen edges={['top', 'left', 'right']}>

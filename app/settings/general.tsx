@@ -1,5 +1,6 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
+import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { categories, DEFAULT_DELETE_CATEGORY_KEY } from '@/lib/categories';
 import { isSelectWorkspaceOnLoginEnabled, setSelectWorkspaceOnLoginEnabled } from '@/lib/secure';
@@ -11,8 +12,15 @@ import { Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } f
 
 export default function GeneralSettings() {
   const router = useRouter();
+  const { unlocked } = useSession();
   const { mode, setMode, colors, enhancedContrast, setEnhancedContrast, showBorders, setShowBorders, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  React.useEffect(() => {
+    if (!unlocked) {
+      router.replace('/login');
+    }
+  }, [unlocked, router]);
 
   const [selectWorkspaceOnLogin, setSelectWorkspaceOnLogin] = React.useState(false);
   const [fallbackCategory, setFallbackCategory] = React.useState<string>('google');

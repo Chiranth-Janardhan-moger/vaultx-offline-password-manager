@@ -211,7 +211,7 @@ export const saveVault = async (vault: VaultData, vaultKey: string) => {
 export const toCsv = (vault: VaultData) => {
   const sanitizeCell = (v: string) => {
     const s = v ?? '';
-    return /^[=+\-@]/.test(s) ? `'${s}` : s;
+    return /^[\s\t\r\n]*[=+\-@|]/.test(s) ? `'${s}` : s;
   };
 
   const escape = (v: string) => '"' + sanitizeCell(v).replace(/"/g, '""') + '"';
@@ -254,10 +254,11 @@ export const encryptBackupData = async (
 
   const ciphertext = encrypted.toString();
   const ivHex = ivWordArray.toString(CryptoJS.enc.Hex);
-  const hmac = CryptoJS.HmacSHA256(ciphertext + ivHex, hmacKey).toString();
+  const version = '2.1';
+  const hmac = CryptoJS.HmacSHA256(`${version}:${saltHex}:${iterations}:${ivHex}:${ciphertext}`, hmacKey).toString();
 
   const container = {
-    version: '2.1',
+    version,
     timestamp: Date.now(),
     salt: saltHex,
     iv: ivHex,
@@ -277,15 +278,22 @@ export const decryptBackupData = async (
 
   // New hardened format (v2.1)
   if (container.version === '2.1' || (container.salt && container.ciphertext && container.iv)) {
+    if (container.version === '2.1' && !container.hmac) {
+      throw new Error('Incorrect backup password');
+    }
     const saltHex = container.salt;
-    const iterations = container.iterations || 100_000;
+    const iterations = Number(container.iterations) || 100_000;
+    if (iterations < 10_000 || iterations > 500_000) {
+      throw new Error('Incorrect backup password');
+    }
     const iv = CryptoJS.enc.Hex.parse(container.iv);
 
     if (container.hmac) {
       const hmacKeyHex = await pbkdf2Key(passphrase, saltHex, 10_000);
       const hmacKey = CryptoJS.enc.Hex.parse(hmacKeyHex);
-      const expectedHmac = CryptoJS.HmacSHA256(container.ciphertext + container.iv, hmacKey).toString();
-      if (expectedHmac !== container.hmac) {
+      const boundHmac = CryptoJS.HmacSHA256(`${container.version || '2.1'}:${saltHex}:${iterations}:${container.iv}:${container.ciphertext}`, hmacKey).toString();
+      const legacyHmac = CryptoJS.HmacSHA256(container.ciphertext + container.iv, hmacKey).toString();
+      if (container.hmac !== boundHmac && container.hmac !== legacyHmac) {
         throw new Error('Incorrect backup password');
       }
     }
@@ -306,8 +314,8 @@ export const decryptBackupData = async (
 
     const parsed = JSON.parse(decryptedText);
     return {
-      passwords: parsed.passwords || [],
-      cards: parsed.cards || [],
+      passwords: Array.isArray(parsed.passwords) ? parsed.passwords : [],
+      cards: Array.isArray(parsed.cards) ? parsed.cards : [],
     };
   }
 

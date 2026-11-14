@@ -2,7 +2,7 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { loadRecoveryQuestions, unwrapWithRecovery } from '@/lib/secure';
+import { clearLockoutState, getLockoutState, loadRecoveryQuestions, recordFailedAttempt, unwrapWithRecovery } from '@/lib/secure';
 import { decryptVaultWithKey } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -51,11 +51,26 @@ export default function Recover() {
 
     setLoading(true);
     try {
+      const lockout = await getLockoutState();
+      const now = Date.now();
+      if (lockout.lockedUntil > now) {
+        const secs = Math.ceil((lockout.lockedUntil - now) / 1000);
+        showAlert({
+          title: 'Account Locked',
+          message: `Too many failed attempts. Please wait ${secs} seconds before trying again.`,
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
       const vaultKey = await unwrapWithRecovery([answer]);
       const vault = await decryptVaultWithKey(vaultKey);
+      await clearLockoutState();
       unlock(vault, vaultKey);
       router.replace('/dashboard');
     } catch (e: any) {
+      await recordFailedAttempt(5, 30_000);
       const errorMsg = e?.message ?? 'Incorrect answer';
       if (errorMsg.includes('malformed') || errorMsg.includes('utf-8')) {
         showAlert({

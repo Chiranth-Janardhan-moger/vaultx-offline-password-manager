@@ -27,14 +27,20 @@ class NativeCryptoModule(private val reactContext: ReactApplicationContext) : Re
                     algorithm.equals("sha512", ignoreCase = true) -> "PBKDF2WithHmacSHA512"
                     else -> "PBKDF2WithHmacSHA256"
                 }
-                val spec = PBEKeySpec(password.toCharArray(), saltBytes, iterations, keyLengthBits)
+                val passwordChars = password.toCharArray()
+                val spec = PBEKeySpec(passwordChars, saltBytes, iterations, keyLengthBits)
                 try {
                     val skf = SecretKeyFactory.getInstance(algo)
                     val keyBytes = skf.generateSecret(spec).encoded
-                    val resultHex = byteArrayToHexString(keyBytes)
-                    promise.resolve(resultHex)
+                    try {
+                        val resultHex = byteArrayToHexString(keyBytes)
+                        promise.resolve(resultHex)
+                    } finally {
+                        keyBytes.fill(0.toByte())
+                    }
                 } finally {
                     spec.clearPassword()
+                    passwordChars.fill('0')
                 }
             } catch (e: Exception) {
                 promise.reject("ERR_PBKDF2", e.message, e)

@@ -15,9 +15,15 @@ const BLOCK_SCREENSHOTS_KEY = 'block_screenshots';
 
 export default function SecuritySettings() {
   const router = useRouter();
-  const { autoLockMinutes, updateAutoLockMinutes } = useSession();
+  const { unlocked, autoLockMinutes, updateAutoLockMinutes } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
+
+  React.useEffect(() => {
+    if (!unlocked) {
+      router.replace('/login');
+    }
+  }, [unlocked, router]);
 
   const [doubleTapLock, setDoubleTapLock] = React.useState(false);
   const [blockScreenshots, setBlockScreenshots] = React.useState(true);

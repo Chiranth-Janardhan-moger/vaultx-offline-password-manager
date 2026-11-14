@@ -353,8 +353,22 @@ export default function Login() {
 
                 {/* Recovery Link */}
                 <TouchableOpacity
-                  onPress={() => router.push('/recover')}
-                  style={styles.forgotLink}
+                  onPress={async () => {
+                    const lockout = await getLockoutState();
+                    if (lockout.lockedUntil > Date.now()) {
+                      const secs = Math.ceil((lockout.lockedUntil - Date.now()) / 1000);
+                      showAlert({
+                        title: 'Account Locked',
+                        message: `Too many failed attempts. Please wait ${secs} seconds before trying again.`,
+                        confirmText: 'OK',
+                        onConfirm: () => {},
+                      });
+                      return;
+                    }
+                    router.push('/recover');
+                  }}
+                  disabled={lockedUntil > Date.now()}
+                  style={[styles.forgotLink, lockedUntil > Date.now() && { opacity: 0.5 }]}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.forgotText, { color: colors.mutedText }]}>

@@ -130,6 +130,20 @@ test('Vault - Export to CSV Format', () => {
   // Special characters like quote should be escaped
   assert.ok(csv.includes('"Google, Inc."'));
   assert.ok(csv.includes('"secret""password"'));
+
+  // CSV Formula Injection (CWE-1236) sanitization
+  const formulaVault = {
+    passwords: [
+      { service: '=1+1', username: '+cmd', password: '-2', notes: '@calc' },
+      { service: '\t=DDE', username: '\r=cmd', password: '  =SUM', notes: '|test' },
+    ],
+  };
+  const formulaCsv = toCsv(formulaVault);
+  assert.ok(formulaCsv.includes('"\'=1+1"'));
+  assert.ok(formulaCsv.includes('"\'\t=DDE"'));
+  assert.ok(formulaCsv.includes('"\'\r=cmd"'));
+  assert.ok(formulaCsv.includes('"\'  =SUM"'));
+  assert.ok(formulaCsv.includes('"\'|test"'));
 });
 
 test('Vault - Identity Cards Saving and Retrieval', async () => {
@@ -192,6 +206,27 @@ test('Backup - Encrypt and Decrypt Backup with Passphrase (v2.1 PBKDF2 + HMAC)',
   await assert.rejects(async () => {
     await decryptBackupData(encryptedJson, 'WrongPassphrase');
   }, /Incorrect backup password/);
+
+  // Security: Stripping HMAC from v2.1 container must be rejected
+  const strippedContainer = { ...parsedContainer };
+  delete strippedContainer.hmac;
+  await assert.rejects(async () => {
+    await decryptBackupData(JSON.stringify(strippedContainer), backupPassword);
+  }, /Incorrect backup password/);
+
+  // Security: Out-of-bounds iterations must be rejected
+  const excessiveIterations = { ...parsedContainer, iterations: 1_000_000 };
+  await assert.rejects(async () => {
+    await decryptBackupData(JSON.stringify(excessiveIterations), backupPassword);
+  }, /Incorrect backup password/);
+
+  // Security: Non-array schema normalization must return safe arrays
+  const malformedBackupJson = await encryptBackupData({ passwords: 'corrupted' }, backupPassword);
+  const normalized = await decryptBackupData(malformedBackupJson, backupPassword);
+  assert.ok(Array.isArray(normalized.passwords));
+  assert.strictEqual(normalized.passwords.length, 0);
+  assert.ok(Array.isArray(normalized.cards));
+  assert.strictEqual(normalized.cards.length, 0);
 
   // Legacy v2.0 format backwards compatibility test
   const legacyPassphrase = 'LegacyPassword123';
