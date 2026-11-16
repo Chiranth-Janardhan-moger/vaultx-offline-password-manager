@@ -6,9 +6,9 @@ import { useTheme } from '@/context/ThemeProvider';
 import { categories, categorizeService, DEFAULT_DELETE_CATEGORY_KEY, getCategoryById, getEffectiveCategories, type CategoryType } from '@/lib/categories';
 import { getServiceColor, getServiceIcon } from '@/lib/service-icons';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
+import { getTOTPDetails } from '@/lib/totp';
 import { saveVault, type PasswordItem, type VaultData } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
@@ -25,6 +25,50 @@ import {
 } from 'react-native';
 
 const DOUBLE_TAP_LOCK_KEY = 'double_tap_lock';
+
+function TotpCodeDisplay({
+  secret,
+  colors,
+  copyToClipboard,
+}: {
+  secret: string;
+  colors: any;
+  copyToClipboard: (text: string, label: string) => void;
+}) {
+  const [details, setDetails] = React.useState(() => getTOTPDetails(secret));
+
+  React.useEffect(() => {
+    setDetails(getTOTPDetails(secret));
+    const timer = setInterval(() => {
+      setDetails(getTOTPDetails(secret));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [secret]);
+
+  const formattedCode =
+    details.code.length === 6
+      ? `${details.code.slice(0, 3)} ${details.code.slice(3)}`
+      : details.code;
+
+  return (
+    <View style={styles.detailRow}>
+      <Text style={[styles.detailLabel, { color: colors.mutedText }]}>2FA Code (TOTP)</Text>
+      <View style={styles.detailValue}>
+        <Text style={[styles.detailText, { color: colors.text, fontSize: 18, fontWeight: '900', letterSpacing: 1 }]}>
+          {formattedCode}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ color: colors.mutedText, fontSize: 11, fontWeight: '600' }}>
+            {details.remainingSeconds}s
+          </Text>
+          <TouchableOpacity onPress={() => copyToClipboard(details.code, '2FA Code')}>
+            <Ionicons name="copy-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -967,6 +1011,11 @@ export default function Dashboard() {
                           </View>
                         </View>
                       </View>
+                    ) : null}
+
+                    {/* 2FA Code (TOTP) */}
+                    {item.totpSecret ? (
+                      <TotpCodeDisplay secret={item.totpSecret} colors={colors} copyToClipboard={copyToClipboard} />
                     ) : null}
 
                     {/* Notes */}

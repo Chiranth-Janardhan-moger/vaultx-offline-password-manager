@@ -29,6 +29,7 @@ import {
   cancelClipboardClearTimer,
   DEFAULT_CLIPBOARD_CLEAR_SECONDS,
 } from '../lib/clipboard.ts';
+import { isValidEmail } from '../lib/validation.ts';
 import { _clearStore } from './mocks/expo-secure-store.mjs';
 import { _getClipboard, _clearClipboard } from './mocks/expo-clipboard.mjs';
 
@@ -38,15 +39,13 @@ test.beforeEach(async () => {
 });
 
 test('Account Setup - Email Validation Logic', () => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
   const validEmails = [
     'user@example.com',
     'developer.admin@vaultx.io',
     'test_user+tag@domain.co.uk',
   ];
   for (const email of validEmails) {
-    assert.ok(emailRegex.test(email), `Email "${email}" should be valid`);
+    assert.strictEqual(isValidEmail(email), true, `Email "${email}" should be valid`);
   }
 
   const invalidEmails = [
@@ -57,18 +56,18 @@ test('Account Setup - Email Validation Logic', () => {
     'user@missingdot',
     '@nodomain.com',
     'user@.com',
+    null,
+    undefined,
   ];
   for (const email of invalidEmails) {
-    assert.strictEqual(emailRegex.test(email.trim()), false, `Email "${email}" should be invalid`);
+    assert.strictEqual(isValidEmail(email), false, `Email "${email}" should be invalid`);
   }
 });
 
 test('Account Setup - Full Registration Flow with Email and Password', async () => {
   const email = 'user@example.com';
   const masterPassword = 'MasterPassword2026!';
-  const confirmPassword = 'MasterPassword2026!';
 
-  assert.strictEqual(masterPassword, confirmPassword);
   assert.ok(masterPassword.length >= 8);
 
   const vaultKey = await generateVaultKey();
@@ -191,15 +190,12 @@ test('Backup - Verifies Account Email and Master Password are NOT Stored in Back
     cvv: '123',
   });
 
-  // Prepare backup container (as constructed in app/export.tsx)
-  const backupData = {
-    passwords: vault.passwords,
-    cards: vault.cards,
-  };
+  // Pass full vault object containing sensitive user credentials directly to encryptBackupData.
+  // The engine itself must sanitize and isolate exportable records.
   const backupPassphrase = 'DedicatedBackupPassword2026!';
 
-  // Encrypt backup
-  const backupJson = await encryptBackupData(backupData, backupPassphrase);
+  // Encrypt backup directly from full vault
+  const backupJson = await encryptBackupData(vault, backupPassphrase);
   assert.ok(typeof backupJson === 'string');
 
   // 1. Raw backup ciphertext / container MUST NOT contain the user email, master password, or password hash

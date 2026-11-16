@@ -3,10 +3,10 @@ import Screen from '@/components/Screen';
 import SwipeToGenerate from '@/components/SwipeToGenerate';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { categories, categorizeService, getEffectiveCategories, CategoryType } from '@/lib/categories';
+import { categorizeService, getEffectiveCategories, CategoryType } from '@/lib/categories';
 import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '@/lib/password-strength';
 import { normalizeServiceName } from '@/lib/service-icons';
-import { PasswordItem, saveVault, getEffectiveWorkspaces, type VaultData } from '@/lib/vault';
+import { PasswordItem, saveVault, getEffectiveWorkspaces, moveItemUp, moveItemDown, type VaultData } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
@@ -41,6 +41,7 @@ export default function AddPassword() {
   const [loading, setLoading] = React.useState(false);
   const [folder, setFolder] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<CategoryType | null>(null);
+  const [totpSecret, setTotpSecret] = React.useState('');
   const userManuallySelectedTagRef = React.useRef(false);
   const [workspace, setWorkspace] = React.useState<string>(
     (params.workspace as string) || activeWorkspace || 'Personal'
@@ -169,21 +170,11 @@ export default function AddPassword() {
   };
 
   const moveOtherPinUp = (index: number) => {
-    if (index <= 0) return;
-    const updated = [...otherPins];
-    const temp = updated[index];
-    updated[index] = updated[index - 1];
-    updated[index - 1] = temp;
-    setOtherPins(updated);
+    setOtherPins(moveItemUp(otherPins, index));
   };
 
   const moveOtherPinDown = (index: number) => {
-    if (index >= otherPins.length - 1) return;
-    const updated = [...otherPins];
-    const temp = updated[index];
-    updated[index] = updated[index + 1];
-    updated[index + 1] = temp;
-    setOtherPins(updated);
+    setOtherPins(moveItemDown(otherPins, index));
   };
 
   const updateOtherPinLabel = (index: number, label: string) => {
@@ -300,6 +291,7 @@ export default function AddPassword() {
         modifiedAt: Date.now(),
         folder: finalFolder.trim() || undefined,
         workspace: workspace.trim() || 'Personal',
+        totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
       };
       const next = { ...vault, passwords: [...vault.passwords, item] };
       await saveVault(next, vaultKey);
@@ -315,7 +307,7 @@ export default function AddPassword() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, setVault, router, showAlert]);
+  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, totpSecret, setVault, router, showAlert]);
 
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
@@ -583,7 +575,21 @@ export default function AddPassword() {
             })}
           </ScrollView>
 
-          
+          {/* 2FA Secret Key */}
+          <Text style={[styles.label, { color: colors.mutedText }]}>2FA Secret Key (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. JBSWY3DPEHPK3PXP"
+            placeholderTextColor={colors.mutedText}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            autoComplete="off"
+            textContentType="none"
+            importantForAutofill="no"
+            value={totpSecret}
+            onChangeText={(t) => setTotpSecret(t.replace(/\s+/g, '').toUpperCase())}
+          />
+
           {/* PIN Section Toggle */}
           <TouchableOpacity
             style={[styles.pinToggle, { backgroundColor: colors.inputBg, borderColor: colors.border }]}

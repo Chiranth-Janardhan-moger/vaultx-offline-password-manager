@@ -54,6 +54,9 @@ android/local.properties
 # Security audit
 security-audit/
 
+# Local test screenshots
+/screenshots/
+
 # Secrets, Keystores, and CI Build Artifacts
 *.keystore
 build-assets/

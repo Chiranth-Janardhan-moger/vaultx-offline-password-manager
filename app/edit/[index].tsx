@@ -3,10 +3,10 @@ import Screen from '@/components/Screen';
 import SwipeToGenerate from '@/components/SwipeToGenerate';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { categories, categorizeService, getEffectiveCategories, CategoryType } from '@/lib/categories';
+import { categorizeService, getEffectiveCategories, CategoryType } from '@/lib/categories';
 import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '@/lib/password-strength';
 import { normalizeServiceName } from '@/lib/service-icons';
-import { PasswordItem, saveVault, getEffectiveWorkspaces, type VaultData } from '@/lib/vault';
+import { PasswordItem, saveVault, getEffectiveWorkspaces, moveItemUp, moveItemDown, type VaultData } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
@@ -47,6 +47,7 @@ export default function EditPassword() {
     (existingPassword?.category as CategoryType) || null
   );
   const [workspace, setWorkspace] = React.useState(existingPassword?.workspace || 'Personal');
+  const [totpSecret, setTotpSecret] = React.useState(existingPassword?.totpSecret || '');
   const [showAddTagModal, setShowAddTagModal] = React.useState(false);
   const [newTagName, setNewTagName] = React.useState('');
 
@@ -158,21 +159,11 @@ export default function EditPassword() {
   };
 
   const moveOtherPinUp = (idx: number) => {
-    if (idx <= 0) return;
-    const updated = [...otherPins];
-    const temp = updated[idx];
-    updated[idx] = updated[idx - 1];
-    updated[idx - 1] = temp;
-    setOtherPins(updated);
+    setOtherPins(moveItemUp(otherPins, idx));
   };
 
   const moveOtherPinDown = (idx: number) => {
-    if (idx >= otherPins.length - 1) return;
-    const updated = [...otherPins];
-    const temp = updated[idx];
-    updated[idx] = updated[idx + 1];
-    updated[idx + 1] = temp;
-    setOtherPins(updated);
+    setOtherPins(moveItemDown(otherPins, idx));
   };
 
   const updateOtherPinLabel = (idx: number, label: string) => {
@@ -264,6 +255,7 @@ export default function EditPassword() {
         modifiedAt: Date.now(),
         folder: folder.trim() || undefined,
         workspace: workspace.trim() || 'Personal',
+        totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
       };
 
       const updatedPasswords = [...vault.passwords];
@@ -549,7 +541,21 @@ export default function EditPassword() {
             })}
           </ScrollView>
 
-          
+          {/* 2FA Secret Key */}
+          <Text style={[styles.label, { color: colors.mutedText }]}>2FA Secret Key (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. JBSWY3DPEHPK3PXP"
+            placeholderTextColor={colors.mutedText}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            autoComplete="off"
+            textContentType="none"
+            importantForAutofill="no"
+            value={totpSecret}
+            onChangeText={(t) => setTotpSecret(t.replace(/\s+/g, '').toUpperCase())}
+          />
+
           {/* PIN Section Toggle */}
           <TouchableOpacity
             style={[styles.pinToggle, { backgroundColor: colors.inputBg, borderColor: colors.border }]}

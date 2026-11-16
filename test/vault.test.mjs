@@ -12,6 +12,8 @@ import {
   vaultExists,
   toCsv,
   getEffectiveWorkspaces,
+  moveItemUp,
+  moveItemDown,
   encryptBackupData,
   decryptBackupData,
 } from '../lib/vault.ts';
@@ -76,6 +78,7 @@ test('Vault - Create, Encrypt, Save, and Decrypt Vault Lifecycle', async () => {
     password: 'github_password_123',
     category: 'work',
     isFavorite: true,
+    totpSecret: 'JBSWY3DPEHPK3PXP',
   });
 
   decrypted.cards.push({
@@ -95,6 +98,7 @@ test('Vault - Create, Encrypt, Save, and Decrypt Vault Lifecycle', async () => {
   const reloaded = await decryptVaultWithKey(vaultKey);
   assert.strictEqual(reloaded.passwords.length, 1);
   assert.strictEqual(reloaded.passwords[0].service, 'GitHub');
+  assert.strictEqual(reloaded.passwords[0].totpSecret, 'JBSWY3DPEHPK3PXP');
   assert.strictEqual(reloaded.cards.length, 1);
   assert.strictEqual(reloaded.cards[0].title, 'HDFC Millennia');
 });
@@ -275,29 +279,26 @@ test("Vault - Custom Fields / Additional PINs with Text and Numeric Values", asy
   assert.strictEqual(parsedFields[2].pin, "123456");
 });
 
-test("Vault - Custom Fields Reordering Up and Down", async () => {
+test("Vault - Custom Fields Reordering Up and Down", () => {
   const fields = [
     { label: "First", pin: "1" },
     { label: "Second", pin: "2" },
     { label: "Third", pin: "3" },
   ];
 
-  // Move "Third" up (swap index 2 with 1)
-  const movedUp = [...fields];
-  const temp1 = movedUp[2];
-  movedUp[2] = movedUp[1];
-  movedUp[1] = temp1;
+  // Boundary checks: moving index 0 up does nothing
+  assert.deepStrictEqual(moveItemUp(fields, 0), fields);
+  // Boundary checks: moving index 2 down does nothing
+  assert.deepStrictEqual(moveItemDown(fields, 2), fields);
 
+  // Move "Third" (index 2) up -> swapped with "Second" (index 1)
+  const movedUp = moveItemUp(fields, 2);
   assert.strictEqual(movedUp[0].label, "First");
   assert.strictEqual(movedUp[1].label, "Third");
   assert.strictEqual(movedUp[2].label, "Second");
 
-  // Move "First" down (swap index 0 with 1)
-  const movedDown = [...movedUp];
-  const temp2 = movedDown[0];
-  movedDown[0] = movedDown[1];
-  movedDown[1] = temp2;
-
+  // Move "First" (index 0) down -> swapped with "Third" (index 1)
+  const movedDown = moveItemDown(movedUp, 0);
   assert.strictEqual(movedDown[0].label, "Third");
   assert.strictEqual(movedDown[1].label, "First");
   assert.strictEqual(movedDown[2].label, "Second");

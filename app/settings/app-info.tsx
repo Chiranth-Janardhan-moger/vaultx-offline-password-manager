@@ -11,7 +11,7 @@ import appConfig from '../../app.json';
 export default function AppInfoSettings() {
   const router = useRouter();
   const { unlocked } = useSession();
-  const { colors, resolved } = useTheme();
+  const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   React.useEffect(() => {

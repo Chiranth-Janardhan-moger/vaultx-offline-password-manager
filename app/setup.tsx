@@ -4,6 +4,7 @@ import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { generateVaultKey, saveBiometricKey, saveMeta, savePasswordWrap, saveRecoveryWrap } from '@/lib/secure';
 import { createNewVault, generateSaltHex, hashPasswordAsync, vaultExists } from '@/lib/vault';
+import { isValidEmail } from '@/lib/validation';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -73,8 +74,7 @@ export default function Setup() {
       });
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
+    if (!isValidEmail(trimmedEmail)) {
       showAlert({
         title: 'Invalid Email',
         message: 'Please enter a valid email address',

@@ -2,6 +2,12 @@ import { NativeModules, Platform } from 'react-native';
 
 const { ScreenSecurity } = NativeModules;
 
+export const BLOCK_SCREENSHOTS_KEY = 'block_screenshots';
+
+export const shouldBlockScreenshotsByDefault = (storedValue: string | null | undefined): boolean => {
+  return storedValue !== 'false';
+};
+
 export const setScreenshotBlocking = async (block: boolean): Promise<boolean> => {
   if (Platform.OS !== 'android') return false;
   if (ScreenSecurity?.setScreenshotBlocking) {

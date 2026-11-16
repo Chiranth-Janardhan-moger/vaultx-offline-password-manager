@@ -1,94 +1,796 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="VaultX is a fully offline, privacy-first password manager that keeps your passwords secure on your device. Zero cloud, absolute security.">
-    <meta name="keywords" content="password manager, offline password manager, security, privacy, android password manager, VaultX">
-    <meta name="author" content="Chiranth Moger">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="VaultX - Secure Offline Password Manager">
-    <meta property="og:description" content="A fully offline, privacy-first password manager. Your data never leaves your phone.">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="VaultX - Secure Offline Password Manager">
-    <meta property="twitter:description" content="A fully offline, privacy-first password manager. Your data never leaves your phone.">
-    
-    <title>VaultX | The Ultimate Offline Password Manager</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VaultX is an open-source, fully offline password manager and 2FA authenticator for Android. Zero cloud synchronization, zero internet permissions, AES-256 encryption, and hardware biometric protection.">
+  <meta name="keywords" content="password manager, offline password manager, android password manager, 2fa authenticator, totp, zero knowledge, aes-256, pbkdf2, open source, privacy, security, f-droid">
+  <meta name="author" content="Chiranth Moger">
+  <meta name="theme-color" content="#080a10">
+
+  <!-- Open Graph / Social Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://chiranth-janardhan-moger.github.io/vaultx-offline-password-manager/">
+  <meta property="og:title" content="VaultX | Pure Offline Password Manager & 2FA Authenticator">
+  <meta property="og:description" content="Zero cloud synchronization, zero network permissions. Military-grade AES-256 encryption, hardware biometrics, and built-in RFC 6238 2FA authenticator.">
+  <meta property="og:image" content="assets/icon.png">
+
+  <!-- Twitter Meta -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="VaultX | Pure Offline Password Manager">
+  <meta name="twitter:description" content="A fully offline, privacy-hardened Android vault with zero internet permissions. Your data never leaves your device.">
+  <meta name="twitter:image" content="assets/icon.png">
+
+  <title>VaultX | Pure Offline Password Manager & 2FA Authenticator</title>
+
+  <link rel="icon" type="image/webp" href="assets/favicon.webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Schema.org SoftwareApplication JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "VaultX",
+    "operatingSystem": "Android 8.0 and up",
+    "applicationCategory": "SecurityApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "Zero-permission, offline password manager and 2FA authenticator with AES-256 encryption and biometric authentication.",
+    "license": "https://opensource.org/licenses/MIT",
+    "downloadUrl": "https://f-droid.org/packages/com.chiranth7.vaultx/"
+  }
+  </script>
 </head>
 <body>
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="logo">
-                <span class="logo-icon">🛡️</span>
-                VaultX
-            </div>
-            <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager" target="_blank" rel="noopener" class="nav-btn">GitHub</a>
-        </div>
-    </nav>
+  <!-- Ambient Glow Canvas -->
+  <div class="ambient-glow-wrapper" aria-hidden="true">
+    <div class="ambient-glow ambient-glow-1"></div>
+    <div class="ambient-glow ambient-glow-2"></div>
+    <div class="ambient-glow ambient-glow-3"></div>
+  </div>
 
-    <header class="hero">
-        <div class="hero-content">
-            <h1 class="fade-up">Your Passwords.<br><span class="gradient-text">Your Device Only.</span></h1>
-            <p class="fade-up delay-1">VaultX is a completely offline, privacy-first password manager. Zero cloud synchronization means zero data breaches. Absolute control, right in your pocket.</p>
-            <div class="cta-group fade-up delay-2">
-                <a href="https://f-droid.org/packages/com.chiranth7.vaultx/" class="btn btn-primary" target="_blank" rel="noopener">Get on F-Droid</a>
-                <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases/latest" class="btn btn-secondary" target="_blank" rel="noopener">Download APK</a>
-            </div>
+  <!-- Header & Navigation -->
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="#" class="brand-link" aria-label="VaultX Home">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
         </div>
-    </header>
+        <span class="brand-name">VaultX</span>
+      </a>
 
-    <section id="features" class="features">
-        <h2 class="section-title fade-up">Why Choose VaultX?</h2>
-        <div class="features-grid">
-            <div class="feature-card fade-up">
-                <div class="feature-icon">🔒</div>
-                <h3>100% Offline</h3>
-                <p>No internet permission required. Your vault is encrypted locally and never transmitted anywhere.</p>
+      <nav aria-label="Main Navigation">
+        <ul class="nav-links">
+          <li><a href="#features" class="nav-item-link">Features</a></li>
+          <li><a href="#showcase" class="nav-item-link">Showcase</a></li>
+          <li><a href="#security" class="nav-item-link">Security</a></li>
+          <li><a href="#downloads" class="nav-item-link">Downloads</a></li>
+          <li><a href="#faq" class="nav-item-link">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager" target="_blank" rel="noopener" class="nav-icon-link" aria-label="GitHub Repository" title="GitHub Repository">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+          </svg>
+        </a>
+        <a href="https://f-droid.org/packages/com.chiranth7.vaultx/" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+          <span>Get on F-Droid</span>
+        </a>
+        <button class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer -->
+  <div class="mobile-nav-drawer" aria-hidden="true">
+    <button class="mobile-drawer-close" aria-label="Close navigation menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <ul class="mobile-nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#showcase">Showcase</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#downloads">Downloads</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://f-droid.org/packages/com.chiranth7.vaultx/" target="_blank" rel="noopener">F-Droid</a></li>
+    </ul>
+  </div>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="hero-status-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Pure offline architecture on Android</span>
+          </div>
+
+          <h1 class="hero-headline">
+            Your passwords stay exclusively on your phone.
+          </h1>
+
+          <p class="hero-description">
+            Zero internet permissions, hardware biometrics, and local AES-256 encryption.
+          </p>
+
+          <div class="hero-cta-group">
+            <a href="https://f-droid.org/packages/com.chiranth7.vaultx/" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Get on F-Droid</span>
+            </a>
+            <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases/latest" target="_blank" rel="noopener" class="btn btn-outline btn-lg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              <span>Download APK</span>
+            </a>
+          </div>
+
+          <div class="trust-badges-grid">
+            <div class="trust-badge-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Zero network permissions</span>
             </div>
-            <div class="feature-card fade-up delay-1">
-                <div class="feature-icon">⚡</div>
-                <h3>Android Autofill</h3>
-                <p>Seamlessly log into apps and websites using the native Android Autofill Framework integration.</p>
+            <div class="trust-badge-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Integrated 2FA authenticator</span>
             </div>
-            <div class="feature-card fade-up delay-2">
-                <div class="feature-icon">🛡️</div>
-                <h3>AES-256 Encryption</h3>
-                <p>Industry-standard cryptography ensures that your secrets are locked away with unbreakable math.</p>
+            <div class="trust-badge-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>AES-256 and PBKDF2 derivation</span>
             </div>
-            <div class="feature-card fade-up">
-                <div class="feature-icon">📱</div>
-                <h3>Biometric Auth</h3>
-                <p>Unlock your vault effortlessly using your fingerprint or face unlock via Android Biometrics.</p>
+            <div class="trust-badge-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Free and open source under MIT</span>
             </div>
-            <div class="feature-card fade-up delay-1">
-                <div class="feature-icon">💾</div>
-                <h3>Local Backups</h3>
-                <p>Export your encrypted vault as a file for safekeeping, completely under your own control.</p>
-            </div>
-            <div class="feature-card fade-up delay-2">
-                <div class="feature-icon">🎨</div>
-                <h3>Premium UI</h3>
-                <p>A beautiful, modern React Native interface designed for speed, clarity, and comfort.</p>
-            </div>
+          </div>
         </div>
+
+        <div class="hero-mockup-wrapper">
+          <div class="floating-stat-card floating-stat-card-1">
+            <div class="stat-icon-wrap stat-icon-green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <div>
+              <div class="stat-text-label">Network permissions</div>
+              <div class="stat-text-value">Zero declared</div>
+            </div>
+          </div>
+
+          <figure class="device-figure">
+            <div class="phone-screen">
+              <div class="phone-camera-island">
+                <div class="phone-camera-lens"></div>
+              </div>
+              <img src="assets/screenshots/3.png" alt="VaultX dashboard interface preview" class="phone-screenshot-img">
+            </div>
+          </figure>
+
+          <div class="floating-stat-card floating-stat-card-2">
+            <div class="stat-icon-wrap stat-icon-purple">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div>
+              <div class="stat-text-label">Two-factor authentication</div>
+              <div class="stat-text-value">RFC 6238 verified</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <footer class="footer">
-        <p>&copy; <script>document.write(new Date().getFullYear())</script> Chiranth Moger. Open Source under MIT License.</p>
-    </footer>
+    <!-- Core Features Section -->
+    <section id="features" class="features-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Built Without Compromise</h2>
+          <p class="section-subtitle">
+            Most password managers rely on remote cloud storage that creates centralized targets for data breaches. VaultX is architected around absolute local device ownership.
+          </p>
+        </div>
 
-    <script src="script.js"></script>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+                <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+                <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+                <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">Pure Offline Operation</h3>
+            <p class="feature-desc">The Android manifest contains zero internet permissions. VaultX cannot make outbound network requests, report telemetry, or transmit credentials.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <h3 class="feature-title">Built-In 2FA Authenticator</h3>
+            <p class="feature-desc">Generate rotating six-digit one-time codes adhering to RFC 6238 without separate apps. Includes 30-second countdown rings and auto-clearing clipboard copies.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">Digital Card Wallet</h3>
+            <p class="feature-desc">Store payment cards and banking records in visual containers. Features formatted card grouping and on-demand CVV reveal toggles.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"></path>
+                <path d="M5 19.5C5.5 18 6 15 6 12c0-.7.12-1.37.34-2"></path>
+                <path d="M17.29 21.02c.12-.6.21-1.2.27-1.85.17-1.74-.05-3.07-.52-4.24-.44-1.1-1.18-1.93-2.16-2.51"></path>
+                <path d="M9 10a3 3 0 0 1 5.12-2.12"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title">Hardware Biometric Authentication</h3>
+            <p class="feature-desc">Authenticate directly using Android BiometricPrompt with KeyStore hardware isolation, protected against brute-force attacks via persistent lockout rate-limiting.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title">AES-256 Encryption</h3>
+            <p class="feature-desc">Vault payloads are encrypted with AES-256-CBC. Master keys are derived via PBKDF2 with 16-byte random salts generated through Java SecureRandom.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">Fail-Closed Screen Security</h3>
+            <p class="feature-desc">Active Android window protection blocks screenshots and obscures credential previews in the recent applications view, failing closed on startup.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </div>
+            <h3 class="feature-title">Auto-Clearing Clipboard</h3>
+            <p class="feature-desc">Copied credentials and TOTP codes are automatically wiped from the system clipboard after a configured timer (45 seconds default) to prevent clipboard snooping.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">Tamper-Proof Backups</h3>
+            <p class="feature-desc">Export encrypted JSON backups protected by your custom passphrase. Integrates SHA-256 HMAC integrity signatures to reject altered files immediately.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Screenshots Showcase -->
+    <section id="showcase" class="gallery-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Designed for Everyday Clarity</h2>
+          <p class="section-subtitle">
+            Explore authentic VaultX screens captured directly from production devices running Android 15.
+          </p>
+        </div>
+
+        <div class="gallery-tabs" role="tablist">
+          <button class="gallery-tab-btn active" data-index="0" role="tab" aria-selected="true">1. Biometric Authentication</button>
+          <button class="gallery-tab-btn" data-index="1" role="tab" aria-selected="false">2. Workspaces</button>
+          <button class="gallery-tab-btn" data-index="2" role="tab" aria-selected="false">3. Dashboard &amp; 2FA</button>
+          <button class="gallery-tab-btn" data-index="3" role="tab" aria-selected="false">4. Custom Fields</button>
+          <button class="gallery-tab-btn" data-index="4" role="tab" aria-selected="false">5. Card Wallet</button>
+          <button class="gallery-tab-btn" data-index="5" role="tab" aria-selected="false">6. Add Card</button>
+          <button class="gallery-tab-btn" data-index="6" role="tab" aria-selected="false">7. Password Generator</button>
+          <button class="gallery-tab-btn" data-index="7" role="tab" aria-selected="false">8. Security Settings</button>
+        </div>
+
+        <div class="gallery-viewport">
+          <div class="gallery-preview-frame">
+            <figure class="gallery-device">
+              <img id="galleryImg" src="assets/screenshots/1.png" alt="VaultX application screen preview" class="gallery-phone-img">
+            </figure>
+          </div>
+
+          <div class="gallery-details">
+            <h3 id="galleryTitle" class="gallery-details-title">Hardware Biometric Authentication</h3>
+            <p id="galleryDesc" class="gallery-details-text">
+              Access your credentials using native Android biometric authentication backed by hardware-isolated KeyStore keys and zero-knowledge master password derivation.
+            </p>
+            <ul id="galleryHighlights" class="gallery-details-highlights">
+              <li class="gallery-highlight-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Android BiometricPrompt hardware security</span>
+              </li>
+              <li class="gallery-highlight-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Persistent SecureStore lockout throttling</span>
+              </li>
+              <li class="gallery-highlight-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Zero accounts or email registrations required</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security Architecture Section -->
+    <section id="security" class="security-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Cryptographic Threat Model</h2>
+          <p class="section-subtitle">
+            Every architectural tier in VaultX enforces deterministic cryptographic boundaries on device.
+          </p>
+        </div>
+
+        <div class="security-layers-grid">
+          <div class="security-layer-card">
+            <span class="security-layer-num">Tier 1</span>
+            <h3 class="security-layer-title">Hardware Isolation</h3>
+            <p class="security-layer-desc">Android KeyStore protects vault wrapping keys in hardware TEE and StrongBox registers, requiring biometric user confirmation.</p>
+            <code class="security-layer-specs">KeyStore + BiometricPrompt</code>
+          </div>
+
+          <div class="security-layer-card">
+            <span class="security-layer-num">Tier 2</span>
+            <h3 class="security-layer-title">Key Derivation</h3>
+            <p class="security-layer-desc">Master passwords derive AES keys using PBKDF2 with 16-byte random salts generated via Java SecureRandom.</p>
+            <code class="security-layer-specs">PBKDF2-HMAC-SHA256 (16B Salt)</code>
+          </div>
+
+          <div class="security-layer-card">
+            <span class="security-layer-num">Tier 3</span>
+            <h3 class="security-layer-title">Payload Encryption</h3>
+            <p class="security-layer-desc">All password items, custom fields, bank cards, and 2FA secrets are serialized and stored under AES-256-CBC.</p>
+            <code class="security-layer-specs">AES-256-CBC + PKCS7 Padding</code>
+          </div>
+
+          <div class="security-layer-card">
+            <span class="security-layer-num">Tier 4</span>
+            <h3 class="security-layer-title">Integrity Verification</h3>
+            <p class="security-layer-desc">Encrypted backup containers append cryptographic HMAC digests. Any byte tampering causes immediate decryption failure.</p>
+            <code class="security-layer-specs">SHA-256 HMAC Container Verification</code>
+          </div>
+
+          <div class="security-layer-card">
+            <span class="security-layer-num">Tier 5</span>
+            <h3 class="security-layer-title">Display Guard</h3>
+            <p class="security-layer-desc">Operating system windows enforce fail-closed FLAG_SECURE to prevent screen scraping, screenshots, and recents leakage.</p>
+            <code class="security-layer-specs">WindowManager.LayoutParams.FLAG_SECURE</code>
+          </div>
+
+          <div class="security-layer-card">
+            <span class="security-layer-num">Tier 6</span>
+            <h3 class="security-layer-title">Memory Sanitization</h3>
+            <p class="security-layer-desc">Master password char arrays are zero-wiped immediately following key derivation to prevent heap retention.</p>
+            <code class="security-layer-specs">JVM CharArray Zero Wipe</code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Table Section -->
+    <section id="comparison" class="features-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">VaultX vs Cloud Password Managers</h2>
+          <p class="section-subtitle">
+            An architectural comparison between local device ownership and centralized cloud password services.
+          </p>
+        </div>
+
+        <div class="comparison-wrapper">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Security Property</th>
+                <th class="comparison-vaultx-col">VaultX</th>
+                <th>Cloud Password Managers</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Cloud Breach Vulnerability</strong></td>
+                <td class="comparison-vaultx-col"><span class="badge-tag-positive">Zero Risk (No Servers)</span></td>
+                <td><span class="badge-tag-negative">High (Centralized Server Target)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Android Network Permission</strong></td>
+                <td class="comparison-vaultx-col"><span class="badge-tag-positive">Zero Permissions (No INTERNET)</span></td>
+                <td><span class="badge-tag-negative">Mandatory Full Internet Access</span></td>
+              </tr>
+              <tr>
+                <td><strong>Mandatory Cloud Account</strong></td>
+                <td class="comparison-vaultx-col"><span class="badge-tag-positive">None (Instant Local Start)</span></td>
+                <td><span class="badge-tag-negative">Required Remote Account</span></td>
+              </tr>
+              <tr>
+                <td><strong>Integrated 2FA Authenticator</strong></td>
+                <td class="comparison-vaultx-col"><span class="badge-tag-positive">Included Free (RFC 6238)</span></td>
+                <td><span class="badge-tag-negative">Often Gated Behind Subscriptions</span></td>
+              </tr>
+              <tr>
+                <td><strong>Telemetry &amp; Third-Party Trackers</strong></td>
+                <td class="comparison-vaultx-col"><span class="badge-tag-positive">Zero Analytics &amp; Trackers</span></td>
+                <td><span class="badge-tag-negative">Crashlytics, Mixpanel, Segment</span></td>
+              </tr>
+              <tr>
+                <td><strong>Licensing &amp; Reproducibility</strong></td>
+                <td class="comparison-vaultx-col"><span class="badge-tag-positive">MIT Licensed &amp; F-Droid Audited</span></td>
+                <td><span class="badge-tag-negative">Proprietary or Restricted</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Password Generator Widget -->
+    <section id="generator" class="generator-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Cryptographic Generator</h2>
+          <p class="section-subtitle">
+            Generate cryptographically strong passwords in your browser using the Web Crypto API.
+          </p>
+        </div>
+
+        <div class="generator-widget-box">
+          <div class="gen-display-wrapper">
+            <span id="genPasswordOutput" class="gen-password-output">Generating…</span>
+            <button id="genRefreshBtn" class="gen-action-btn" title="Generate New Password" aria-label="Generate New Password">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+            <button id="genCopyBtn" class="gen-action-btn" title="Copy to Clipboard" aria-label="Copy to Clipboard">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="strength-meter-wrap">
+            <div class="strength-bar-track">
+              <div id="strengthBarFill" class="strength-bar-fill"></div>
+            </div>
+            <span id="strengthLabel" class="strength-label-text">Very Strong (128 bits)</span>
+          </div>
+
+          <div class="gen-controls-grid">
+            <div class="gen-length-row">
+              <div class="gen-slider-header">
+                <span>Password Length</span>
+                <span id="genLengthVal" class="gen-slider-val">20</span>
+              </div>
+              <input type="range" id="genLengthSlider" class="gen-range-slider" min="8" max="64" value="20">
+            </div>
+
+            <div class="gen-options-row">
+              <label class="gen-checkbox-label">
+                <input type="checkbox" id="genOptUpper" checked>
+                <span>Uppercase Letters (A-Z)</span>
+              </label>
+              <label class="gen-checkbox-label">
+                <input type="checkbox" id="genOptLower" checked>
+                <span>Lowercase Letters (a-z)</span>
+              </label>
+              <label class="gen-checkbox-label">
+                <input type="checkbox" id="genOptNumbers" checked>
+                <span>Numbers (0-9)</span>
+              </label>
+              <label class="gen-checkbox-label">
+                <input type="checkbox" id="genOptSymbols" checked>
+                <span>Special Symbols (!@#$…)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Downloads Matrix Section -->
+    <section id="downloads" class="download-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Install on Android</h2>
+          <p class="section-subtitle">
+            VaultX is published on F-Droid and distributed as architecture-optimized split APKs.
+          </p>
+        </div>
+
+        <div class="download-cards-grid">
+          <div class="download-card download-card-featured">
+            <div class="download-card-header">
+              <h3 class="download-arch-title">F-Droid Store</h3>
+              <p class="download-arch-desc">Install via the official F-Droid client for automatic updates and verified reproducible builds.</p>
+            </div>
+            <div class="download-meta-list">
+              <div>Package: <code>com.chiranth7.vaultx</code></div>
+              <div>License: MIT (Free &amp; Open Source)</div>
+            </div>
+            <a href="https://f-droid.org/packages/com.chiranth7.vaultx/" target="_blank" rel="noopener" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>View on F-Droid</span>
+            </a>
+          </div>
+
+          <div class="download-card">
+            <div class="download-card-header">
+              <h3 class="download-arch-title">arm64-v8a APK</h3>
+              <p class="download-arch-desc">Optimized binary for modern Android smartphones manufactured after 2017.</p>
+            </div>
+            <div class="download-meta-list">
+              <div>Version: 1.4.4 (Code 253)</div>
+              <div>Size: ~29 MB</div>
+            </div>
+            <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases/latest" target="_blank" rel="noopener" class="btn btn-secondary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download arm64 APK</span>
+            </a>
+          </div>
+
+          <div class="download-card">
+            <div class="download-card-header">
+              <h3 class="download-arch-title">armeabi-v7a APK</h3>
+              <p class="download-arch-desc">Optimized lightweight package tailored for older 32-bit ARM Android smartphones.</p>
+            </div>
+            <div class="download-meta-list">
+              <div>Version: 1.4.4 (Code 253)</div>
+              <div>Size: ~24 MB</div>
+            </div>
+            <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases/latest" target="_blank" rel="noopener" class="btn btn-secondary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download v7a APK</span>
+            </a>
+          </div>
+
+          <div class="download-card">
+            <div class="download-card-header">
+              <h3 class="download-arch-title">Universal APK</h3>
+              <p class="download-arch-desc">Consolidated package bundle supporting ARM, ARM64, x86, and x86_64 devices.</p>
+            </div>
+            <div class="download-meta-list">
+              <div>Version: 1.4.4 (Code 253)</div>
+              <div>Size: ~73 MB</div>
+            </div>
+            <a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases/latest" target="_blank" rel="noopener" class="btn btn-secondary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download Universal</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Accordion Section -->
+    <section id="faq" class="faq-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Frequently Asked Questions</h2>
+          <p class="section-subtitle">
+            Details on VaultX’s security model, offline workflows, and data protection.
+          </p>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button class="faq-trigger" aria-expanded="false">
+              <span>How do I sync or backup passwords if VaultX is offline?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-content">
+              VaultX features an encrypted backup export system in Settings. You can create a password-encrypted JSON file derived with PBKDF2 and authenticated via SHA-256 HMAC. You can securely transfer this file to your other devices using private local solutions like Syncthing, local USB, SD card, or KDE Connect.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-trigger" aria-expanded="false">
+              <span>What happens if I forget my master password?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-content">
+              Because VaultX operates under a zero-knowledge architecture, no remote administrator can reset your credentials. However, during initial setup, VaultX provides optional local security questions which wrap a secondary recovery key. If you forget your password, you can answer your recovery questions to regain access.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-trigger" aria-expanded="false">
+              <span>Why is zero internet permission better than encrypted cloud syncing?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-content">
+              Cloud password managers require constant trust in remote servers, cloud infrastructure, DNS configurations, TLS certificates, and API endpoints. When a password manager has zero network permission in its Android manifest, the operating system kernel physically prohibits it from opening sockets or sending data anywhere, eliminating remote attack vectors entirely.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-trigger" aria-expanded="false">
+              <span>Does VaultX support 2FA TOTP codes like Google Authenticator?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-content">
+              Yes. VaultX includes an integrated RFC 6238 TOTP two-factor authentication engine. When adding a credential, paste the Base32 2FA secret key. VaultX generates rotating 6-digit codes with a 30-second countdown ring, accessible right on your dashboard with one-tap auto-clearing clipboard copying.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-trigger" aria-expanded="false">
+              <span>Is VaultX really free and open source?</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="faq-content">
+              Yes. VaultX is licensed under the permissive MIT License. There are no subscriptions, in-app purchases, ads, or paywalled features. The full source code is public on GitHub and verified by the official F-Droid build systems.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="brand-link" aria-label="VaultX Home">
+            <div class="brand-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <span class="brand-name">VaultX</span>
+          </a>
+          <p class="footer-desc">
+            The ultimate zero-knowledge, offline password manager and 2FA authenticator for Android. Free and open source under the MIT License.
+          </p>
+        </div>
+
+        <div>
+          <h3 class="footer-heading">Platform</h3>
+          <ul class="footer-links-list">
+            <li><a href="#features">Features Overview</a></li>
+            <li><a href="#showcase">Device Showcase</a></li>
+            <li><a href="#security">Security Architecture</a></li>
+            <li><a href="#generator">Password Generator</a></li>
+            <li><a href="#comparison">Cloud Comparison</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer-heading">Distribution</h3>
+          <ul class="footer-links-list">
+            <li><a href="https://f-droid.org/packages/com.chiranth7.vaultx/" target="_blank" rel="noopener">F-Droid Package</a></li>
+            <li><a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/releases" target="_blank" rel="noopener">GitHub Releases</a></li>
+            <li><a href="#downloads">Architecture Split APKs</a></li>
+            <li><a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer-heading">Open Source</h3>
+          <ul class="footer-links-list">
+            <li><a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager" target="_blank" rel="noopener">Source Code</a></li>
+            <li><a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/issues" target="_blank" rel="noopener">Issue Tracker</a></li>
+            <li><a href="https://github.com/Chiranth-Janardhan-moger/vaultx-offline-password-manager/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+            <li><a href="https://gitlab.com/fdroid/fdroiddata/-/merge_requests/41451" target="_blank" rel="noopener">F-Droid Inclusion MR</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 Chiranth Moger. Open source under the MIT License.</div>
+        <div>Engineered for pure privacy. Zero network tracking.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification element -->
+  <div id="toastNotice" class="toast-notice" role="status" aria-live="polite">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span id="toastNoticeText">Action completed</span>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>

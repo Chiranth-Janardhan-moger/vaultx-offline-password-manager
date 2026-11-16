@@ -4,7 +4,6 @@ import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import '@/lib/crypto-shim';
-import CryptoJS from 'crypto-js';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';

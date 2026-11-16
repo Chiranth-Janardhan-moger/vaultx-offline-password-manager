@@ -68,6 +68,24 @@ export const getEffectiveWorkspaces = (vault?: VaultData | null): string[] => {
   return list;
 };
 
+export const moveItemUp = <T>(list: T[], index: number): T[] => {
+  if (index <= 0 || index >= list.length) return [...list];
+  const updated = [...list];
+  const temp = updated[index];
+  updated[index] = updated[index - 1];
+  updated[index - 1] = temp;
+  return updated;
+};
+
+export const moveItemDown = <T>(list: T[], index: number): T[] => {
+  if (index < 0 || index >= list.length - 1) return [...list];
+  const updated = [...list];
+  const temp = updated[index];
+  updated[index] = updated[index + 1];
+  updated[index + 1] = temp;
+  return updated;
+};
+
 const VAULT_FILENAME = 'vault_v1.enc';
 
 export const getVaultFilePath = () => {
@@ -232,7 +250,7 @@ export const toCsv = (vault: VaultData) => {
 };
 
 export const encryptBackupData = async (
-  backupData: { passwords: PasswordItem[]; cards?: CardItem[] },
+  backupData: { passwords: PasswordItem[]; cards?: CardItem[]; [key: string]: any },
   passphrase: string
 ): Promise<string> => {
   const saltHex = getRandomHex(16);
@@ -245,7 +263,14 @@ export const encryptBackupData = async (
   const hmacKeyHex = await pbkdf2Key(passphrase, saltHex, 10_000);
   const hmacKey = CryptoJS.enc.Hex.parse(hmacKeyHex);
 
-  const plaintext = JSON.stringify(backupData);
+  // Security Hardening: Enforce strict credential isolation and schema whitelisting.
+  // Never serialize user account credentials (email, master password hash, password salt) into backups.
+  const sanitized = {
+    passwords: Array.isArray(backupData?.passwords) ? backupData.passwords : [],
+    cards: Array.isArray(backupData?.cards) ? backupData.cards : [],
+  };
+
+  const plaintext = JSON.stringify(sanitized);
   const encrypted = CryptoJS.AES.encrypt(plaintext, derivedKey, {
     iv: ivWordArray,
     mode: CryptoJS.mode.CBC,

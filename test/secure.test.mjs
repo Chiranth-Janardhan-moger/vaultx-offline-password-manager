@@ -188,6 +188,15 @@ test('Secure - Lockout State Persistence and Threshold', async () => {
   assert.strictEqual(state.failedAttempts, 0);
   assert.ok(state.lockedUntil > Date.now());
 
+  // Cryptographic unwrappers strictly enforce lockout at the engine layer
+  await assert.rejects(async () => {
+    await unwrapWithPassword('AnyPassword');
+  }, /Account locked/);
+
+  await assert.rejects(async () => {
+    await unwrapWithRecovery(['answer']);
+  }, /Account locked/);
+
   // State persists across reload
   const persisted = await getLockoutState();
   assert.strictEqual(persisted.lockedUntil, state.lockedUntil);

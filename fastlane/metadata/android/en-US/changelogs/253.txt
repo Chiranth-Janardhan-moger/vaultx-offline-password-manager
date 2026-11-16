@@ -1,6 +1,6 @@
 Version 1.4.4:
-• Added eye toggle to view and hide MPIN and custom fields on dashboard and search
-• Strengthened screenshot protection (FLAG_SECURE) by default on initial launch
-• Hardened session route guards on Settings, Spaces, and Search
-• Added brute-force lockout protection on security question recovery
-• Enhanced backup integrity verification and secure memory zeroization
+• Restored 2FA / TOTP authenticator with live 30-second countdown ring and one-tap copy
+• Added 2FA secret key input to Add and Edit password forms with overwrite protection
+• Added visibility toggle (eye icon) to unmask MPIN and custom fields on Dashboard and Search
+• Hardened screen security: screenshot blocking now strictly fails closed (FLAG_SECURE retained)
+• Hardened backup integrity, route guards, and zero-knowledge credential isolation

@@ -136,6 +136,11 @@ export const savePasswordWrap = async (vaultKey: string, password: string) => {
 };
 
 export const unwrapWithPassword = async (password: string) => {
+  const lockout = await getLockoutState();
+  if (lockout.lockedUntil > Date.now()) {
+    throw new Error('Account locked due to too many failed attempts');
+  }
+
   const raw = await SecureStore.getItemAsync(KEYS.wrapPassword);
   if (!raw) throw new Error('Password unlock not configured');
   const rec = JSON.parse(raw) as WrapRecord;
@@ -192,6 +197,11 @@ export const loadRecoveryQuestions = async () => {
 };
 
 export const unwrapWithRecovery = async (answers: string[]) => {
+  const lockout = await getLockoutState();
+  if (lockout.lockedUntil > Date.now()) {
+    throw new Error('Account locked due to too many failed attempts');
+  }
+
   const raw = await SecureStore.getItemAsync(KEYS.wrapRecovery);
   if (!raw) throw new Error('Recovery not configured');
   const rec = JSON.parse(raw) as RecoveryRecord;

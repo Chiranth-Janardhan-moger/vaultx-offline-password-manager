@@ -1,13 +1,11 @@
 import '@/lib/crypto-shim';
 import { SessionProvider } from "@/context/SessionProvider";
 import { ThemeProvider } from "@/context/ThemeProvider";
-import { setScreenshotBlocking } from '@/lib/screen-security';
+import { BLOCK_SCREENSHOTS_KEY, setScreenshotBlocking, shouldBlockScreenshotsByDefault } from '@/lib/screen-security';
 import { Stack } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Platform } from 'react-native';
-
-const BLOCK_SCREENSHOTS_KEY = 'block_screenshots';
 
 export default function RootLayout() {
   // Apply screenshot blocking setting on app start
@@ -15,11 +13,11 @@ export default function RootLayout() {
     (async () => {
       try {
         const blockSS = await SecureStore.getItemAsync(BLOCK_SCREENSHOTS_KEY);
-        const shouldBlock = blockSS !== 'false'; // Default: true (blocks screenshots until explicitly disabled in Settings)
+        const shouldBlock = shouldBlockScreenshotsByDefault(blockSS); // Default: true (blocks screenshots until explicitly disabled in Settings)
         await setScreenshotBlocking(shouldBlock);
       } catch (error) {
         console.error('Failed to apply screenshot blocking:', error);
-        await setScreenshotBlocking(false);
+        await setScreenshotBlocking(true);
       }
     })();
   }, []);

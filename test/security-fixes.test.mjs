@@ -12,6 +12,7 @@ import {
   getLockoutState,
   clearLockoutState,
 } from '../lib/secure.ts';
+import { shouldBlockScreenshotsByDefault } from '../lib/screen-security.ts';
 import { _clearStore } from './mocks/expo-secure-store.mjs';
 
 test.beforeEach(async () => {
@@ -20,20 +21,15 @@ test.beforeEach(async () => {
 });
 
 test('Security Fix - VAULTX-SEC-008: Screenshot Blocking Defaults to ON', () => {
-  // When unconfigured in SecureStore (null), blockSS !== 'false' must evaluate to true
-  const blockSSNull = null;
-  const shouldBlockDefault = blockSSNull !== 'false';
-  assert.strictEqual(shouldBlockDefault, true, 'Screenshot blocking must default to ON on cold start');
+  // When unconfigured in SecureStore (null or undefined), must evaluate to true (block screenshots)
+  assert.strictEqual(shouldBlockScreenshotsByDefault(null), true, 'Screenshot blocking must default to ON on cold start');
+  assert.strictEqual(shouldBlockScreenshotsByDefault(undefined), true, 'Screenshot blocking must default to ON when undefined');
 
-  // Explicit user disabling in Settings
-  const blockSSDisabled = 'false';
-  const shouldBlockDisabled = blockSSDisabled !== 'false';
-  assert.strictEqual(shouldBlockDisabled, false, 'Explicitly disabling in Settings must be respected');
+  // Explicit user disabling in Settings ('false')
+  assert.strictEqual(shouldBlockScreenshotsByDefault('false'), false, 'Explicitly disabling in Settings must be respected');
 
-  // Explicit user enabling in Settings
-  const blockSSEnabled = 'true';
-  const shouldBlockEnabled = blockSSEnabled !== 'false';
-  assert.strictEqual(shouldBlockEnabled, true, 'Explicitly enabling in Settings must be respected');
+  // Explicit user enabling in Settings ('true')
+  assert.strictEqual(shouldBlockScreenshotsByDefault('true'), true, 'Explicitly enabling in Settings must be respected');
 });
 
 test('Security Fix - VAULTX-SEC-009: Recovery Questions Lockout Rate Limiting', async () => {

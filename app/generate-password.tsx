@@ -3,11 +3,9 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { getRandomBytes } from '@/lib/crypto-shim';
 import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '@/lib/password-strength';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {

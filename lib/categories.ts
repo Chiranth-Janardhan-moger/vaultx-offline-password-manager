@@ -92,7 +92,6 @@ export const categories: Category[] = [
 ];
 
 export const DEFAULT_DELETE_CATEGORY_KEY = 'default_delete_category';
-export const DEFAULT_DELETE_CATEGORY: CategoryType = 'google';
 
 export const getEffectiveCategories = (
   deletedCategories?: string[],

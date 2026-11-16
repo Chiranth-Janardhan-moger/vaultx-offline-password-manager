@@ -3,10 +3,9 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { CardField, CardItem, CardType, saveVault } from '@/lib/vault';
+import { CardItem, CardType, saveVault } from '@/lib/vault';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
@@ -15,28 +14,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   Platform,
-  KeyboardAvoidingView,
   Share,
 } from 'react-native';
-
-const PREMIUM_GRADIENTS: [string, string][] = [
-  ['#141e30', '#243b55'], // Midnight Blue
-  ['#0f2027', '#203a43'], // Dark Teal
-  ['#311b92', '#673ab7'], // Deep Violet
-  ['#004d40', '#009688'], // Forest Emerald
-  ['#111111', '#333333'], // Carbon Black
-  ['#8e0e00', '#1f0000'], // Crimson Slate
-  ['#1e3c72', '#2a5298'], // Royal Indigo
-  ['#42275a', '#734b6d'], // Plum Velvet
-  ['#134e5e', '#5a8f76'], // Sage Ocean
-  ['#1f1c2c', '#3f3b5c'], // Shadow Purple
-  ['#000428', '#004e92'], // Deep Space
-  ['#29323c', '#485563'], // Gunmetal
-];
 
 export default function CardsScreen() {
   const router = useRouter();
