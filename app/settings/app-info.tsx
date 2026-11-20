@@ -241,6 +241,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 78,
+    width: '100%',
   },
 });

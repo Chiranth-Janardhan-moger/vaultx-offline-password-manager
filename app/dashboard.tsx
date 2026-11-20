@@ -1106,6 +1106,7 @@ export default function Dashboard() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            overScrollMode="never"
             contentContainerStyle={styles.pillsScroll}
           >
             {/* "All" Pill */}
@@ -2368,10 +2369,11 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   pillsContainer: {
-    paddingVertical: 10,
+    paddingVertical: 4,
   },
   pillsScroll: {
     paddingHorizontal: 20,
+    paddingVertical: 6,
     gap: 8,
   },
   pill: {
@@ -2398,6 +2400,8 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 13,
     fontWeight: '700',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   listContent: {
     paddingHorizontal: 20,

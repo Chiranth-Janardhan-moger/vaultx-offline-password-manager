@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 72,
+    width: '100%',
   },
   footer: {
     alignItems: 'flex-start',

@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginLeft: 64,
+    width: '100%',
   },
   badgeWrap: {
     flexDirection: 'row',
