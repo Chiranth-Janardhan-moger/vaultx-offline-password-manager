@@ -2,15 +2,19 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
+import { clearAllSecure } from '@/lib/secure';
+import { getVaultFilePath } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import appConfig from '../../app.json';
 
 export default function AppInfoSettings() {
   const router = useRouter();
-  const { unlocked } = useSession();
+  const { unlocked, lock } = useSession();
   const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
@@ -50,6 +54,54 @@ export default function AppInfoSettings() {
         onConfirm: () => {},
       });
     }
+  };
+
+  const handleWipeAllData = async () => {
+    try {
+      // 1. Delete encrypted vault file from disk
+      const path = getVaultFilePath();
+      const info = await FileSystem.getInfoAsync(path);
+      if (info.exists) {
+        await FileSystem.deleteAsync(path, { idempotent: true });
+      }
+
+      // 2. Clear all secure keys
+      await clearAllSecure();
+      await Promise.all([
+        SecureStore.deleteItemAsync('vaultx_lockout_state_v1'),
+        SecureStore.deleteItemAsync('vaultx_active_workspace'),
+        SecureStore.deleteItemAsync('auto_lock_timer'),
+        SecureStore.deleteItemAsync('select_workspace_on_login'),
+        SecureStore.deleteItemAsync('default_delete_category'),
+        SecureStore.deleteItemAsync('double_tap_lock'),
+        SecureStore.deleteItemAsync('block_screenshots'),
+        SecureStore.deleteItemAsync('clipboard_clear_seconds'),
+      ]);
+
+      // 3. Clear session memory and lock
+      lock();
+
+      // 4. Redirect to onboarding
+      router.replace('/onboarding');
+    } catch {
+      showAlert({
+        title: 'Error',
+        message: 'Failed to erase all data. Please try again.',
+        confirmText: 'OK',
+      });
+    }
+  };
+
+  const confirmWipeAllData = () => {
+    showAlert({
+      title: 'Erase All Vault Data?',
+      message:
+        'This will permanently delete your master password, all saved credentials, identity cards, workspaces, and encryption keys.\n\nThis action cannot be undone. Are you sure you want to completely wipe all data?',
+      confirmText: 'Erase Everything',
+      cancelText: 'Cancel',
+      isDestructive: true,
+      onConfirm: handleWipeAllData,
+    });
   };
 
   return (
@@ -114,6 +166,22 @@ export default function AppInfoSettings() {
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>Report bugs or suggest new features</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* Erase All Data */}
+              <TouchableOpacity style={styles.row} onPress={confirmWipeAllData} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: '#ef444418' }]}>
+                  <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: '#ef4444' }]}>Erase All Data</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Full wipe out and factory reset
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#ef444480" />
               </TouchableOpacity>
             </View>
           </View>

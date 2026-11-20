@@ -95,7 +95,9 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
     router.replace(tab.route);
   };
 
-  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 14);
+  const bottomPadding = insets.bottom > 0
+    ? insets.bottom + (Platform.OS === 'android' ? 10 : 8)
+    : (Platform.OS === 'android' ? 20 : 22);
 
   const capsuleBg = resolved === 'dark' ? colors.card : '#ffffff';
   const capsuleBorder = colors.border;
@@ -131,7 +133,7 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
             >
               <Ionicons
                 name={isActive ? tab.activeIcon : tab.inactiveIcon}
-                size={isActive ? 19 : 21}
+                size={isActive ? 21 : 22}
                 color={isActive ? colors.primary : colors.mutedText}
               />
               {isActive ? (
@@ -171,8 +173,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderRadius: 36,
-    paddingHorizontal: 6,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     borderWidth: 0.6,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
@@ -185,17 +187,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 28,
   },
   activeTabTouch: {
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 28,
     gap: 6,
   },
   activeLabel: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.1,
   },
