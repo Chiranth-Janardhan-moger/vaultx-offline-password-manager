@@ -7,7 +7,13 @@ import { categories, categorizeService, DEFAULT_DELETE_CATEGORY_KEY, getCategory
 import { getServiceColor, getServiceIcon } from '@/lib/service-icons';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
 import { getTOTPDetails } from '@/lib/totp';
-import { saveVault, type PasswordItem, type VaultData } from '@/lib/vault';
+import {
+  getWorkspaceCustomTags,
+  getWorkspaceDeletedCategories,
+  saveVault,
+  type PasswordItem,
+  type VaultData,
+} from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
@@ -261,7 +267,7 @@ export default function Dashboard() {
       .filter((c) => (c.workspace || 'Personal') === currentWs)
       .map((c) => c.folder)
       .filter(Boolean) as string[];
-    const custom = vault.customTags || [];
+    const custom = getWorkspaceCustomTags(vault, currentWs);
     return Array.from(new Set([...custom, ...pFolders, ...cFolders]));
   }, [vault, activeWorkspace]);
 
@@ -290,23 +296,26 @@ export default function Dashboard() {
       .filter((pwd) => (pwd.workspace || 'Personal') === currentWs && Boolean(pwd.totpSecret?.trim()));
   }, [vault?.passwords, activeWorkspace]);
 
-  // Effective active categories (excluding deleted ones, applying custom names)
+  // Effective active categories (excluding deleted ones for active workspace, applying custom names)
   const effectiveCategories = React.useMemo(() => {
-    return getEffectiveCategories(vault?.deletedCategories, vault?.categoryOverrides);
-  }, [vault?.deletedCategories, vault?.categoryOverrides]);
+    const wsDeleted = getWorkspaceDeletedCategories(vault, activeWorkspace || 'Personal');
+    return getEffectiveCategories(wsDeleted, vault?.categoryOverrides);
+  }, [vault, activeWorkspace]);
 
   // Category counts
   const categoryCounts = React.useMemo(() => {
     if (!vault?.passwords) return {};
+    const currentWs = activeWorkspace || 'Personal';
+    const wsDeleted = getWorkspaceDeletedCategories(vault, currentWs);
     const counts: { [key: string]: number } = {};
     vault.passwords.forEach((pwd) => {
       const itemWs = pwd.workspace || 'Personal';
-      if (itemWs !== (activeWorkspace || 'Personal')) return;
-      const cat = pwd.category || categorizeService(pwd.service, vault?.deletedCategories);
+      if (itemWs !== currentWs) return;
+      const cat = pwd.category || categorizeService(pwd.service, wsDeleted);
       counts[cat] = (counts[cat] || 0) + 1;
     });
     return counts;
-  }, [vault?.passwords, vault?.deletedCategories, activeWorkspace]);
+  }, [vault, activeWorkspace]);
 
   // Folder counts
   const folderCounts = React.useMemo(() => {
@@ -340,7 +349,8 @@ export default function Dashboard() {
             const folderName = selectedPill.replace('folder:', '');
             if (pwd.folder !== folderName) return false;
           } else {
-            const pwdCategory = pwd.category || categorizeService(pwd.service, vault?.deletedCategories);
+            const wsDeleted = getWorkspaceDeletedCategories(vault, activeWorkspace || 'Personal');
+            const pwdCategory = pwd.category || categorizeService(pwd.service, wsDeleted);
             if (pwdCategory !== selectedPill) return false;
           }
         }
@@ -489,10 +499,22 @@ export default function Dashboard() {
     }
 
     if (!vault || !vaultKey) return;
+    const currentWs = activeWorkspace || 'Personal';
+
+    const currentWsCustom = getWorkspaceCustomTags(vault, currentWs);
+    const updatedWsCustom = currentWsCustom.includes(trimmed) ? currentWsCustom : [...currentWsCustom, trimmed];
+    const updatedWorkspaceCustomTags = {
+      ...(vault.workspaceCustomTags || {}),
+      [currentWs]: updatedWsCustom,
+    };
 
     const currentCustom = vault.customTags || [];
-    const updatedCustom = [...currentCustom, trimmed];
-    const updatedVault: VaultData = { ...vault, customTags: updatedCustom };
+    const updatedCustom = currentCustom.includes(trimmed) ? currentCustom : [...currentCustom, trimmed];
+    const updatedVault: VaultData = {
+      ...vault,
+      customTags: updatedCustom,
+      workspaceCustomTags: updatedWorkspaceCustomTags,
+    };
 
     try {
       await saveVault(updatedVault, vaultKey);
@@ -508,7 +530,7 @@ export default function Dashboard() {
         onConfirm: () => {},
       });
     }
-  }, [newTagName, uniqueFolders, vault, vaultKey, setVault, showAlert]);
+  }, [newTagName, uniqueFolders, vault, vaultKey, setVault, showAlert, activeWorkspace]);
 
   const handleStartEditItem = React.useCallback(() => {
     if (!selectedItemToManage) return;
@@ -547,29 +569,52 @@ export default function Dashboard() {
 
     if (selectedItemToManage.type === 'tag') {
       const oldName = selectedItemToManage.name;
-      const currentCustom = vault.customTags || [];
-      const updatedCustom = currentCustom.map((t) => (t === oldName ? trimmed : t));
-      if (!updatedCustom.includes(trimmed)) {
-        updatedCustom.push(trimmed);
-      }
+      const currentWs = activeWorkspace || 'Personal';
 
+      // Update workspace custom tags for current workspace
+      const currentWsCustom = getWorkspaceCustomTags(vault, currentWs);
+      const updatedWsCustom = currentWsCustom.map((t) => (t === oldName ? trimmed : t));
+      if (!updatedWsCustom.includes(trimmed)) {
+        updatedWsCustom.push(trimmed);
+      }
+      const updatedWorkspaceCustomTags = {
+        ...(vault.workspaceCustomTags || {}),
+        [currentWs]: updatedWsCustom,
+      };
+
+      // Only rename passwords in the active workspace
       const updatedPasswords = (vault.passwords || []).map((p) => {
-        if (p.folder === oldName) {
+        const itemWs = p.workspace || 'Personal';
+        if (itemWs === currentWs && p.folder === oldName) {
           return { ...p, folder: trimmed, modifiedAt: Date.now() };
         }
         return p;
       });
 
+      // Only rename cards in the active workspace
       const updatedCards = (vault.cards || []).map((c) => {
-        if (c.folder === oldName) {
+        const itemWs = c.workspace || 'Personal';
+        if (itemWs === currentWs && c.folder === oldName) {
           return { ...c, folder: trimmed };
         }
         return c;
       });
 
+      // If other workspaces still use oldName, keep oldName in legacy customTags
+      const otherWsUseOldName =
+        updatedPasswords.some((p) => (p.workspace || 'Personal') !== currentWs && p.folder === oldName) ||
+        updatedCards.some((c) => (c.workspace || 'Personal') !== currentWs && c.folder === oldName);
+
+      const currentCustom = vault.customTags || [];
+      let updatedCustom = currentCustom.map((t) => (t === oldName && !otherWsUseOldName ? trimmed : t));
+      if (!updatedCustom.includes(trimmed)) {
+        updatedCustom.push(trimmed);
+      }
+
       updatedVault = {
         ...vault,
         customTags: updatedCustom,
+        workspaceCustomTags: updatedWorkspaceCustomTags,
         passwords: updatedPasswords,
         cards: updatedCards,
       };
@@ -604,19 +649,26 @@ export default function Dashboard() {
         onConfirm: () => {},
       });
     }
-  }, [selectedItemToManage, editTagName, uniqueFolders, vault, vaultKey, setVault, selectedPill, showAlert]);
+  }, [selectedItemToManage, editTagName, uniqueFolders, vault, vaultKey, setVault, selectedPill, showAlert, activeWorkspace]);
 
   const handleDeleteItem = React.useCallback(
     async (item: { type: 'category' | 'tag'; id: string; name: string }, fallbackId: CategoryType, fallbackName: string) => {
       if (!vault || !vaultKey) return;
+      const currentWs = activeWorkspace || 'Personal';
 
       let updatedVault: VaultData;
 
       if (item.type === 'tag') {
-        const currentCustom = (vault.customTags || []).filter((t) => t !== item.name);
+        const currentWsCustom = getWorkspaceCustomTags(vault, currentWs).filter((t) => t !== item.name);
+        const updatedWorkspaceCustomTags = {
+          ...(vault.workspaceCustomTags || {}),
+          [currentWs]: currentWsCustom,
+        };
 
+        // ONLY update passwords belonging to the active workspace!
         const updatedPasswords = (vault.passwords || []).map((p) => {
-          if (p.folder === item.name) {
+          const itemWs = p.workspace || 'Personal';
+          if (itemWs === currentWs && p.folder === item.name) {
             return {
               ...p,
               folder: undefined,
@@ -627,40 +679,62 @@ export default function Dashboard() {
           return p;
         });
 
+        // ONLY update cards belonging to the active workspace!
         const updatedCards = (vault.cards || []).map((c) => {
-          if (c.folder === item.name) {
+          const itemWs = c.workspace || 'Personal';
+          if (itemWs === currentWs && c.folder === item.name) {
             return { ...c, folder: undefined };
           }
           return c;
         });
 
+        // Check if other workspaces still have items or tags with this name
+        const isUsedInOtherWorkspace =
+          updatedPasswords.some((p) => (p.workspace || 'Personal') !== currentWs && p.folder === item.name) ||
+          updatedCards.some((c) => (c.workspace || 'Personal') !== currentWs && c.folder === item.name) ||
+          Object.entries(updatedWorkspaceCustomTags).some(([ws, tags]) => ws !== currentWs && tags.includes(item.name));
+
+        const currentCustom = isUsedInOtherWorkspace
+          ? (vault.customTags || [])
+          : (vault.customTags || []).filter((t) => t !== item.name);
+
         updatedVault = {
           ...vault,
           customTags: currentCustom,
+          workspaceCustomTags: updatedWorkspaceCustomTags,
           passwords: updatedPasswords,
           cards: updatedCards,
         };
       } else {
-        const currentDeleted = vault.deletedCategories || [];
-        const updatedDeleted = currentDeleted.includes(item.id)
-          ? currentDeleted
-          : [...currentDeleted, item.id];
+        const currentWsDeleted = getWorkspaceDeletedCategories(vault, currentWs);
+        const updatedWsDeleted = currentWsDeleted.includes(item.id)
+          ? currentWsDeleted
+          : [...currentWsDeleted, item.id];
 
+        const updatedWorkspaceDeletedCategories = {
+          ...(vault.workspaceDeletedCategories || {}),
+          [currentWs]: updatedWsDeleted,
+        };
+
+        // ONLY update passwords in the active workspace!
         const updatedPasswords = (vault.passwords || []).map((p) => {
-          const cat = p.category || categorizeService(p.service, vault.deletedCategories);
-          if (cat === item.id) {
-            return {
-              ...p,
-              category: fallbackId,
-              modifiedAt: Date.now(),
-            };
+          const itemWs = p.workspace || 'Personal';
+          if (itemWs === currentWs) {
+            const cat = p.category || categorizeService(p.service, updatedWsDeleted);
+            if (cat === item.id) {
+              return {
+                ...p,
+                category: fallbackId,
+                modifiedAt: Date.now(),
+              };
+            }
           }
           return p;
         });
 
         updatedVault = {
           ...vault,
-          deletedCategories: updatedDeleted,
+          workspaceDeletedCategories: updatedWorkspaceDeletedCategories,
           passwords: updatedPasswords,
         };
       }
@@ -692,7 +766,7 @@ export default function Dashboard() {
         });
       }
     },
-    [vault, vaultKey, setVault, selectedPill, showAlert]
+    [vault, vaultKey, setVault, selectedPill, showAlert, activeWorkspace]
   );
 
   const handleConfirmDeleteItem = React.useCallback(async () => {
@@ -833,6 +907,16 @@ export default function Dashboard() {
       return;
     }
 
+    const targetWs = vault.passwords[selectedPasswordIndex]?.workspace || activeWorkspace || 'Personal';
+    const currentWsCustom = getWorkspaceCustomTags(vault, targetWs);
+    const updatedWsCustom = currentWsCustom.some((t) => t.toLowerCase() === trimmed.toLowerCase())
+      ? currentWsCustom
+      : [...currentWsCustom, trimmed];
+    const updatedWorkspaceCustomTags = {
+      ...(vault.workspaceCustomTags || {}),
+      [targetWs]: updatedWsCustom,
+    };
+
     const currentCustom = vault.customTags || [];
     const updatedCustom = currentCustom.some((t) => t.toLowerCase() === trimmed.toLowerCase())
       ? currentCustom
@@ -848,6 +932,7 @@ export default function Dashboard() {
     const updatedVault: VaultData = {
       ...vault,
       customTags: updatedCustom,
+      workspaceCustomTags: updatedWorkspaceCustomTags,
       passwords: updatedPasswords,
     };
 
@@ -871,7 +956,7 @@ export default function Dashboard() {
         onConfirm: () => {},
       });
     }
-  }, [moveNewTagInput, vault, vaultKey, selectedPasswordIndex, setVault, closeMoveSheet, showAlert]);
+  }, [moveNewTagInput, vault, vaultKey, selectedPasswordIndex, setVault, closeMoveSheet, showAlert, activeWorkspace]);
 
   const formatTimestamp = (timestamp?: number) => {
     if (!timestamp) return null;

@@ -6,7 +6,7 @@ import { useTheme } from '@/context/ThemeProvider';
 import { categorizeService, getEffectiveCategories, CategoryType } from '@/lib/categories';
 import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '@/lib/password-strength';
 import { normalizeServiceName } from '@/lib/service-icons';
-import { PasswordItem, saveVault, getEffectiveWorkspaces, moveItemUp, moveItemDown, type VaultData } from '@/lib/vault';
+import { PasswordItem, saveVault, getEffectiveWorkspaces, getWorkspaceCustomTags, moveItemUp, moveItemDown, type VaultData } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
@@ -61,13 +61,20 @@ export default function EditPassword() {
 
   const customTags = React.useMemo(() => {
     if (!vault) return [];
-    const pFolders = (vault.passwords || []).map((p) => p.folder).filter(Boolean) as string[];
-    const cFolders = (vault.cards || []).map((c) => c.folder).filter(Boolean) as string[];
-    const custom = vault.customTags || [];
+    const currentWs = workspace || 'Personal';
+    const pFolders = (vault.passwords || [])
+      .filter((p) => (p.workspace || 'Personal') === currentWs)
+      .map((p) => p.folder)
+      .filter(Boolean) as string[];
+    const cFolders = (vault.cards || [])
+      .filter((c) => (c.workspace || 'Personal') === currentWs)
+      .map((c) => c.folder)
+      .filter(Boolean) as string[];
+    const custom = getWorkspaceCustomTags(vault, currentWs);
     const all = Array.from(new Set([...custom, ...pFolders, ...cFolders]));
     const catNames = new Set(effectiveCats.map((c) => c.name.toLowerCase()));
     return all.filter((t) => !catNames.has(t.toLowerCase()));
-  }, [vault, effectiveCats]);
+  }, [vault, effectiveCats, workspace]);
 
   const handleCreateTag = React.useCallback(async () => {
     const trimmed = newTagName.trim();
@@ -96,10 +103,22 @@ export default function EditPassword() {
     }
 
     if (!vault || !vaultKey) return;
+    const currentWs = workspace || 'Personal';
+
+    const currentWsCustom = getWorkspaceCustomTags(vault, currentWs);
+    const updatedWsCustom = currentWsCustom.includes(trimmed) ? currentWsCustom : [...currentWsCustom, trimmed];
+    const updatedWorkspaceCustomTags = {
+      ...(vault.workspaceCustomTags || {}),
+      [currentWs]: updatedWsCustom,
+    };
 
     const currentCustom = vault.customTags || [];
-    const updatedCustom = [...currentCustom, trimmed];
-    const updatedVault: VaultData = { ...vault, customTags: updatedCustom };
+    const updatedCustom = currentCustom.includes(trimmed) ? currentCustom : [...currentCustom, trimmed];
+    const updatedVault: VaultData = {
+      ...vault,
+      customTags: updatedCustom,
+      workspaceCustomTags: updatedWorkspaceCustomTags,
+    };
 
     try {
       await saveVault(updatedVault, vaultKey);
@@ -116,7 +135,7 @@ export default function EditPassword() {
         onConfirm: () => {},
       });
     }
-  }, [newTagName, effectiveCats, customTags, vault, vaultKey, setVault, showAlert]);
+  }, [newTagName, effectiveCats, customTags, vault, vaultKey, setVault, showAlert, workspace]);
 
   // Password strength check
   const passwordStrength = React.useMemo(() => {

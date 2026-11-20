@@ -7,6 +7,8 @@ import {
   saveVault,
   decryptVaultWithKey,
   getEffectiveWorkspaces,
+  getWorkspaceCustomTags,
+  getWorkspaceDeletedCategories,
 } from '../lib/vault.ts';
 import { _clearFiles } from './mocks/expo-file-system.mjs';
 
@@ -194,4 +196,109 @@ test('Workspace Isolation - Workspace rename and delete updates both passwords a
 
   assert.strictEqual(reloaded.passwords[0].workspace, 'Personal');
   assert.strictEqual(reloaded.cards[0].workspace, 'Personal');
+});
+
+test('Workspace Isolation - Deleting tag in Personal does not affect items in Work', async () => {
+  const vaultKey = generateSaltHex(32);
+  const vault = await createNewVault('MyPassword123!', vaultKey);
+
+  vault.passwords = [
+    { service: 'PersonalBank', username: 'alice', password: 'p1', folder: 'Finance', workspace: 'Personal' },
+    { service: 'WorkPayroll', username: 'alice_corp', password: 'p2', folder: 'Finance', workspace: 'Work' },
+  ];
+  vault.cards = [
+    { id: 'c1', type: 'credit_card', title: 'Personal Visa', holderName: 'A', number: '1', fields: [], gradient: ['#000', '#111'], createdAt: 1, folder: 'Finance', workspace: 'Personal' },
+    { id: 'c2', type: 'credit_card', title: 'Corporate Amex', holderName: 'A', number: '2', fields: [], gradient: ['#000', '#111'], createdAt: 2, folder: 'Finance', workspace: 'Work' },
+  ];
+  vault.workspaceCustomTags = {
+    Personal: ['Finance', 'Home'],
+    Work: ['Finance', 'Cloud'],
+  };
+  vault.customTags = ['Finance', 'Home', 'Cloud'];
+
+  // Simulate deleting tag 'Finance' while viewing 'Personal' workspace
+  const currentWs = 'Personal';
+  const tagToDelete = 'Finance';
+  const fallbackId = 'google';
+
+  const updatedPasswords = vault.passwords.map((p) => {
+    const itemWs = p.workspace || 'Personal';
+    if (itemWs === currentWs && p.folder === tagToDelete) {
+      return { ...p, folder: undefined, category: fallbackId, modifiedAt: Date.now() };
+    }
+    return p;
+  });
+
+  const updatedCards = vault.cards.map((c) => {
+    const itemWs = c.workspace || 'Personal';
+    if (itemWs === currentWs && c.folder === tagToDelete) {
+      return { ...c, folder: undefined };
+    }
+    return c;
+  });
+
+  const currentWsCustom = getWorkspaceCustomTags(vault, currentWs).filter((t) => t !== tagToDelete);
+  const updatedWorkspaceCustomTags = {
+    ...(vault.workspaceCustomTags || {}),
+    [currentWs]: currentWsCustom,
+  };
+
+  const isUsedInOtherWorkspace =
+    updatedPasswords.some((p) => (p.workspace || 'Personal') !== currentWs && p.folder === tagToDelete) ||
+    updatedCards.some((c) => (c.workspace || 'Personal') !== currentWs && c.folder === tagToDelete) ||
+    Object.entries(updatedWorkspaceCustomTags).some(([ws, tags]) => ws !== currentWs && tags.includes(tagToDelete));
+
+  const updatedCustomTags = isUsedInOtherWorkspace
+    ? vault.customTags
+    : (vault.customTags || []).filter((t) => t !== tagToDelete);
+
+  vault.passwords = updatedPasswords;
+  vault.cards = updatedCards;
+  vault.workspaceCustomTags = updatedWorkspaceCustomTags;
+  vault.customTags = updatedCustomTags;
+
+  await saveVault(vault, vaultKey);
+  const reloaded = await decryptVaultWithKey(vaultKey);
+
+  // Personal password has folder removed
+  const personalPwd = reloaded.passwords.find((p) => p.workspace === 'Personal');
+  assert.strictEqual(personalPwd.folder, undefined);
+  assert.strictEqual(personalPwd.category, 'google');
+
+  // Work password still has folder 'Finance' untouched
+  const workPwd = reloaded.passwords.find((p) => p.workspace === 'Work');
+  assert.strictEqual(workPwd.folder, 'Finance');
+
+  // Personal card has folder removed
+  const personalCard = reloaded.cards.find((c) => c.workspace === 'Personal');
+  assert.strictEqual(personalCard.folder, undefined);
+
+  // Work card still has folder 'Finance' untouched
+  const workCard = reloaded.cards.find((c) => c.workspace === 'Work');
+  assert.strictEqual(workCard.folder, 'Finance');
+
+  // Tag was removed from Personal's tags, but retained in Work's tags
+  assert.deepStrictEqual(getWorkspaceCustomTags(reloaded, 'Personal'), ['Home']);
+  assert.deepStrictEqual(getWorkspaceCustomTags(reloaded, 'Work'), ['Finance', 'Cloud']);
+});
+
+test('Workspace Isolation - Custom tags created in Personal do not leak into Work', async () => {
+  const vaultKey = generateSaltHex(32);
+  const vault = await createNewVault('MyPassword123!', vaultKey);
+
+  vault.workspaceCustomTags = {
+    Personal: ['PersonalTag1', 'PersonalTag2'],
+    Work: ['WorkTag1'],
+  };
+
+  await saveVault(vault, vaultKey);
+  const reloaded = await decryptVaultWithKey(vaultKey);
+
+  const personalTags = getWorkspaceCustomTags(reloaded, 'Personal');
+  const workTags = getWorkspaceCustomTags(reloaded, 'Work');
+
+  assert.deepStrictEqual(personalTags, ['PersonalTag1', 'PersonalTag2']);
+  assert.deepStrictEqual(workTags, ['WorkTag1']);
+  assert.strictEqual(workTags.includes('PersonalTag1'), false);
+  assert.strictEqual(personalTags.includes('WorkTag1'), false);
 });

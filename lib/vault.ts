@@ -52,12 +52,35 @@ export type VaultData = {
   passwords: PasswordItem[];
   cards?: CardItem[];
   customTags?: string[];
+  workspaceCustomTags?: { [workspace: string]: string[] };
   deletedCategories?: string[];
+  workspaceDeletedCategories?: { [workspace: string]: string[] };
   categoryOverrides?: { [categoryId: string]: string };
   customSpaces?: string[];
 };
 
 export const DEFAULT_WORKSPACES = ['Personal', 'Work'] as const;
+
+export const getWorkspaceCustomTags = (vault?: VaultData | null, workspace?: string): string[] => {
+  if (!vault) return [];
+  const ws = workspace || 'Personal';
+  if (vault.workspaceCustomTags && Array.isArray(vault.workspaceCustomTags[ws])) {
+    return vault.workspaceCustomTags[ws];
+  }
+  if (ws === 'Personal' && Array.isArray(vault.customTags)) {
+    return vault.customTags;
+  }
+  return [];
+};
+
+export const getWorkspaceDeletedCategories = (vault?: VaultData | null, workspace?: string): string[] => {
+  if (!vault) return [];
+  const ws = workspace || 'Personal';
+  if (vault.workspaceDeletedCategories && Array.isArray(vault.workspaceDeletedCategories[ws])) {
+    return vault.workspaceDeletedCategories[ws];
+  }
+  return vault.deletedCategories || [];
+};
 
 export const getEffectiveWorkspaces = (vault?: VaultData | null): string[] => {
   const custom = vault?.customSpaces || [];
@@ -204,6 +227,8 @@ export const createNewVault = async (
     passwords: [],
     cards: [],
     customTags: [],
+    workspaceCustomTags: {},
+    workspaceDeletedCategories: {},
   };
   await saveEncryptedVault(data, vaultKey);
   return data;
