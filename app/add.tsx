@@ -307,7 +307,7 @@ export default function AddPassword() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, totpSecret, setVault, router, showAlert]);
+  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, workspace, totpSecret, setVault, router, showAlert]);
 
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 

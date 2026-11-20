@@ -135,6 +135,8 @@ export default function SecuritySettings() {
             bounces={true}
             alwaysBounceVertical={true}
           >
+            {/* Authentication Section */}
+            <Text style={[styles.sectionHeader, { color: colors.mutedText, marginTop: 4 }]}>AUTHENTICATION</Text>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {/* Change Master Password */}
               <TouchableOpacity style={styles.row} onPress={() => router.push('/change-password')} activeOpacity={0.7}>
@@ -147,11 +149,11 @@ export default function SecuritySettings() {
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
+            </View>
 
-
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
+            {/* App Locking Section */}
+            <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>APP LOCKING</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {/* Auto-lock Timer */}
               <TouchableOpacity style={styles.row} onPress={() => setShowAutoLockModal(true)} activeOpacity={0.7}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
@@ -169,6 +171,27 @@ export default function SecuritySettings() {
 
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
+              {/* Double Tap to Lock */}
+              <View style={styles.row}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="hand-left-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Double Tap to Lock</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Tap empty space on Dashboard to lock</Text>
+                </View>
+                <Switch
+                  value={doubleTapLock}
+                  onValueChange={toggleDoubleTapLock}
+                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
+                  thumbColor={doubleTapLock ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                />
+              </View>
+            </View>
+
+            {/* Privacy & Protection Section */}
+            <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>PRIVACY & PROTECTION</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {/* Auto-clear Clipboard */}
               <TouchableOpacity style={styles.row} onPress={() => setShowClipboardModal(true)} activeOpacity={0.7}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
@@ -200,25 +223,6 @@ export default function SecuritySettings() {
                   onValueChange={toggleBlockScreenshots}
                   trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
                   thumbColor={blockScreenshots ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
-                />
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Double Tap to Lock */}
-              <View style={styles.row}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="hand-left-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Double Tap to Lock</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Tap empty space on Dashboard to lock</Text>
-                </View>
-                <Switch
-                  value={doubleTapLock}
-                  onValueChange={toggleDoubleTapLock}
-                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                  thumbColor={doubleTapLock ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
                 />
               </View>
             </View>
@@ -337,6 +341,15 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 24, fontWeight: '900' },
   scrollContent: { paddingBottom: 28 },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginTop: 20,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  },
   card: {
     borderRadius: 18,
     borderWidth: 1,

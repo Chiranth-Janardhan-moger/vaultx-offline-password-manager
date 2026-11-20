@@ -81,6 +81,8 @@ export default function GeneralSettings() {
             bounces={true}
             alwaysBounceVertical={true}
           >
+            {/* Theme & Display Section */}
+            <Text style={[styles.sectionHeader, { color: colors.mutedText, marginTop: 4 }]}>THEME & DISPLAY</Text>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {/* Theme Segmented Control matching uploaded design */}
               <View style={styles.themeRow}>
@@ -121,27 +123,6 @@ export default function GeneralSettings() {
                     );
                   })}
                 </View>
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Workspace on Login Switch */}
-              <View style={styles.row}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="grid-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Select Workspace on Login</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    Prompt to choose workspace after unlocking
-                  </Text>
-                </View>
-                <Switch
-                  value={selectWorkspaceOnLogin}
-                  onValueChange={toggleSelectWorkspaceOnLogin}
-                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                  thumbColor={selectWorkspaceOnLogin ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
-                />
               </View>
 
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -187,9 +168,34 @@ export default function GeneralSettings() {
                   </View>
                 </>
               ) : null}
+            </View>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            {/* Workspaces Section */}
+            <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>WORKSPACES</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {/* Workspace on Login Switch */}
+              <View style={styles.row}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="grid-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Select Workspace on Login</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Prompt to choose workspace after unlocking
+                  </Text>
+                </View>
+                <Switch
+                  value={selectWorkspaceOnLogin}
+                  onValueChange={toggleSelectWorkspaceOnLogin}
+                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
+                  thumbColor={selectWorkspaceOnLogin ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                />
+              </View>
+            </View>
 
+            {/* Tags & Categories Section */}
+            <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>TAGS & CATEGORIES</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {/* Tag Deletion Target */}
               <TouchableOpacity style={styles.row} onPress={() => setShowFallbackModal(true)} activeOpacity={0.7}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
@@ -277,6 +283,15 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 24, fontWeight: '900' },
   scrollContent: { paddingBottom: 28 },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginTop: 20,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  },
   card: {
     borderRadius: 18,
     borderWidth: 1,

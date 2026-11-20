@@ -23,28 +23,33 @@ import {
 export default function CardsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { unlocked, vault, vaultKey, setVault } = useSession();
+  const { unlocked, vault, vaultKey, setVault, activeWorkspace } = useSession();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   React.useEffect(() => {
     if (!unlocked) router.replace('/login');
   }, [unlocked, router]);
 
-  const [cards, setCards] = React.useState<CardItem[]>([]);
+  const currentWorkspace = activeWorkspace || 'Personal';
+
+  // Filter cards by active workspace
+  const cards = React.useMemo(() => {
+    if (!vault?.cards) return [];
+    return vault.cards.filter((c) => (c.workspace || 'Personal') === currentWorkspace);
+  }, [vault?.cards, currentWorkspace]);
+
   const [selectedCard, setSelectedCard] = React.useState<CardItem | null>(null);
   const [reorderingCardId, setReorderingCardId] = React.useState<string | null>(null);
 
+  // Auto-deselect card if workspace switches and card belongs to previous workspace
+  React.useEffect(() => {
+    if (selectedCard && (selectedCard.workspace || 'Personal') !== currentWorkspace) {
+      setSelectedCard(null);
+    }
+  }, [currentWorkspace, selectedCard]);
+
   // Revealed Fields State (maps "cardId_fieldIndex" -> boolean, and "cardId_number" -> boolean)
   const [revealedFields, setRevealedFields] = React.useState<{ [key: string]: boolean }>({});
-
-  // Sync cards from vault on mount and when screen regains focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (vault?.cards) {
-        setCards(vault.cards);
-      }
-    }, [vault])
-  );
 
   const toggleFieldReveal = (key: string) => {
     setRevealedFields(prev => ({ ...prev, [key]: !prev[key] }));
@@ -111,13 +116,11 @@ export default function CardsScreen() {
       type: 'destructive',
       onConfirm: async () => {
         if (!vault || !vaultKey) return;
-        const currentCards = vault.cards || cards;
-        const nextCards = currentCards.filter(c => c.id !== cardId);
+        const nextCards = (vault.cards || []).filter(c => c.id !== cardId);
         try {
           const updatedVault = { ...vault, cards: nextCards };
           await saveVault(updatedVault, vaultKey);
           setVault(() => updatedVault);
-          setCards(nextCards);
           setSelectedCard(null);
         } catch (error) {
           console.error('Failed to delete card:', error);
@@ -131,24 +134,29 @@ export default function CardsScreen() {
     });
   };
 
-  const handleMoveCard = async (index: number, direction: 'up' | 'down') => {
-    if (!vault || !vaultKey) return;
-    const currentCards = vault.cards || cards;
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= currentCards.length) return;
+  const handleMoveCard = async (filteredIndex: number, direction: 'up' | 'down') => {
+    if (!vault || !vaultKey || !vault.cards) return;
+    const newFilteredIndex = direction === 'up' ? filteredIndex - 1 : filteredIndex + 1;
+    if (newFilteredIndex < 0 || newFilteredIndex >= cards.length) return;
 
-    const nextCards = [...currentCards];
-    const temp = nextCards[index];
-    nextCards[index] = nextCards[newIndex];
-    nextCards[newIndex] = temp;
+    const targetCard = cards[filteredIndex];
+    const neighborCard = cards[newFilteredIndex];
+    if (!targetCard || !neighborCard) return;
+
+    const idxTarget = vault.cards.findIndex(c => c.id === targetCard.id);
+    const idxNeighbor = vault.cards.findIndex(c => c.id === neighborCard.id);
+    if (idxTarget === -1 || idxNeighbor === -1) return;
+
+    const nextCards = [...vault.cards];
+    nextCards[idxTarget] = neighborCard;
+    nextCards[idxNeighbor] = targetCard;
 
     try {
       const updatedVault = { ...vault, cards: nextCards };
       await saveVault(updatedVault, vaultKey);
       setVault(() => updatedVault);
-      setCards(nextCards);
-      if (selectedCard && selectedCard.id === temp.id) {
-        setSelectedCard(nextCards[newIndex]);
+      if (selectedCard && selectedCard.id === targetCard.id) {
+        setSelectedCard(targetCard);
       }
     } catch (error) {
       console.error('Failed to reorder card:', error);
@@ -530,10 +538,28 @@ export default function CardsScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.bodyWrap}>
           <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Wallet</Text>
+            <View style={styles.headerTitleWrap}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Wallet</Text>
+              <TouchableOpacity
+                style={[styles.spacePill, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push('/spaces')}
+                activeOpacity={0.7}
+                accessibilityLabel={`Workspace: ${currentWorkspace}`}
+              >
+                <Text style={[styles.spacePillText, { color: colors.text }]} numberOfLines={1}>
+                  {currentWorkspace}
+                </Text>
+                <Ionicons name="chevron-down" size={12} color={colors.mutedText} style={{ marginLeft: 3 }} />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={[styles.addBtn, { backgroundColor: colors.primary }]}
-              onPress={() => router.push('/add-card' as any)}
+              onPress={() =>
+                router.push({
+                  pathname: '/add-card',
+                  params: { workspace: currentWorkspace },
+                } as any)
+              }
               accessibilityRole="button"
               accessibilityLabel="Add Card"
             >
@@ -552,7 +578,12 @@ export default function CardsScreen() {
               </Text>
               <TouchableOpacity
                 style={[styles.createBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/add-card' as any)}
+                onPress={() =>
+                  router.push({
+                    pathname: '/add-card',
+                    params: { workspace: currentWorkspace },
+                  } as any)
+                }
               >
                 <Ionicons name="add-circle" size={22} color="#ffffff" />
                 <Text style={styles.createBtnText}>Add First Card</Text>
@@ -693,6 +724,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 14,
+  },
+  headerTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  spacePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    maxWidth: 140,
+  },
+  spacePillText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   headerTitle: { fontSize: 28, fontWeight: '900' },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

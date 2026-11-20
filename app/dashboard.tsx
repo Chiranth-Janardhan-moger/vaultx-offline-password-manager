@@ -70,6 +70,126 @@ function TotpCodeDisplay({
   );
 }
 
+function TotpMediumCard({
+  item,
+  colors,
+  resolved,
+  onCopy,
+}: {
+  item: PasswordItem;
+  colors: any;
+  resolved: string;
+  onCopy: (code: string) => void;
+}) {
+  const [details, setDetails] = React.useState(() => getTOTPDetails(item.totpSecret));
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => {
+    setDetails(getTOTPDetails(item.totpSecret));
+    const timer = setInterval(() => {
+      setDetails(getTOTPDetails(item.totpSecret));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [item.totpSecret]);
+
+  const handleCopy = React.useCallback(() => {
+    onCopy(details.code);
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  }, [details.code, onCopy]);
+
+  const iconName = getServiceIcon(item.service);
+  const iconColor = getServiceColor(item.service, resolved === 'dark');
+  const isUrgent = details.remainingSeconds <= 5;
+
+  const formattedCode =
+    details.code.length === 6
+      ? `${details.code.slice(0, 3)} ${details.code.slice(3)}`
+      : details.code;
+
+  return (
+    <TouchableOpacity
+      style={[styles.totpCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+      onPress={handleCopy}
+      activeOpacity={0.7}
+      accessibilityLabel={`Copy 2FA code for ${item.service}`}
+    >
+      {/* Top Row: Icon, Service, Username, and Countdown Timer */}
+      <View style={styles.totpCardTopRow}>
+        <View style={styles.totpCardServiceWrap}>
+          <View style={[styles.totpCardIconWrap, { backgroundColor: iconColor + '18' }]}>
+            <Ionicons name={iconName as any} size={20} color={iconColor} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.totpCardTitle, { color: colors.text }]} numberOfLines={1}>
+              {item.service}
+            </Text>
+            <Text style={[styles.totpCardSub, { color: colors.mutedText }]} numberOfLines={1}>
+              {item.username}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.totpTimerBadge,
+            { backgroundColor: isUrgent ? '#ef444418' : colors.primary + '18' },
+          ]}
+        >
+          <Ionicons
+            name="time-outline"
+            size={13}
+            color={isUrgent ? '#ef4444' : colors.primary}
+          />
+          <Text
+            style={[
+              styles.totpTimerText,
+              { color: isUrgent ? '#ef4444' : colors.primary },
+            ]}
+          >
+            {details.remainingSeconds}s
+          </Text>
+        </View>
+      </View>
+
+      {/* Code Row: Large Bold Code + 1-Tap Copy Button */}
+      <View style={styles.totpCardCodeRow}>
+        <Text style={[styles.totpLargeCode, { color: colors.text }]}>
+          {formattedCode}
+        </Text>
+
+        <TouchableOpacity
+          style={[
+            styles.totpCopyBtn,
+            {
+              backgroundColor: copied ? '#22c55e18' : colors.primary + '18',
+              borderColor: copied ? '#22c55e40' : colors.primary + '30',
+            },
+          ]}
+          onPress={handleCopy}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={copied ? 'checkmark' : 'copy-outline'}
+            size={15}
+            color={copied ? '#22c55e' : colors.primary}
+          />
+          <Text
+            style={[
+              styles.totpCopyBtnText,
+              { color: copied ? '#22c55e' : colors.primary },
+            ]}
+          >
+            {copied ? 'Copied' : 'Copy'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const { unlocked, vault, vaultKey, setVault, lock, resetAutoLockTimer, activeWorkspace } = useSession();
@@ -84,7 +204,7 @@ export default function Dashboard() {
   const dullCancelBorder = resolved === 'dark' ? '#333a48' : '#d1d6de';
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  // Selected filter: 'all' | CategoryType | `folder:${string}`
+  // Selected filter: 'all' | 'favorites' | CategoryType | `folder:${string}`
   const [selectedPill, setSelectedPill] = React.useState<string>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [expandedIndex, setExpandedIndex] = React.useState<number | null>(null);
@@ -94,6 +214,7 @@ export default function Dashboard() {
     globalIndex: number;
   } | null>(null);
   const [showPasswordActionModal, setShowPasswordActionModal] = React.useState(false);
+  const [showTotpModal, setShowTotpModal] = React.useState(false);
   const [showAddTagModal, setShowAddTagModal] = React.useState(false);
   const [showTagActionModal, setShowTagActionModal] = React.useState(false);
   const [showEditTagModal, setShowEditTagModal] = React.useState(false);
@@ -128,14 +249,46 @@ export default function Dashboard() {
   );
 
 
-  // Unique custom folders & user created tags
+  // Unique custom folders & user created tags (filtered to active workspace)
   const uniqueFolders = React.useMemo(() => {
     if (!vault) return [];
-    const pFolders = (vault.passwords || []).map((p) => p.folder).filter(Boolean) as string[];
-    const cFolders = (vault.cards || []).map((c) => c.folder).filter(Boolean) as string[];
+    const currentWs = activeWorkspace || 'Personal';
+    const pFolders = (vault.passwords || [])
+      .filter((p) => (p.workspace || 'Personal') === currentWs)
+      .map((p) => p.folder)
+      .filter(Boolean) as string[];
+    const cFolders = (vault.cards || [])
+      .filter((c) => (c.workspace || 'Personal') === currentWs)
+      .map((c) => c.folder)
+      .filter(Boolean) as string[];
     const custom = vault.customTags || [];
     return Array.from(new Set([...custom, ...pFolders, ...cFolders]));
-  }, [vault]);
+  }, [vault, activeWorkspace]);
+
+  // Total passwords in the active workspace
+  const activeWorkspacePasswordsCount = React.useMemo(() => {
+    if (!vault?.passwords) return 0;
+    const currentWs = activeWorkspace || 'Personal';
+    return vault.passwords.filter((pwd) => (pwd.workspace || 'Personal') === currentWs).length;
+  }, [vault?.passwords, activeWorkspace]);
+
+  // Total favorites in the active workspace
+  const activeWorkspaceFavoritesCount = React.useMemo(() => {
+    if (!vault?.passwords) return 0;
+    const currentWs = activeWorkspace || 'Personal';
+    return vault.passwords.filter(
+      (pwd) => (pwd.workspace || 'Personal') === currentWs && Boolean(pwd.isFavorite)
+    ).length;
+  }, [vault?.passwords, activeWorkspace]);
+
+  // All 2FA enabled accounts in the active workspace
+  const activeWorkspace2faAccounts = React.useMemo(() => {
+    if (!vault?.passwords) return [];
+    const currentWs = activeWorkspace || 'Personal';
+    return vault.passwords
+      .map((pwd, idx) => ({ ...pwd, globalIndex: idx }))
+      .filter((pwd) => (pwd.workspace || 'Personal') === currentWs && Boolean(pwd.totpSecret?.trim()));
+  }, [vault?.passwords, activeWorkspace]);
 
   // Effective active categories (excluding deleted ones, applying custom names)
   const effectiveCategories = React.useMemo(() => {
@@ -180,7 +333,9 @@ export default function Dashboard() {
         const itemWs = pwd.workspace || 'Personal';
         if (itemWs !== (activeWorkspace || 'Personal')) return false;
 
-        if (selectedPill !== 'all') {
+        if (selectedPill === 'favorites') {
+          if (!pwd.isFavorite) return false;
+        } else if (selectedPill !== 'all') {
           if (selectedPill.startsWith('folder:')) {
             const folderName = selectedPill.replace('folder:', '');
             if (pwd.folder !== folderName) return false;
@@ -200,8 +355,44 @@ export default function Dashboard() {
 
         return true;
       })
-      .sort((a, b) => a.service.toLowerCase().localeCompare(b.service.toLowerCase()));
+      .sort((a, b) => {
+        if (selectedPill !== 'favorites') {
+          if (a.isFavorite && !b.isFavorite) return -1;
+          if (!a.isFavorite && b.isFavorite) return 1;
+        }
+        return a.service.toLowerCase().localeCompare(b.service.toLowerCase());
+      });
   }, [vault?.passwords, vault?.deletedCategories, selectedPill, searchQuery, activeWorkspace]);
+
+  const handleToggleFavorite = React.useCallback(
+    async (globalIndex: number) => {
+      if (!vault || !vaultKey) return;
+      const currentItem = vault.passwords[globalIndex];
+      if (!currentItem) return;
+
+      const nextFavorite = !currentItem.isFavorite;
+      const updatedPasswords = [...vault.passwords];
+      updatedPasswords[globalIndex] = {
+        ...currentItem,
+        isFavorite: nextFavorite,
+        modifiedAt: Date.now(),
+      };
+
+      const updatedVault: VaultData = { ...vault, passwords: updatedPasswords };
+      try {
+        await saveVault(updatedVault, vaultKey);
+        setVault(() => updatedVault);
+      } catch {
+        showAlert({
+          title: 'Error',
+          message: 'Failed to update favorite status.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+      }
+    },
+    [vault, vaultKey, setVault, showAlert]
+  );
 
   const handleDoubleTap = () => {
     if (!doubleTapEnabled) return;
@@ -718,6 +909,21 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.headerActions}>
+            {activeWorkspace2faAccounts.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.totpHeaderBtn,
+                  { backgroundColor: colors.primary + '18', borderColor: colors.primary + '40' },
+                ]}
+                onPress={() => setShowTotpModal(true)}
+                accessibilityLabel="Open 2FA Authenticator"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="timer-outline" size={16} color={colors.primary} />
+                <Text style={[styles.totpHeaderBtnText, { color: colors.primary }]}>2FA</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[styles.addHeaderBtn, { backgroundColor: colors.primary }]}
               onPress={() =>
@@ -785,7 +991,33 @@ export default function Dashboard() {
                   { color: selectedPill === 'all' ? colors.primary : colors.text },
                 ]}
               >
-                All ({vault?.passwords.length || 0})
+                All ({activeWorkspacePasswordsCount})
+              </Text>
+            </TouchableOpacity>
+
+            {/* Favorites Pill */}
+            <TouchableOpacity
+              style={[
+                styles.pill,
+                selectedPill === 'favorites'
+                  ? [styles.pillActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
+                  : { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+              onPress={() => setSelectedPill('favorites')}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={selectedPill === 'favorites' ? 'star' : 'star-outline'}
+                size={15}
+                color={selectedPill === 'favorites' ? '#f59e0b' : colors.mutedText}
+              />
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: selectedPill === 'favorites' ? colors.primary : colors.text },
+                ]}
+              >
+                Favorites ({activeWorkspaceFavoritesCount})
               </Text>
             </TouchableOpacity>
 
@@ -902,13 +1134,21 @@ export default function Dashboard() {
           scrollEventThrottle={1000}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: colors.primary + '10' }]}>
-                <Ionicons name="key-outline" size={44} color={colors.primary} />
+              <View style={[styles.emptyIconCircle, { backgroundColor: (selectedPill === 'favorites' ? '#f59e0b' : colors.primary) + '15' }]}>
+                <Ionicons
+                  name={selectedPill === 'favorites' ? 'star-outline' : 'key-outline'}
+                  size={44}
+                  color={selectedPill === 'favorites' ? '#f59e0b' : colors.primary}
+                />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No Passwords Found</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                {selectedPill === 'favorites' ? 'No Favorites Yet' : 'No Passwords Found'}
+              </Text>
               <Text style={[styles.emptySubtext, { color: colors.mutedText }]}>
                 {searchQuery.trim()
                   ? `No accounts match "${searchQuery.trim()}"`
+                  : selectedPill === 'favorites'
+                  ? 'Tap the star icon on any account card to pin it to favorites.'
                   : selectedPill === 'all'
                   ? 'Tap the + button to add your first password'
                   : selectedPill.startsWith('folder:')
@@ -955,6 +1195,22 @@ export default function Dashboard() {
                       {item.username}
                     </Text>
                   </View>
+
+                  <TouchableOpacity
+                    style={styles.cardHeaderStarBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(item.globalIndex);
+                    }}
+                    hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                    accessibilityLabel={item.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Ionicons
+                      name={item.isFavorite ? 'star' : 'star-outline'}
+                      size={18}
+                      color={item.isFavorite ? '#f59e0b' : colors.mutedText + '80'}
+                    />
+                  </TouchableOpacity>
 
                   <Ionicons
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -1399,6 +1655,40 @@ export default function Dashboard() {
               </TouchableOpacity>
             </View>
 
+            {/* Row 2: Favorite / Unfavorite Toggle */}
+            <TouchableOpacity
+              style={[
+                styles.bottomSheetActionRow,
+                { backgroundColor: colors.inputBg, borderColor: colors.border, marginTop: 10 },
+              ]}
+              onPress={() => {
+                const targetIdx = selectedPasswordForAction?.globalIndex;
+                setShowPasswordActionModal(false);
+                setSelectedPasswordForAction(null);
+                if (targetIdx !== undefined) {
+                  handleToggleFavorite(targetIdx);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: '#f59e0b18' }]}>
+                <Ionicons
+                  name={selectedPasswordForAction?.item.isFavorite ? 'star' : 'star-outline'}
+                  size={20}
+                  color="#f59e0b"
+                />
+              </View>
+              <View style={styles.bottomSheetActionTextWrap}>
+                <Text style={[styles.bottomSheetActionTitle, { color: colors.text }]}>
+                  {selectedPasswordForAction?.item.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                </Text>
+                <Text style={[styles.bottomSheetActionSubtitle, { color: colors.mutedText }]}>
+                  {selectedPasswordForAction?.item.isFavorite ? 'Unpin from quick access' : 'Pin to top of your vault'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+            </TouchableOpacity>
+
             {/* Row 2: Delete Password (Full Width Destructive Row) */}
             <TouchableOpacity
               style={[
@@ -1753,6 +2043,87 @@ export default function Dashboard() {
         </View>
       </Modal>
 
+      {/* 2FA Authenticator Bottom Sheet Modal */}
+      <Modal
+        visible={showTotpModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTotpModal(false)}
+      >
+        <View style={styles.bottomSheetOverlay}>
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowTotpModal(false)}
+          />
+          <View
+            style={[
+              styles.bottomSheetContainer,
+              styles.totpSheetContainer,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            {/* Material 3 Drag Handle */}
+            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
+
+            {/* Header with Title, Count badge, and Close Button */}
+            <View style={styles.totpSheetHeader}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={[styles.totpSheetTitle, { color: colors.text }]}>
+                    Authenticator (2FA)
+                  </Text>
+                  <View style={[styles.totpSheetCountBadge, { backgroundColor: colors.primary + '18' }]}>
+                    <Text style={[styles.totpSheetCountText, { color: colors.primary }]}>
+                      {activeWorkspace2faAccounts.length}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.totpSheetSub, { color: colors.mutedText }]}>
+                  {activeWorkspace2faAccounts.length === 1 ? '1 active code' : `${activeWorkspace2faAccounts.length} active codes`} in {activeWorkspace || 'Personal'}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.bottomSheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={() => setShowTotpModal(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Close Authenticator"
+              >
+                <Ionicons name="close" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.bottomSheetDivider, { backgroundColor: colors.border }]} />
+
+            {/* List of Medium 2FA Cards */}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 16 }}
+            >
+              {activeWorkspace2faAccounts.map((item) => (
+                <TotpMediumCard
+                  key={`totp-${item.globalIndex}-${item.service}`}
+                  item={item}
+                  colors={colors}
+                  resolved={resolved}
+                  onCopy={async (code) => {
+                    await copyToClipboardWithAutoClear(code);
+                  }}
+                />
+              ))}
+
+              <View style={styles.totpFooterNotice}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.mutedText} />
+                <Text style={[styles.totpFooterText, { color: colors.mutedText }]}>
+                  Tap any card to instantly copy the 6-digit code
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <AlertComponent />
     </Screen>
   );
@@ -1800,6 +2171,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  totpHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 38,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  totpHeaderBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   addHeaderBtn: {
     width: 38,
@@ -2387,5 +2771,119 @@ const styles = StyleSheet.create({
   modalBtnText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  cardHeaderStarBtn: {
+    padding: 6,
+    marginRight: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  totpSheetContainer: {
+    maxHeight: '82%',
+  },
+  totpSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  totpSheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  totpSheetCountBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  totpSheetCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  totpSheetSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  totpCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+  },
+  totpCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  totpCardServiceWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginRight: 10,
+  },
+  totpCardIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  totpCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  totpCardSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  totpTimerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  totpTimerText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  totpCardCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 2,
+  },
+  totpLargeCode: {
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: 3,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  totpCopyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  totpCopyBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  totpFooterNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+  },
+  totpFooterText: {
+    fontSize: 12,
   },
 });

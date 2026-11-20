@@ -52,15 +52,21 @@ export default function WorkspacesScreen() {
     return getEffectiveWorkspaces(vault);
   }, [vault]);
 
-  // Count passwords per workspace
+  // Count passwords and cards per workspace
   const spaceCounts = React.useMemo(() => {
-    const counts: Record<string, number> = {};
+    const counts: Record<string, { passwords: number; cards: number }> = {};
     (vault?.passwords || []).forEach((p) => {
       const ws = p.workspace || 'Personal';
-      counts[ws] = (counts[ws] || 0) + 1;
+      if (!counts[ws]) counts[ws] = { passwords: 0, cards: 0 };
+      counts[ws].passwords += 1;
+    });
+    (vault?.cards || []).forEach((c) => {
+      const ws = c.workspace || 'Personal';
+      if (!counts[ws]) counts[ws] = { passwords: 0, cards: 0 };
+      counts[ws].cards += 1;
     });
     return counts;
-  }, [vault?.passwords]);
+  }, [vault?.passwords, vault?.cards]);
 
   const handleSelectSpace = async (space: string) => {
     await setActiveWorkspace(space);
@@ -211,14 +217,23 @@ export default function WorkspacesScreen() {
   const handleConfirmDelete = () => {
     if (!selectedSpaceToManage) return;
     const spaceToDelete = selectedSpaceToManage;
-    const count = spaceCounts[spaceToDelete] || 0;
+    const pCount = spaceCounts[spaceToDelete]?.passwords || 0;
+    const cCount = spaceCounts[spaceToDelete]?.cards || 0;
+    const totalCount = pCount + cCount;
+
+    let moveDesc = '';
+    if (totalCount > 0) {
+      const parts: string[] = [];
+      if (pCount > 0) parts.push(`${pCount} account${pCount > 1 ? 's' : ''}`);
+      if (cCount > 0) parts.push(`${cCount} card${cCount > 1 ? 's' : ''}`);
+      moveDesc = `Deleting "${spaceToDelete}" will move its ${parts.join(' and ')} to "Personal".`;
+    } else {
+      moveDesc = `Are you sure you want to delete "${spaceToDelete}"?`;
+    }
 
     showAlert({
       title: 'Delete Workspace?',
-      message:
-        count > 0
-          ? `Deleting "${spaceToDelete}" will move its ${count} account${count > 1 ? 's' : ''} to "Personal".`
-          : `Are you sure you want to delete "${spaceToDelete}"?`,
+      message: moveDesc,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       onConfirm: async () => {
@@ -335,7 +350,12 @@ export default function WorkspacesScreen() {
             }
 
             const isCurrent = (activeWorkspace || 'Personal') === item.name;
-            const count = spaceCounts[item.name] || 0;
+            const pCount = spaceCounts[item.name]?.passwords || 0;
+            const cCount = spaceCounts[item.name]?.cards || 0;
+            let countLabel = `${pCount} ${pCount === 1 ? 'account' : 'accounts'}`;
+            if (cCount > 0) {
+              countLabel += ` • ${cCount} ${cCount === 1 ? 'card' : 'cards'}`;
+            }
             const subtitle = item.name === 'Personal' ? 'Default' : item.name === 'Work' ? 'Workspace' : 'Custom';
 
             return (
@@ -373,7 +393,7 @@ export default function WorkspacesScreen() {
                 {/* Bottom: Count & Subtitle */}
                 <View style={styles.cardBottom}>
                   <Text style={[styles.cardCountText, { color: colors.text }]}>
-                    {count} {count === 1 ? 'account' : 'accounts'}
+                    {countLabel}
                   </Text>
                   <Text style={[styles.cardSubText, { color: colors.mutedText }]}>{subtitle}</Text>
                 </View>

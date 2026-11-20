@@ -86,7 +86,7 @@ function TotpCodeDisplay({
 
 export default function SearchScreen() {
   const router = useRouter();
-  const { unlocked, vault, vaultKey, setVault } = useSession();
+  const { unlocked, vault, vaultKey, setVault, activeWorkspace } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
@@ -301,15 +301,19 @@ export default function SearchScreen() {
     });
   };
 
-  // Search results with match highlighting
+  // Search results with match highlighting (filtered to active workspace)
   const searchResults = React.useMemo((): SearchResult[] => {
     if (!vault?.passwords) return [];
 
+    const currentWs = activeWorkspace || 'Personal';
     let results: SearchResult[] = [];
 
     // If showing favorites only
     if (showFavoritesOnly) {
       vault.passwords.forEach((pwd, idx) => {
+        const itemWs = pwd.workspace || 'Personal';
+        if (itemWs !== currentWs) return;
+
         if (pwd.isFavorite) {
           const category = pwd.category || categorizeService(pwd.service);
           results.push({
@@ -329,6 +333,9 @@ export default function SearchScreen() {
     const query = searchQuery.toLowerCase().trim();
 
     vault.passwords.forEach((pwd, idx) => {
+      const itemWs = pwd.workspace || 'Personal';
+      if (itemWs !== currentWs) return;
+
       const category = pwd.category || categorizeService(pwd.service);
       let matchType: 'service' | 'username' | 'notes' | null = null;
 
@@ -358,14 +365,18 @@ export default function SearchScreen() {
     });
 
     return results;
-  }, [vault?.passwords, searchQuery, showFavoritesOnly]);
+  }, [vault?.passwords, searchQuery, showFavoritesOnly, activeWorkspace]);
 
-  // Popular services suggestion (normalized and grouped by icon)
+  // Popular services suggestion (normalized and grouped by icon, filtered to active workspace)
   const popularServices = React.useMemo(() => {
     if (!vault?.passwords) return [];
+    const currentWs = activeWorkspace || 'Personal';
     const serviceCounts = new Map<string, number>();
 
     vault.passwords.forEach((pwd) => {
+      const itemWs = pwd.workspace || 'Personal';
+      if (itemWs !== currentWs) return;
+
       const normalized = normalizeServiceName(pwd.service);
       const count = serviceCounts.get(normalized) || 0;
       serviceCounts.set(normalized, count + 1);
@@ -395,7 +406,7 @@ export default function SearchScreen() {
     return Array.from(iconGroups.values())
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
-  }, [vault?.passwords]);
+  }, [vault?.passwords, activeWorkspace]);
 
   const highlightMatch = (text: string, query: string) => {
     if (!query.trim()) return text;

@@ -2,10 +2,10 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
-import { CardField, CardItem, saveVault } from '@/lib/vault';
+import { CardField, CardItem, getEffectiveWorkspaces, saveVault } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
   KeyboardAvoidingView,
@@ -35,6 +35,7 @@ const QUICK_FIELD_SUGGESTIONS = ['CVV', 'PIN', 'Issue Date', 'Category', 'Notes'
 
 export default function AddCard() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { unlocked, vault, vaultKey, setVault, activeWorkspace } = useSession();
   const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -45,7 +46,14 @@ export default function AddCard() {
   const [expiry, setExpiry] = React.useState('');
   const [selectedGradient, setSelectedGradient] = React.useState<[string, string]>(CARD_DESIGNS[0].gradient);
   const [customFields, setCustomFields] = React.useState<CardField[]>([]);
+  const [workspace, setWorkspace] = React.useState<string>(
+    (params.workspace as string) || activeWorkspace || 'Personal'
+  );
   const [loading, setLoading] = React.useState(false);
+
+  const effectiveWorkspaces = React.useMemo(() => {
+    return getEffectiveWorkspaces(vault);
+  }, [vault]);
 
   React.useEffect(() => {
     if (!unlocked) {
@@ -122,7 +130,7 @@ export default function AddCard() {
         fields: finalFields,
         gradient: selectedGradient,
         createdAt: Date.now(),
-        workspace: activeWorkspace || 'Personal',
+        workspace: workspace.trim() || 'Personal',
       };
 
       const existingCards = vault.cards || [];
@@ -144,7 +152,7 @@ export default function AddCard() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, title, holderName, number, expiry, customFields, selectedGradient, activeWorkspace, setVault, router, showAlert]);
+  }, [loading, vault, vaultKey, title, holderName, number, expiry, customFields, selectedGradient, workspace, setVault, router, showAlert]);
 
   const inputStyle = [
     styles.input,
@@ -428,6 +436,41 @@ export default function AddCard() {
             ))}
           </View>
 
+          {/* Workspace Selection */}
+          <Text style={[styles.sectionTitle, { color: colors.mutedText, marginTop: 12 }]}>Workspace</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagChipsScroll}
+            style={{ marginBottom: 16 }}
+          >
+            {effectiveWorkspaces.map((wsName) => {
+              const isSelected = (workspace || 'Personal').toLowerCase() === wsName.toLowerCase();
+              return (
+                <TouchableOpacity
+                  key={wsName}
+                  style={[
+                    styles.tagChip,
+                    isSelected
+                      ? [styles.tagChipActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
+                      : { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  ]}
+                  onPress={() => setWorkspace(wsName)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.tagChipText,
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                    ]}
+                  >
+                    {wsName}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
           {/* Bottom Save Action Button */}
           <TouchableOpacity
             style={[styles.saveActionBtn, { backgroundColor: colors.primary }]}
@@ -674,5 +717,24 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '800',
+  },
+  tagChipsScroll: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  tagChipActive: {
+    borderWidth: 1.5,
+  },
+  tagChipText: {
+    fontSize: 13,
   },
 });
