@@ -22,6 +22,7 @@ import {
   FlatList,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -196,6 +197,58 @@ function TotpMediumCard({
   );
 }
 
+interface FilterPillProps {
+  isSelected: boolean;
+  onPress: () => void;
+  onLongPress?: () => void;
+  accessibilityLabel?: string;
+  children: (props: { isHighlighted: boolean }) => React.ReactNode;
+}
+
+function FilterPill({
+  isSelected,
+  onPress,
+  onLongPress,
+  accessibilityLabel,
+  children,
+}: FilterPillProps) {
+  const { colors, showBorders } = useTheme();
+  const [isHovered, setIsHovered] = React.useState(false);
+  const activePillBg = colors.primary + '18'; // Matches BottomNavBar capsule pill color
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={300}
+      onHoverIn={() => setIsHovered(true)}
+      onHoverOut={() => setIsHovered(false)}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => {
+        const isHighlighted = isSelected || isHovered || pressed;
+        return [
+          styles.pill,
+          isHighlighted
+            ? {
+                backgroundColor: activePillBg,
+                borderColor: showBorders ? colors.primary + '35' : 'transparent',
+              }
+            : {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+        ];
+      }}
+    >
+      {({ pressed }) => {
+        const isHighlighted = isSelected || isHovered || pressed;
+        return children({ isHighlighted });
+      }}
+    </Pressable>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const { unlocked, vault, vaultKey, setVault, lock, resetAutoLockTimer, activeWorkspace } = useSession();
@@ -227,6 +280,7 @@ export default function Dashboard() {
   const [selectedItemToManage, setSelectedItemToManage] = React.useState<{ type: 'category' | 'tag'; id: string; name: string } | null>(null);
   const [newTagName, setNewTagName] = React.useState('');
   const [editTagName, setEditTagName] = React.useState('');
+  const [isAddTagHovered, setIsAddTagHovered] = React.useState(false);
 
   // Move Modal state (Material 3 Bottom Sheet)
   const [showMoveModal, setShowMoveModal] = React.useState(false);
@@ -1055,52 +1109,47 @@ export default function Dashboard() {
             contentContainerStyle={styles.pillsScroll}
           >
             {/* "All" Pill */}
-            <TouchableOpacity
-              style={[
-                styles.pill,
-                selectedPill === 'all'
-                  ? [styles.pillActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
-                  : { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
+            <FilterPill
+              isSelected={selectedPill === 'all'}
               onPress={() => setSelectedPill('all')}
-              activeOpacity={0.7}
+              accessibilityLabel={`All (${activeWorkspacePasswordsCount})`}
             >
-              <Text
-                style={[
-                  styles.pillText,
-                  { color: selectedPill === 'all' ? colors.primary : colors.text },
-                ]}
-              >
-                All ({activeWorkspacePasswordsCount})
-              </Text>
-            </TouchableOpacity>
+              {({ isHighlighted }) => (
+                <Text
+                  style={[
+                    styles.pillText,
+                    { color: isHighlighted ? colors.primary : colors.text },
+                  ]}
+                >
+                  All ({activeWorkspacePasswordsCount})
+                </Text>
+              )}
+            </FilterPill>
 
             {/* Favorites Pill */}
-            <TouchableOpacity
-              style={[
-                styles.pill,
-                selectedPill === 'favorites'
-                  ? [styles.pillActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
-                  : { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
+            <FilterPill
+              isSelected={selectedPill === 'favorites'}
               onPress={() => setSelectedPill('favorites')}
-              activeOpacity={0.7}
               accessibilityLabel={`Favorites (${activeWorkspaceFavoritesCount})`}
             >
-              <Ionicons
-                name={selectedPill === 'favorites' ? 'star' : 'star-outline'}
-                size={16}
-                color={selectedPill === 'favorites' ? '#f59e0b' : colors.mutedText}
-              />
-              <Text
-                style={[
-                  styles.pillText,
-                  { color: selectedPill === 'favorites' ? colors.primary : colors.text },
-                ]}
-              >
-                ({activeWorkspaceFavoritesCount})
-              </Text>
-            </TouchableOpacity>
+              {({ isHighlighted }) => (
+                <>
+                  <Ionicons
+                    name={selectedPill === 'favorites' ? 'star' : 'star-outline'}
+                    size={16}
+                    color={selectedPill === 'favorites' ? '#f59e0b' : isHighlighted ? colors.primary : colors.mutedText}
+                  />
+                  <Text
+                    style={[
+                      styles.pillText,
+                      { color: isHighlighted ? colors.primary : colors.text },
+                    ]}
+                  >
+                    ({activeWorkspaceFavoritesCount})
+                  </Text>
+                </>
+              )}
+            </FilterPill>
 
             {/* Standard Category Pills */}
             {effectiveCategories.map((cat) => {
@@ -1109,32 +1158,28 @@ export default function Dashboard() {
               const isManageable = cat.id !== 'google';
 
               return (
-                <TouchableOpacity
+                <FilterPill
                   key={cat.id}
-                  style={[
-                    styles.pill,
-                    isSelected
-                      ? [styles.pillActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
-                      : { backgroundColor: colors.card, borderColor: colors.border },
-                  ]}
+                  isSelected={isSelected}
                   onPress={() => setSelectedPill(cat.id)}
                   onLongPress={
                     isManageable
                       ? () => handleOpenItemActions({ type: 'category', id: cat.id, name: cat.name })
                       : undefined
                   }
-                  delayLongPress={300}
-                  activeOpacity={0.7}
+                  accessibilityLabel={`${cat.name} (${count})`}
                 >
-                  <Text
-                    style={[
-                      styles.pillText,
-                      { color: isSelected ? colors.primary : colors.text },
-                    ]}
-                  >
-                    {cat.name} ({count})
-                  </Text>
-                </TouchableOpacity>
+                  {({ isHighlighted }) => (
+                    <Text
+                      style={[
+                        styles.pillText,
+                        { color: isHighlighted ? colors.primary : colors.text },
+                      ]}
+                    >
+                      {cat.name} ({count})
+                    </Text>
+                  )}
+                </FilterPill>
               );
             })}
 
@@ -1145,53 +1190,50 @@ export default function Dashboard() {
               const isSelected = selectedPill === pillId;
 
               return (
-                <TouchableOpacity
+                <FilterPill
                   key={pillId}
-                  style={[
-                    styles.pill,
-                    isSelected
-                      ? [styles.pillActive, { backgroundColor: colors.primary + '18', borderColor: colors.primary }]
-                      : { backgroundColor: colors.card, borderColor: colors.border },
-                  ]}
+                  isSelected={isSelected}
                   onPress={() => setSelectedPill(pillId)}
                   onLongPress={() => handleOpenItemActions({ type: 'tag', id: folderName, name: folderName })}
-                  delayLongPress={300}
-                  activeOpacity={0.7}
+                  accessibilityLabel={`${folderName} (${count})`}
                 >
-                  <Text
-                    style={[
-                      styles.pillText,
-                      { color: isSelected ? colors.primary : colors.text },
-                    ]}
-                  >
-                    {folderName} ({count})
-                  </Text>
-                </TouchableOpacity>
+                  {({ isHighlighted }) => (
+                    <Text
+                      style={[
+                        styles.pillText,
+                        { color: isHighlighted ? colors.primary : colors.text },
+                      ]}
+                    >
+                      {folderName} ({count})
+                    </Text>
+                  )}
+                </FilterPill>
               );
             })}
 
             {/* "+" Tag Add Button Pill */}
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({ pressed }) => [
                 styles.pill,
                 {
-                  backgroundColor: colors.card,
+                  backgroundColor: (pressed || isAddTagHovered) ? (colors.primary + '18') : colors.card,
                   borderColor: colors.primary,
                   borderStyle: 'dashed',
                 },
               ]}
+              onHoverIn={() => setIsAddTagHovered(true)}
+              onHoverOut={() => setIsAddTagHovered(false)}
               onPress={() => {
                 setNewTagName('');
                 setShowAddTagModal(true);
               }}
-              activeOpacity={0.7}
               accessibilityLabel="Create custom tag"
             >
               <Ionicons name="add" size={16} color={colors.primary} />
               <Text style={[styles.pillText, { color: colors.primary, fontWeight: '700' }]}>
                 Tag
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </ScrollView>
         </View>
 
@@ -2352,9 +2394,6 @@ const styles = StyleSheet.create({
         shadowColor: '#000000',
       },
     }),
-  },
-  pillActive: {
-    borderWidth: 1.5,
   },
   pillText: {
     fontSize: 13,
