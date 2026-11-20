@@ -9,7 +9,7 @@ import ToggleSwitch from '@/components/ToggleSwitch';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { LayoutAnimation, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LayoutAnimation, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function GeneralSettings() {
   const router = useRouter();
@@ -131,6 +131,26 @@ export default function GeneralSettings() {
 
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
+              {/* Show Card Borders Switch */}
+              <View style={styles.row}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="square-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Show Card Borders</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Display outline borders around cards
+                  </Text>
+                </View>
+                <ToggleSwitch
+                  value={showBorders}
+                  onValueChange={setShowBorders}
+                  accessibilityLabel="Show Card Borders"
+                />
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
               {/* Enhanced Contrast Switch */}
               <View style={styles.row}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
@@ -148,28 +168,6 @@ export default function GeneralSettings() {
                   accessibilityLabel="Enhanced Contrast"
                 />
               </View>
-
-              {enhancedContrast ? (
-                <>
-                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                  <View style={styles.row}>
-                    <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                      <Ionicons name="square-outline" size={18} color={colors.primary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.itemTitle, { color: colors.text }]}>Show Card Borders</Text>
-                      <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                        Display defined borders around items
-                      </Text>
-                    </View>
-                    <ToggleSwitch
-                      value={showBorders}
-                      onValueChange={setShowBorders}
-                      accessibilityLabel="Show Card Borders"
-                    />
-                  </View>
-                </>
-              ) : null}
             </View>
 
             {/* Workspaces Section */}
@@ -297,6 +295,18 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+        shadowColor: '#000000',
+      },
+    }),
   },
   themeRow: {
     padding: 16,

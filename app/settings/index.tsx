@@ -5,7 +5,7 @@ import { useTheme } from '@/context/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface SettingCategoryItem {
   key: string;
@@ -134,6 +134,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginTop: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+        shadowColor: '#000000',
+      },
+    }),
   },
   menuRow: {
     flexDirection: 'row',

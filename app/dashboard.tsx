@@ -2224,6 +2224,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     maxWidth: 140,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+        shadowColor: '#000000',
+      },
+    }),
   },
   spacePillText: {
     fontSize: 13,
@@ -2294,6 +2306,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+        shadowColor: '#000000',
+      },
+    }),
   },
   searchInput: {
     flex: 1,
@@ -2316,6 +2340,18 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 20,
     borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+        shadowColor: '#000000',
+      },
+    }),
   },
   pillActive: {
     borderWidth: 1.5,
@@ -2334,6 +2370,18 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 16,
     marginBottom: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+        shadowColor: '#000000',
+      },
+    }),
   },
   cardHeader: {
     flexDirection: 'row',
@@ -2881,6 +2929,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+        shadowColor: '#000000',
+      },
+    }),
   },
   totpCardTopRow: {
     flexDirection: 'row',

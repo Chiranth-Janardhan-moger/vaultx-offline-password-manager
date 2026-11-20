@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   PanResponder,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -463,6 +464,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+        shadowColor: '#000000',
+      },
+    }),
   },
   sectionTitle: {
     fontSize: 16,

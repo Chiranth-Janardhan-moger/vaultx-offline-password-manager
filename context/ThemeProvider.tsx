@@ -54,49 +54,49 @@ const darkColors: ThemeColors = {
   statusBarBg: '#000000',
 };
 
-// Enhanced contrast WITHOUT borders (subtle gray borders for definition)
+// Enhanced contrast WITHOUT borders (Apple dark zinc / soft canvas with transparent borders)
 const lightColorsEnhancedNoBorder: ThemeColors = {
-  background: '#ffffff',
-  card: '#ffffff',
+  background: '#F2F2F7',
+  card: '#FFFFFF',
   text: '#000000',
-  mutedText: '#333333',
-  inputBg: '#ffffff',
-  primary: '#2563EB',
-  border: '#f0f0f0',
-  statusBarBg: '#ffffff',
+  mutedText: '#8E8E93',
+  inputBg: '#E5E5EA',
+  primary: '#007AFF',
+  border: 'transparent',
+  statusBarBg: '#F2F2F7',
 };
 
 const darkColorsEnhancedNoBorder: ThemeColors = {
   background: '#000000',
-  card: '#000000',
-  text: '#ffffff',
-  mutedText: '#cccccc',
-  inputBg: '#000000',
-  primary: '#2563EB',
-  border: '#1a1a1a',
+  card: '#1C1C1E',
+  text: '#FFFFFF',
+  mutedText: '#8E8E93',
+  inputBg: '#2C2C2E',
+  primary: '#0A84FF',
+  border: 'transparent',
   statusBarBg: '#000000',
 };
 
 // Enhanced contrast WITH borders
 const lightColorsEnhancedWithBorder: ThemeColors = {
-  background: '#ffffff',
-  card: '#ffffff',
+  background: '#F2F2F7',
+  card: '#FFFFFF',
   text: '#000000',
-  mutedText: '#333333',
-  inputBg: '#ffffff',
-  primary: '#2563EB',
-  border: '#000000',
-  statusBarBg: '#ffffff',
+  mutedText: '#8E8E93',
+  inputBg: '#E5E5EA',
+  primary: '#007AFF',
+  border: '#D1D1D6',
+  statusBarBg: '#F2F2F7',
 };
 
 const darkColorsEnhancedWithBorder: ThemeColors = {
   background: '#000000',
-  card: '#000000',
-  text: '#ffffff',
-  mutedText: '#cccccc',
-  inputBg: '#000000',
-  primary: '#2563EB',
-  border: '#ffffff',
+  card: '#1C1C1E',
+  text: '#FFFFFF',
+  mutedText: '#8E8E93',
+  inputBg: '#2C2C2E',
+  primary: '#0A84FF',
+  border: '#38383A',
   statusBarBg: '#000000',
 };
 
@@ -104,7 +104,7 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
   const systemColorScheme = useColorScheme();
   const [mode, setModeState] = useState<ThemeMode>('dark');
   const [enhancedContrast, setEnhancedContrastState] = useState(false);
-  const [showBorders, setShowBordersState] = useState(false);
+  const [showBorders, setShowBordersState] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -117,7 +117,9 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
       if (savedContrast === 'true') setEnhancedContrastState(true);
       
       const savedBorders = await SecureStore.getItemAsync(SHOW_BORDERS_KEY);
-      if (savedBorders === 'true') setShowBordersState(true);
+      if (savedBorders !== null) {
+        setShowBordersState(savedBorders === 'true');
+      }
     })();
   }, []);
 
@@ -129,11 +131,6 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
   const setEnhancedContrast = (enabled: boolean) => {
     setEnhancedContrastState(enabled);
     SecureStore.setItemAsync(ENHANCED_CONTRAST_KEY, enabled ? 'true' : 'false');
-    // Reset borders when disabling enhanced contrast
-    if (!enabled) {
-      setShowBordersState(false);
-      SecureStore.setItemAsync(SHOW_BORDERS_KEY, 'false');
-    }
   };
 
   const setShowBorders = (enabled: boolean) => {
@@ -151,7 +148,8 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
       colors = resolved === 'dark' ? darkColorsEnhancedNoBorder : lightColorsEnhancedNoBorder;
     }
   } else {
-    colors = resolved === 'dark' ? darkColors : lightColors;
+    const baseColors = resolved === 'dark' ? darkColors : lightColors;
+    colors = showBorders ? baseColors : { ...baseColors, border: 'transparent' };
   }
 
   const value = useMemo<ThemeValue>(
