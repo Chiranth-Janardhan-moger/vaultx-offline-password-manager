@@ -33,24 +33,24 @@ const SHOW_BORDERS_KEY = 'show_borders_v1';
 const ThemeContext = createContext<ThemeValue | undefined>(undefined);
 
 const lightColors: ThemeColors = {
-  background: '#ffffff',
-  card: '#f3f4f6',
-  text: '#0b0b0c',
-  mutedText: '#4b5563',
-  inputBg: '#eef2f7',
-  primary: '#2563EB',
-  border: '#e5e7eb',
-  statusBarBg: '#ffffff',
+  background: '#F2F2F7',
+  card: '#FFFFFF',
+  text: '#000000',
+  mutedText: '#8E8E93',
+  inputBg: '#E5E5EA',
+  primary: '#007AFF',
+  border: '#D1D1D6',
+  statusBarBg: '#F2F2F7',
 };
 
 const darkColors: ThemeColors = {
   background: '#000000',
-  card: '#111827',
-  text: '#ffffff',
-  mutedText: '#9aa0a6',
-  inputBg: '#1f2937',
-  primary: '#2563EB',
-  border: '#1f2937',
+  card: '#1C1C1E',
+  text: '#FFFFFF',
+  mutedText: '#8E8E93',
+  inputBg: '#2C2C2E',
+  primary: '#0A84FF',
+  border: '#38383A',
   statusBarBg: '#000000',
 };
 

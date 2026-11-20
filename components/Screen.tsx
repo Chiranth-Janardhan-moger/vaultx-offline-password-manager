@@ -16,7 +16,7 @@ export default function Screen({ children, style, forceResolved, edges }: Props)
   const r = forceResolved ?? resolved;
 
   const barStyle = r === 'dark' ? 'light' : 'dark';
-  const bg = r === 'dark' ? '#000000' : '#ffffff';
+  const bg = r === 'dark' ? '#000000' : colors.background;
 
   return (
     <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: bg }}>

@@ -97,8 +97,8 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
 
   const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 14);
 
-  const capsuleBg = resolved === 'dark' ? '#181d26' : '#ffffff';
-  const capsuleBorder = resolved === 'dark' ? '#2b3342' : '#e2e8f0';
+  const capsuleBg = resolved === 'dark' ? colors.card : '#ffffff';
+  const capsuleBorder = colors.border;
   const activePillBg = colors.primary + '18';
 
   return (
