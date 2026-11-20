@@ -102,7 +102,7 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
   const activePillBg = resolved === 'dark' ? '#1A2E44' : '#E0EEFF';
 
   return (
-    <View style={[styles.outerWrapper, { paddingBottom: bottomPadding }]}>
+    <View style={[styles.outerWrapper, { paddingBottom: bottomPadding }]} pointerEvents="box-none">
       <View
         style={[
           styles.capsule,
@@ -154,11 +154,16 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
 
 const styles = StyleSheet.create({
   outerWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
     paddingTop: 6,
+    zIndex: 100,
   },
   capsule: {
     flexDirection: 'row',

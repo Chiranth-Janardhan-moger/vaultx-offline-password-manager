@@ -771,8 +771,8 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  scrollContainer: { paddingBottom: 24 },
-  stackContainer: { marginTop: 12, paddingBottom: 24 },
+  scrollContainer: { paddingBottom: 100 },
+  stackContainer: { marginTop: 12, paddingBottom: 100 },
   expandedContainer: { marginTop: 12 },
   cardWrapper: {
     marginBottom: 20,

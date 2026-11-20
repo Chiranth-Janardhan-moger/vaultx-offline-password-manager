@@ -2414,7 +2414,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 24,
+    paddingBottom: 100,
   },
   card: {
     borderWidth: 0.6,

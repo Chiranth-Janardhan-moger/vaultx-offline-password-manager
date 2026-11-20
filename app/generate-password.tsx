@@ -170,7 +170,7 @@ export default function GeneratePassword() {
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           bounces={true}
           alwaysBounceVertical={true}

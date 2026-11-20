@@ -63,19 +63,20 @@ export default function SettingsIndex() {
   return (
     <Screen edges={['top', 'left', 'right']}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.bodyWrap}>
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
-          </View>
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+        </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-            bounces={true}
-            alwaysBounceVertical={true}
-          >
-            <View style={[styles.cardGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          bounces={true}
+          alwaysBounceVertical={true}
+        >
+          <View style={[styles.cardGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.cardGroupInner}>
               {SETTING_CATEGORIES.map((item, idx) => {
                 const isLast = idx === SETTING_CATEGORIES.length - 1;
                 return (
@@ -99,22 +100,22 @@ export default function SettingsIndex() {
                 );
               })}
             </View>
+          </View>
 
-            {/* Hero Brand Footer */}
-            <View style={styles.footer}>
-              <Text style={[styles.footerHero, { color: footerColor }]}>
-                Your last{'\n'}password manager
-              </Text>
-              
-              <View style={[styles.dividerLine, { backgroundColor: lineColor }]} />
-              
-              <Text style={[styles.footerBrand, { color: footerColor }]}>VaultX</Text>
-              <Text style={[styles.footerTagline, { color: footerColor }]}>
-                Offline. Secure. Yours.
-              </Text>
-            </View>
-          </ScrollView>
-        </View>
+          {/* Hero Brand Footer */}
+          <View style={styles.footer}>
+            <Text style={[styles.footerHero, { color: footerColor }]}>
+              Your last{'\n'}password manager
+            </Text>
+            
+            <View style={[styles.dividerLine, { backgroundColor: lineColor }]} />
+            
+            <Text style={[styles.footerBrand, { color: footerColor }]}>VaultX</Text>
+            <Text style={[styles.footerTagline, { color: footerColor }]}>
+              Offline. Secure. Yours.
+            </Text>
+          </View>
+        </ScrollView>
 
         {/* Bottom Navigation Bar */}
         <BottomNavBar activeTab="settings" />
@@ -125,14 +126,12 @@ export default function SettingsIndex() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  bodyWrap: { flex: 1, paddingHorizontal: 20, paddingTop: 14 },
-  headerRow: { marginBottom: 16 },
+  headerRow: { paddingHorizontal: 20, paddingTop: 14, marginBottom: 16 },
   title: { fontSize: 28, fontWeight: '900' },
-  scrollContent: { paddingBottom: 28 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   cardGroup: {
     borderRadius: 20,
     borderWidth: 0.6,
-    overflow: 'hidden',
     marginTop: 6,
     ...Platform.select({
       ios: {
@@ -146,6 +145,10 @@ const styles = StyleSheet.create({
         shadowColor: '#000000',
       },
     }),
+  },
+  cardGroupInner: {
+    borderRadius: 19.4,
+    overflow: 'hidden',
   },
   menuRow: {
     flexDirection: 'row',

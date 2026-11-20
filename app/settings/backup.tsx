@@ -20,23 +20,24 @@ export default function BackupSettings() {
   return (
     <Screen edges={['top', 'left', 'right']}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.bodyWrap}>
-          {/* Header with Back Button */}
-          <View style={styles.headerRow}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="chevron-back" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>Backup & Restore</Text>
-            <View style={{ width: 40 }} />
-          </View>
+        {/* Header with Back Button */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>Backup & Restore</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-            bounces={true}
-            alwaysBounceVertical={true}
-          >
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          bounces={true}
+          alwaysBounceVertical={true}
+        >
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.cardInner}>
               {/* Export Backup */}
               <TouchableOpacity style={styles.row} onPress={() => router.push('/export')} activeOpacity={0.7}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
@@ -63,8 +64,8 @@ export default function BackupSettings() {
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </View>
+          </View>
+        </ScrollView>
       </View>
     </Screen>
   );
@@ -72,11 +73,12 @@ export default function BackupSettings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  bodyWrap: { flex: 1, paddingHorizontal: 20, paddingTop: 14 },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 14,
     marginBottom: 16,
   },
   backBtn: {
@@ -87,10 +89,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: { fontSize: 24, fontWeight: '900' },
-  scrollContent: { paddingBottom: 28 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 0.6,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+        shadowColor: '#000000',
+      },
+    }),
+  },
+  cardInner: {
+    borderRadius: 17.4,
     overflow: 'hidden',
   },
   row: {
