@@ -5,10 +5,11 @@ import { useTheme } from '@/context/ThemeProvider';
 import { categories, DEFAULT_DELETE_CATEGORY_KEY } from '@/lib/categories';
 import { isSelectWorkspaceOnLoginEnabled, setSelectWorkspaceOnLoginEnabled } from '@/lib/secure';
 import { Ionicons } from '@expo/vector-icons';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { LayoutAnimation, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function GeneralSettings() {
   const router = useRouter();
@@ -105,7 +106,10 @@ export default function GeneralSettings() {
                           styles.segmentBtn,
                           isSelected && [styles.segmentBtnActive, { backgroundColor: colors.primary }],
                         ]}
-                        onPress={() => setMode(t)}
+                        onPress={() => {
+                          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                          setMode(t);
+                        }}
                         activeOpacity={0.8}
                       >
                         <Text
@@ -138,11 +142,10 @@ export default function GeneralSettings() {
                     Higher contrast and pure black panels
                   </Text>
                 </View>
-                <Switch
+                <ToggleSwitch
                   value={enhancedContrast}
                   onValueChange={setEnhancedContrast}
-                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                  thumbColor={enhancedContrast ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                  accessibilityLabel="Enhanced Contrast"
                 />
               </View>
 
@@ -159,11 +162,10 @@ export default function GeneralSettings() {
                         Display defined borders around items
                       </Text>
                     </View>
-                    <Switch
+                    <ToggleSwitch
                       value={showBorders}
                       onValueChange={setShowBorders}
-                      trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                      thumbColor={showBorders ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                      accessibilityLabel="Show Card Borders"
                     />
                   </View>
                 </>
@@ -184,11 +186,10 @@ export default function GeneralSettings() {
                     Prompt to choose workspace after unlocking
                   </Text>
                 </View>
-                <Switch
+                <ToggleSwitch
                   value={selectWorkspaceOnLogin}
                   onValueChange={toggleSelectWorkspaceOnLogin}
-                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                  thumbColor={selectWorkspaceOnLogin ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                  accessibilityLabel="Select Workspace on Login"
                 />
               </View>
             </View>

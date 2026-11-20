@@ -1,6 +1,7 @@
 import BottomNavBar from '@/components/BottomNavBar';
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '@/lib/password-strength';
@@ -12,7 +13,6 @@ import {
   PanResponder,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -266,11 +266,10 @@ export default function GeneratePassword() {
                       <Text style={[styles.toggleSample, { color: colors.mutedText }]}>A, B, C, D...</Text>
                     </View>
                   </View>
-                  <Switch
+                  <ToggleSwitch
                     value={options.uppercase}
                     onValueChange={() => toggleOption('uppercase')}
-                    trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                    thumbColor={options.uppercase ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                    accessibilityLabel="Toggle Uppercase"
                   />
                 </View>
 
@@ -285,11 +284,10 @@ export default function GeneratePassword() {
                       <Text style={[styles.toggleSample, { color: colors.mutedText }]}>a, b, c, d...</Text>
                     </View>
                   </View>
-                  <Switch
+                  <ToggleSwitch
                     value={options.lowercase}
                     onValueChange={() => toggleOption('lowercase')}
-                    trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                    thumbColor={options.lowercase ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                    accessibilityLabel="Toggle Lowercase"
                   />
                 </View>
 
@@ -304,11 +302,10 @@ export default function GeneratePassword() {
                       <Text style={[styles.toggleSample, { color: colors.mutedText }]}>0, 1, 2, 3...</Text>
                     </View>
                   </View>
-                  <Switch
+                  <ToggleSwitch
                     value={options.numbers}
                     onValueChange={() => toggleOption('numbers')}
-                    trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                    thumbColor={options.numbers ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                    accessibilityLabel="Toggle Numbers"
                   />
                 </View>
 
@@ -323,11 +320,10 @@ export default function GeneratePassword() {
                       <Text style={[styles.toggleSample, { color: colors.mutedText }]}>! @ # $ % & *</Text>
                     </View>
                   </View>
-                  <Switch
+                  <ToggleSwitch
                     value={options.symbols}
                     onValueChange={() => toggleOption('symbols')}
-                    trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                    thumbColor={options.symbols ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                    accessibilityLabel="Toggle Symbols"
                   />
                 </View>
               </View>

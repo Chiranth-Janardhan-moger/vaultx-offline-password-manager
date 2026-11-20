@@ -1,5 +1,6 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { generateVaultKey, saveBiometricKey, saveMeta, savePasswordWrap, saveRecoveryWrap } from '@/lib/secure';
@@ -8,7 +9,7 @@ import { isValidEmail } from '@/lib/validation';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 const QUESTIONS = [
@@ -349,12 +350,11 @@ export default function Setup() {
                   {bioSupported ? 'Uses your device biometrics.' : 'Not available on this device.'}
                 </Text>
               </View>
-              <Switch
+              <ToggleSwitch
                 value={enableBio}
                 onValueChange={setEnableBio}
                 disabled={!bioSupported}
-                trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                thumbColor={enableBio ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                accessibilityLabel="Enable biometric unlock"
               />
             </View>
 

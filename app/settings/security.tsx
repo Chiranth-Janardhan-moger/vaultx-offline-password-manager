@@ -2,13 +2,14 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import { getClipboardClearSeconds, setClipboardClearSeconds } from '@/lib/clipboard';
 import { setScreenshotBlocking } from '@/lib/screen-security';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const DOUBLE_TAP_LOCK_KEY = 'double_tap_lock';
 const BLOCK_SCREENSHOTS_KEY = 'block_screenshots';
@@ -180,11 +181,10 @@ export default function SecuritySettings() {
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Double Tap to Lock</Text>
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>Tap empty space on Dashboard to lock</Text>
                 </View>
-                <Switch
+                <ToggleSwitch
                   value={doubleTapLock}
                   onValueChange={toggleDoubleTapLock}
-                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                  thumbColor={doubleTapLock ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                  accessibilityLabel="Double Tap to Lock"
                 />
               </View>
             </View>
@@ -218,11 +218,10 @@ export default function SecuritySettings() {
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Block Screenshots</Text>
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>Hide app in recents & block captures</Text>
                 </View>
-                <Switch
+                <ToggleSwitch
                   value={blockScreenshots}
                   onValueChange={toggleBlockScreenshots}
-                  trackColor={{ false: resolved === 'dark' ? '#334155' : colors.border, true: colors.primary + '60' }}
-                  thumbColor={blockScreenshots ? colors.primary : (resolved === 'dark' ? '#64748b' : '#94a3b8')}
+                  accessibilityLabel="Block Screenshots"
                 />
               </View>
             </View>
