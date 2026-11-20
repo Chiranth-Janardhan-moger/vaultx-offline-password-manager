@@ -279,7 +279,7 @@ function FilterPill({
 export default function Dashboard() {
   const router = useRouter();
   const { unlocked, vault, vaultKey, setVault, lock, resetAutoLockTimer, activeWorkspace } = useSession();
-  const { colors, resolved } = useTheme();
+  const { colors, showBorders, resolved } = useTheme();
 
   // Light-gray / clean card tokens for dialogs matching webstack
   const dullCardBg = resolved === 'dark' ? '#1c2027' : '#FFFFFF';

@@ -42,7 +42,7 @@ export default function Login() {
   const [lockedUntil, setLockedUntil] = React.useState<number>(0);
   const [canBio, setCanBio] = React.useState(false);
   const [hasUnlockMethod, setHasUnlockMethod] = React.useState(false);
-  const inputRef = React.useRef<TextInput>(null);
+  const inputRef = React.useRef<any>(null);
 
   // Smooth, high-performance UI animations
   const fadeAnim = React.useRef(new Animated.Value(0)).current;

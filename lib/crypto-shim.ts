@@ -18,6 +18,8 @@ if (typeof globalThis.crypto !== 'object' || globalThis.crypto === null) {
 }
 (globalThis as any).crypto.getRandomValues = polyfillGetRandomValues;
 
+declare const global: any;
+
 if (typeof global !== 'undefined') {
   if (typeof (global as any).crypto !== 'object' || (global as any).crypto === null) {
     (global as any).crypto = (globalThis as any).crypto;

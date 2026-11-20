@@ -108,7 +108,7 @@ export default function SearchScreen() {
   const modalAnim = React.useRef(new Animated.Value(0)).current;
   const overlayAnim = React.useRef(new Animated.Value(0)).current;
 
-  const searchInputRef = React.useRef<TextInput>(null);
+  const searchInputRef = React.useRef<any>(null);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(30)).current;
 

@@ -461,7 +461,7 @@ export default function WorkspacesScreen() {
                     {selectedSpaceToManage}
                   </Text>
                   <Text style={[styles.bottomSheetSubtitle, { color: colors.mutedText }]}>
-                    Workspace • {spaceCounts[selectedSpaceToManage || ''] || 0} accounts
+                    Workspace • {spaceCounts[selectedSpaceToManage || '']?.passwords || 0} accounts
                   </Text>
                 </View>
                 <TouchableOpacity

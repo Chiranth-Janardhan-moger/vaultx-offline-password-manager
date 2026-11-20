@@ -9,7 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import appConfig from '../../app.json';
 
 export default function AppInfoSettings() {
@@ -99,7 +99,7 @@ export default function AppInfoSettings() {
         'This will permanently delete your master password, all saved credentials, identity cards, workspaces, and encryption keys.\n\nThis action cannot be undone. Are you sure you want to completely wipe all data?',
       confirmText: 'Erase Everything',
       cancelText: 'Cancel',
-      isDestructive: true,
+      type: 'destructive',
       onConfirm: handleWipeAllData,
     });
   };
