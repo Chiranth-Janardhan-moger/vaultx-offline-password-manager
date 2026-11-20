@@ -1747,11 +1747,15 @@ export default function Dashboard() {
 
             <View style={[styles.bottomSheetDivider, { backgroundColor: colors.border }]} />
 
-            {/* Actions: 1 row, 2 columns for Edit and Move */}
+            {/* Actions: 2 columns and 2 rows for Edit, Move, Favorite, Delete */}
+            {/* Row 1: Edit & Move */}
             <View style={styles.m3ActionRow2Col}>
               {/* Column 1: Edit */}
               <TouchableOpacity
-                style={[styles.m3ActionColCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                style={[
+                  styles.m3ActionColCard,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                ]}
                 onPress={() => {
                   const targetIdx = selectedPasswordForAction?.globalIndex;
                   setShowPasswordActionModal(false);
@@ -1763,19 +1767,19 @@ export default function Dashboard() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.m3ActionColIconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="pencil" size={20} color={colors.primary} />
+                  <Ionicons name="pencil" size={18} color={colors.primary} />
                 </View>
-                <View style={styles.m3ActionColTextWrap}>
-                  <Text style={[styles.m3ActionColTitle, { color: colors.text }]}>Edit</Text>
-                  <Text style={[styles.m3ActionColSubtitle, { color: colors.mutedText }]} numberOfLines={1}>
-                    Update details
-                  </Text>
-                </View>
+                <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                  Edit
+                </Text>
               </TouchableOpacity>
 
               {/* Column 2: Move */}
               <TouchableOpacity
-                style={[styles.m3ActionColCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                style={[
+                  styles.m3ActionColCard,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                ]}
                 onPress={() => {
                   const target = selectedPasswordForAction;
                   setShowPasswordActionModal(false);
@@ -1791,78 +1795,72 @@ export default function Dashboard() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#8b5cf618' }]}>
-                  <Ionicons name="pricetag-outline" size={20} color="#8b5cf6" />
+                  <Ionicons name="pricetag-outline" size={18} color="#8b5cf6" />
                 </View>
-                <View style={styles.m3ActionColTextWrap}>
-                  <Text style={[styles.m3ActionColTitle, { color: colors.text }]}>Move</Text>
-                  <Text style={[styles.m3ActionColSubtitle, { color: colors.mutedText }]} numberOfLines={1}>
-                    Change tag
-                  </Text>
-                </View>
+                <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                  Move
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Row 2: Favorite / Unfavorite Toggle */}
-            <TouchableOpacity
-              style={[
-                styles.bottomSheetActionRow,
-                { backgroundColor: colors.inputBg, borderColor: colors.border, marginTop: 10 },
-              ]}
-              onPress={() => {
-                const targetIdx = selectedPasswordForAction?.globalIndex;
-                setShowPasswordActionModal(false);
-                setSelectedPasswordForAction(null);
-                if (targetIdx !== undefined) {
-                  handleToggleFavorite(targetIdx);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: '#f59e0b18' }]}>
-                <Ionicons
-                  name={selectedPasswordForAction?.item.isFavorite ? 'star' : 'star-outline'}
-                  size={20}
-                  color="#f59e0b"
-                />
-              </View>
-              <View style={styles.bottomSheetActionTextWrap}>
-                <Text style={[styles.bottomSheetActionTitle, { color: colors.text }]}>
-                  {selectedPasswordForAction?.item.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
+            {/* Row 2: Favorite / Add & Delete */}
+            <View style={styles.m3ActionRow2Col}>
+              {/* Column 1: Favorite */}
+              <TouchableOpacity
+                style={[
+                  styles.m3ActionColCard,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                ]}
+                onPress={() => {
+                  const targetIdx = selectedPasswordForAction?.globalIndex;
+                  setShowPasswordActionModal(false);
+                  setSelectedPasswordForAction(null);
+                  if (targetIdx !== undefined) {
+                    handleToggleFavorite(targetIdx);
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#f59e0b18' }]}>
+                  <Ionicons
+                    name={selectedPasswordForAction?.item.isFavorite ? 'star' : 'star-outline'}
+                    size={18}
+                    color="#f59e0b"
+                  />
+                </View>
+                <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                  {selectedPasswordForAction?.item.isFavorite ? 'Unfavorite' : 'Favorite'}
                 </Text>
-                <Text style={[styles.bottomSheetActionSubtitle, { color: colors.mutedText }]}>
-                  {selectedPasswordForAction?.item.isFavorite ? 'Unpin from quick access' : 'Pin to top of your vault'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            {/* Row 2: Delete Password (Full Width Destructive Row) */}
-            <TouchableOpacity
-              style={[
-                styles.bottomSheetActionRow,
-                { backgroundColor: '#ef444412', borderColor: '#ef444430', marginTop: 10 },
-              ]}
-              onPress={() => {
-                const targetIdx = selectedPasswordForAction?.globalIndex;
-                setShowPasswordActionModal(false);
-                setSelectedPasswordForAction(null);
-                if (targetIdx !== undefined) {
-                  handleDelete(targetIdx);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: '#ef444420' }]}>
-                <Ionicons name="trash-outline" size={18} color="#ef4444" />
-              </View>
-              <View style={styles.bottomSheetActionTextWrap}>
-                <Text style={[styles.bottomSheetActionTitle, { color: '#ef4444' }]}>Delete Password</Text>
-                <Text style={[styles.bottomSheetActionSubtitle, { color: '#ef4444aa' }]}>
-                  Permanently remove from vault
+              {/* Column 2: Delete */}
+              <TouchableOpacity
+                style={[
+                  styles.m3ActionColCard,
+                  {
+                    backgroundColor: '#ef444410',
+                    borderColor: showBorders ? colors.border : '#ef444430',
+                    borderWidth: colors.borderWidth,
+                  },
+                ]}
+                onPress={() => {
+                  const targetIdx = selectedPasswordForAction?.globalIndex;
+                  setShowPasswordActionModal(false);
+                  setSelectedPasswordForAction(null);
+                  if (targetIdx !== undefined) {
+                    handleDelete(targetIdx);
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#ef444420' }]}>
+                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                </View>
+                <Text style={[styles.m3ActionColTitle, { color: '#ef4444' }]} numberOfLines={1}>
+                  Delete
                 </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#ef4444" />
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -2497,34 +2495,30 @@ const styles = StyleSheet.create({
   },
   m3ActionRow2Col: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 4,
+    gap: 10,
+    marginBottom: 10,
   },
   m3ActionColCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    alignItems: 'flex-start',
     gap: 10,
   },
   m3ActionColIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  m3ActionColTextWrap: {
-    gap: 2,
-  },
   m3ActionColTitle: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: '700',
-  },
-  m3ActionColSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
+    flexShrink: 1,
   },
   expandedContent: {
     marginTop: 12,
