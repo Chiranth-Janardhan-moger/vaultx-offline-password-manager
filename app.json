@@ -7,11 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "vaultx",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -45,7 +40,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
