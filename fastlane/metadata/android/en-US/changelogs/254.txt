@@ -1,6 +1,4 @@
 Version 1.4.5:
-• Fixed startup and password card long-press stability issues
-• Standardized 1px crisp borders across cards, search, and navigation
 • Updated floating navigation bar height and clearance for Material 3
 • Streamlined password action sheet to a 2x2 compact grid layout
 • Added complete data wipeout and vault reset option in App Info
