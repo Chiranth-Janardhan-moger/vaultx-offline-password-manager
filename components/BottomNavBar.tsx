@@ -109,6 +109,7 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
           {
             backgroundColor: capsuleBg,
             borderColor: capsuleBorder,
+            borderWidth: colors.borderWidth,
           },
         ]}
       >

@@ -652,7 +652,7 @@ export default function SearchScreen() {
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
 
-          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: colors.borderWidth }]}>
             <Ionicons name="search" size={20} color={colors.mutedText} />
             <TextInput
               ref={searchInputRef}

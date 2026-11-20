@@ -541,7 +541,7 @@ export default function CardsScreen() {
             <View style={styles.headerTitleWrap}>
               <Text style={[styles.headerTitle, { color: colors.text }]}>Wallet</Text>
               <TouchableOpacity
-                style={[styles.spacePill, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[styles.spacePill, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: colors.borderWidth }]}
                 onPress={() => router.push('/spaces')}
                 activeOpacity={0.7}
                 accessibilityLabel={`Workspace: ${currentWorkspace}`}

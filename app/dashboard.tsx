@@ -253,12 +253,16 @@ function FilterPill({
           isHighlighted
             ? {
                 backgroundColor: activePillBg,
-                borderColor: showBorders ? (resolved === 'dark' ? '#2A4A6F' : '#B8D7FC') : 'transparent',
+                borderColor: showBorders
+                  ? (resolved === 'dark' ? '#3A3A3C' : '#000000')
+                  : (resolved === 'dark' ? '#2A4A6F' : '#B8D7FC'),
+                borderWidth: colors.borderWidth,
                 elevation: 0,
               }
             : {
                 backgroundColor: colors.card,
                 borderColor: colors.border,
+                borderWidth: colors.borderWidth,
                 elevation: 1,
               },
         ];
@@ -1057,7 +1061,7 @@ export default function Dashboard() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.spacePill, { backgroundColor: colors.card, borderColor: colors.border }]}
+              style={[styles.spacePill, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: colors.borderWidth }]}
               onPress={() => router.push('/spaces')}
               onLongPress={() => router.push('/spaces')}
               activeOpacity={0.7}
@@ -1103,7 +1107,7 @@ export default function Dashboard() {
 
         {/* Search Bar */}
         <View style={styles.searchBarContainer}>
-          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: colors.borderWidth }]}>
             <Ionicons name="search" size={18} color={colors.mutedText} style={{ marginRight: 8 }} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}

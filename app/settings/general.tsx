@@ -96,7 +96,7 @@ export default function GeneralSettings() {
                 </View>
 
                 {/* 3-Segmented Pill Container */}
-                <View style={[styles.segmentedWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                <View style={[styles.segmentedWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth }]}>
                   {(['system', 'light', 'dark'] as const).map((t) => {
                     const isSelected = mode === t;
                     const label = t === 'system' ? 'System' : t === 'light' ? 'Light' : 'Dark';
