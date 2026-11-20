@@ -60,6 +60,8 @@ security-audit/
 # Secrets, Keystores, and CI Build Artifacts
 *.keystore
 build-assets/
+*.apk
+release-apks/
 .env
 .env.production
 .env.development
