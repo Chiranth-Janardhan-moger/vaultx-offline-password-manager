@@ -2265,7 +2265,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.6,
     maxWidth: 140,
     ...Platform.select({
       ios: {
@@ -2335,7 +2335,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 0.6,
   },
   searchBarContainer: {
     paddingHorizontal: 20,
@@ -2347,7 +2347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 44,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.6,
     paddingHorizontal: 12,
     ...Platform.select({
       ios: {
@@ -2383,7 +2383,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.6,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
@@ -2409,7 +2409,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   card: {
-    borderWidth: 1,
+    borderWidth: 0.6,
     padding: 14,
     borderRadius: 16,
     marginBottom: 10,
@@ -2969,7 +2969,7 @@ const styles = StyleSheet.create({
   },
   totpCard: {
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 0.6,
     padding: 16,
     marginBottom: 12,
     ...Platform.select({

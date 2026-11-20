@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 0.6,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   segmentedWrapper: {
     flexDirection: 'row',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.6,
     padding: 4,
   },
   segmentBtn: {

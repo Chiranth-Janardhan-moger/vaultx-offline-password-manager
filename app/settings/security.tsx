@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 0.6,
     overflow: 'hidden',
     ...Platform.select({
       ios: {

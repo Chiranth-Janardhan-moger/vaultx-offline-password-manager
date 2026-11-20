@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   card: {
-    borderWidth: 1,
+    borderWidth: 0.6,
     borderRadius: 16,
     padding: 16,
     ...Platform.select({

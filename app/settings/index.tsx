@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 28 },
   cardGroup: {
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.6,
     overflow: 'hidden',
     marginTop: 6,
     ...Platform.select({

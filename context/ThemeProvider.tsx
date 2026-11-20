@@ -50,7 +50,7 @@ const darkColors: ThemeColors = {
   mutedText: '#8E8E93',
   inputBg: '#2C2C2E',
   primary: '#0A84FF',
-  border: '#38383A',
+  border: '#27272A',
   statusBarBg: '#000000',
 };
 
@@ -96,7 +96,7 @@ const darkColorsEnhancedWithBorder: ThemeColors = {
   mutedText: '#8E8E93',
   inputBg: '#2C2C2E',
   primary: '#0A84FF',
-  border: '#38383A',
+  border: '#27272A',
   statusBarBg: '#000000',
 };
 

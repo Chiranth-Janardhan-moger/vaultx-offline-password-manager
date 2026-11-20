@@ -42,25 +42,29 @@ export default function RootLayout() {
           <Stack.Screen 
             name="dashboard" 
             options={{ 
-              animation: 'none',
+              animation: 'fade',
+              animationDuration: 180,
             }} 
           />
           <Stack.Screen 
             name="cards" 
             options={{ 
-              animation: 'none',
+              animation: 'fade',
+              animationDuration: 180,
             }} 
           />
           <Stack.Screen 
             name="generate-password" 
             options={{ 
-              animation: 'none',
+              animation: 'fade',
+              animationDuration: 180,
             }} 
           />
           <Stack.Screen 
             name="settings/index" 
             options={{ 
-              animation: 'none',
+              animation: 'fade',
+              animationDuration: 180,
             }} 
           />
         </Stack>

@@ -49,7 +49,7 @@ const TABS: TabConfig[] = [
   },
   {
     key: 'generator',
-    label: 'Generator',
+    label: 'Generate',
     route: '/generate-password',
     activeIcon: 'sparkles',
     inactiveIcon: 'sparkles-outline',
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     paddingHorizontal: 6,
     paddingVertical: 5,
-    borderWidth: 1,
+    borderWidth: 0.6,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
