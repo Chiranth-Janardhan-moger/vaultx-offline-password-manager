@@ -14,7 +14,7 @@ import { LayoutAnimation, Modal, Platform, ScrollView, StyleSheet, Text, Touchab
 export default function GeneralSettings() {
   const router = useRouter();
   const { unlocked } = useSession();
-  const { mode, setMode, colors, enhancedContrast, setEnhancedContrast, showBorders, setShowBorders, resolved } = useTheme();
+  const { mode, setMode, colors, showBorders, setShowBorders, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   React.useEffect(() => {
@@ -147,26 +147,6 @@ export default function GeneralSettings() {
                   value={showBorders}
                   onValueChange={setShowBorders}
                   accessibilityLabel="Show Card Borders"
-                />
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Enhanced Contrast Switch */}
-              <View style={styles.row}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="contrast-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Enhanced Contrast</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    Higher contrast and pure black panels
-                  </Text>
-                </View>
-                <ToggleSwitch
-                  value={enhancedContrast}
-                  onValueChange={setEnhancedContrast}
-                  accessibilityLabel="Enhanced Contrast"
                 />
               </View>
             </View>

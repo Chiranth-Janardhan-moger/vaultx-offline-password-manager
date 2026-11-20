@@ -23,7 +23,7 @@ export const CustomAlert: React.FC<CustomAlertProps> = ({
   confirmText = 'OK',
   type = 'default',
 }) => {
-  const { colors, showBorders, enhancedContrast } = useTheme();
+  const { colors, showBorders } = useTheme();
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -73,7 +73,7 @@ export const CustomAlert: React.FC<CustomAlertProps> = ({
             styles.container,
             {
               backgroundColor: colors.card,
-              borderWidth: showBorders ? (enhancedContrast ? 2 : 1) : 0,
+              borderWidth: showBorders ? 0.6 : 0,
               borderColor: colors.border,
               transform: [
                 {

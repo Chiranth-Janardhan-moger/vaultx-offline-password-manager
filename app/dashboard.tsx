@@ -110,15 +110,28 @@ function TotpMediumCard({
   const iconName = getServiceIcon(item.service);
   const iconColor = getServiceColor(item.service, resolved === 'dark');
   const isUrgent = details.remainingSeconds <= 5;
+  const progressPercent = Math.max(0, Math.min(100, (details.remainingSeconds / 30) * 100));
 
   const formattedCode =
     details.code.length === 6
       ? `${details.code.slice(0, 3)} ${details.code.slice(3)}`
       : details.code;
 
+  const cardBg = resolved === 'dark' ? '#242426' : '#FFFFFF';
+  const copyBtnBg = copied
+    ? (resolved === 'dark' ? '#0F3820' : '#DCFCE7')
+    : (resolved === 'dark' ? '#1A2E44' : '#E0EEFF');
+  const copyBtnColor = copied ? '#16a34a' : colors.primary;
+
   return (
     <TouchableOpacity
-      style={[styles.totpCard, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+      style={[
+        styles.totpCard,
+        {
+          backgroundColor: cardBg,
+          borderColor: colors.border,
+        },
+      ]}
       onPress={handleCopy}
       activeOpacity={0.7}
       accessibilityLabel={`Copy 2FA code for ${item.service}`}
@@ -142,7 +155,7 @@ function TotpMediumCard({
         <View
           style={[
             styles.totpTimerBadge,
-            { backgroundColor: isUrgent ? '#ef444418' : colors.primary + '18' },
+            { backgroundColor: isUrgent ? '#ef444418' : (resolved === 'dark' ? '#1A2E44' : '#E0EEFF') },
           ]}
         >
           <Ionicons
@@ -171,8 +184,8 @@ function TotpMediumCard({
           style={[
             styles.totpCopyBtn,
             {
-              backgroundColor: copied ? '#22c55e18' : colors.primary + '18',
-              borderColor: copied ? '#22c55e40' : colors.primary + '30',
+              backgroundColor: copyBtnBg,
+              borderColor: copied ? '#22c55e' : colors.primary,
             },
           ]}
           onPress={handleCopy}
@@ -180,18 +193,26 @@ function TotpMediumCard({
         >
           <Ionicons
             name={copied ? 'checkmark' : 'copy-outline'}
-            size={15}
-            color={copied ? '#22c55e' : colors.primary}
+            size={14}
+            color={copyBtnColor}
           />
-          <Text
-            style={[
-              styles.totpCopyBtnText,
-              { color: copied ? '#22c55e' : colors.primary },
-            ]}
-          >
+          <Text style={[styles.totpCopyBtnText, { color: copyBtnColor }]}>
             {copied ? 'Copied' : 'Copy'}
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Progress Track */}
+      <View style={[styles.totpProgressBarBg, { backgroundColor: resolved === 'dark' ? '#333336' : '#EEF2F6' }]}>
+        <View
+          style={[
+            styles.totpProgressBarFill,
+            {
+              width: `${progressPercent}%`,
+              backgroundColor: isUrgent ? '#ef4444' : colors.primary,
+            },
+          ]}
+        />
       </View>
     </TouchableOpacity>
   );
@@ -2221,26 +2242,42 @@ export default function Dashboard() {
             {/* List of Medium 2FA Cards */}
             <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 16 }}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 28 }}
             >
-              {activeWorkspace2faAccounts.map((item) => (
-                <TotpMediumCard
-                  key={`totp-${item.globalIndex}-${item.service}`}
-                  item={item}
-                  colors={colors}
-                  resolved={resolved}
-                  onCopy={async (code) => {
-                    await copyToClipboardWithAutoClear(code);
-                  }}
-                />
-              ))}
+              {activeWorkspace2faAccounts.length === 0 ? (
+                <View style={styles.totpEmptyState}>
+                  <View style={[styles.totpEmptyIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                    <Ionicons name="timer-outline" size={38} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.totpEmptyTitle, { color: colors.text }]}>
+                    No 2FA Codes Yet
+                  </Text>
+                  <Text style={[styles.totpEmptySub, { color: colors.mutedText }]}>
+                    Add a 2FA secret key to any account to view live one-time verification codes here.
+                  </Text>
+                </View>
+              ) : (
+                activeWorkspace2faAccounts.map((item) => (
+                  <TotpMediumCard
+                    key={`totp-${item.globalIndex}-${item.service}`}
+                    item={item}
+                    colors={colors}
+                    resolved={resolved}
+                    onCopy={async (code) => {
+                      await copyToClipboardWithAutoClear(code);
+                    }}
+                  />
+                ))
+              )}
 
-              <View style={styles.totpFooterNotice}>
-                <Ionicons name="information-circle-outline" size={14} color={colors.mutedText} />
-                <Text style={[styles.totpFooterText, { color: colors.mutedText }]}>
-                  Tap any card to instantly copy the 6-digit code
-                </Text>
-              </View>
+              {activeWorkspace2faAccounts.length > 0 && (
+                <View style={styles.totpFooterNotice}>
+                  <Ionicons name="information-circle-outline" size={14} color={colors.mutedText} />
+                  <Text style={[styles.totpFooterText, { color: colors.mutedText }]}>
+                    Tap any card to instantly copy the 6-digit code
+                  </Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -2949,12 +2986,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   totpSheetContainer: {
-    maxHeight: '82%',
+    maxHeight: '85%',
+    paddingHorizontal: 0,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderWidth: 0.6,
+    borderBottomWidth: 0,
   },
   totpSheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
     marginBottom: 14,
   },
   totpSheetTitle: {
@@ -2976,7 +3019,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   totpCard: {
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 0.6,
     padding: 16,
     marginBottom: 12,
@@ -2984,7 +3027,7 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.07,
         shadowRadius: 8,
       },
       android: {
@@ -2997,7 +3040,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   totpCardServiceWrap: {
     flex: 1,
@@ -3025,9 +3068,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
   },
   totpTimerText: {
     fontSize: 12,
@@ -3040,9 +3083,9 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   totpLargeCode: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '900',
-    letterSpacing: 3,
+    letterSpacing: 2.5,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   totpCopyBtn: {
@@ -3050,13 +3093,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 0.6,
   },
   totpCopyBtnText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
+  },
+  totpProgressBarBg: {
+    height: 3,
+    width: '100%',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 14,
+  },
+  totpProgressBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  totpEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+  },
+  totpEmptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  totpEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  totpEmptySub: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
   },
   totpFooterNotice: {
     flexDirection: 'row',
