@@ -2,14 +2,14 @@
   "expo": {
     "name": "VaultX",
     "slug": "VaultX",
-    "version": "1.4.4",
+    "version": "1.4.5",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "vaultx",
     "userInterfaceStyle": "automatic",
     "android": {
       "allowBackup": false,
-      "versionCode": 253,
+      "versionCode": 254,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
