@@ -189,11 +189,26 @@ export default function WorkspacesScreen() {
       c.workspace === selectedSpaceToManage ? { ...c, workspace: trimmed } : c
     );
 
+    // Migrate workspace-scoped tags and deleted categories to the new workspace name
+    const updatedWorkspaceCustomTags = { ...(vault.workspaceCustomTags || {}) };
+    if (updatedWorkspaceCustomTags[selectedSpaceToManage]) {
+      updatedWorkspaceCustomTags[trimmed] = updatedWorkspaceCustomTags[selectedSpaceToManage];
+      delete updatedWorkspaceCustomTags[selectedSpaceToManage];
+    }
+
+    const updatedWorkspaceDeletedCategories = { ...(vault.workspaceDeletedCategories || {}) };
+    if (updatedWorkspaceDeletedCategories[selectedSpaceToManage]) {
+      updatedWorkspaceDeletedCategories[trimmed] = updatedWorkspaceDeletedCategories[selectedSpaceToManage];
+      delete updatedWorkspaceDeletedCategories[selectedSpaceToManage];
+    }
+
     const updatedVault: VaultData = {
       ...vault,
       customSpaces: updatedCustom,
       passwords: updatedPasswords,
       cards: updatedCards,
+      workspaceCustomTags: updatedWorkspaceCustomTags,
+      workspaceDeletedCategories: updatedWorkspaceDeletedCategories,
     };
 
     try {
@@ -247,11 +262,26 @@ export default function WorkspacesScreen() {
           c.workspace === spaceToDelete ? { ...c, workspace: 'Personal' } : c
         );
 
+        // Merge custom tags of deleted workspace into Personal so moved items retain tags
+        const updatedWorkspaceCustomTags = { ...(vault.workspaceCustomTags || {}) };
+        const tagsToMerge = updatedWorkspaceCustomTags[spaceToDelete] || [];
+        if (tagsToMerge.length > 0) {
+          const personalTags = updatedWorkspaceCustomTags['Personal'] || [];
+          const merged = Array.from(new Set([...personalTags, ...tagsToMerge]));
+          updatedWorkspaceCustomTags['Personal'] = merged;
+        }
+        delete updatedWorkspaceCustomTags[spaceToDelete];
+
+        const updatedWorkspaceDeletedCategories = { ...(vault.workspaceDeletedCategories || {}) };
+        delete updatedWorkspaceDeletedCategories[spaceToDelete];
+
         const updatedVault: VaultData = {
           ...vault,
           customSpaces: updatedCustom,
           passwords: updatedPasswords,
           cards: updatedCards,
+          workspaceCustomTags: updatedWorkspaceCustomTags,
+          workspaceDeletedCategories: updatedWorkspaceDeletedCategories,
         };
 
         try {

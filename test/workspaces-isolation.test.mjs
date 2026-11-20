@@ -302,3 +302,102 @@ test('Workspace Isolation - Custom tags created in Personal do not leak into Wor
   assert.strictEqual(workTags.includes('PersonalTag1'), false);
   assert.strictEqual(personalTags.includes('WorkTag1'), false);
 });
+
+test('Workspace Isolation - Workspace rename migrates workspace-scoped tags and categories', async () => {
+  const vaultKey = generateSaltHex(32);
+  const vault = await createNewVault('MyPassword123!', vaultKey);
+
+  vault.customSpaces = ['Freelance'];
+  vault.passwords = [
+    { service: 'Client A', username: 'admin', password: 'secret', workspace: 'Freelance', folder: 'Contracts' },
+  ];
+  vault.workspaceCustomTags = {
+    Freelance: ['Contracts', 'Invoices'],
+    Personal: ['Home'],
+  };
+  vault.workspaceDeletedCategories = {
+    Freelance: ['gaming'],
+    Personal: ['shopping'],
+  };
+
+  // Simulate renaming 'Freelance' to 'Clients'
+  const oldName = 'Freelance';
+  const newName = 'Clients';
+
+  const updatedCustom = (vault.customSpaces || []).map((s) => (s === oldName ? newName : s));
+  const updatedPasswords = (vault.passwords || []).map((p) =>
+    p.workspace === oldName ? { ...p, workspace: newName } : p
+  );
+  const updatedWorkspaceCustomTags = { ...(vault.workspaceCustomTags || {}) };
+  if (updatedWorkspaceCustomTags[oldName]) {
+    updatedWorkspaceCustomTags[newName] = updatedWorkspaceCustomTags[oldName];
+    delete updatedWorkspaceCustomTags[oldName];
+  }
+  const updatedWorkspaceDeletedCategories = { ...(vault.workspaceDeletedCategories || {}) };
+  if (updatedWorkspaceDeletedCategories[oldName]) {
+    updatedWorkspaceDeletedCategories[newName] = updatedWorkspaceDeletedCategories[oldName];
+    delete updatedWorkspaceDeletedCategories[oldName];
+  }
+
+  vault.customSpaces = updatedCustom;
+  vault.passwords = updatedPasswords;
+  vault.workspaceCustomTags = updatedWorkspaceCustomTags;
+  vault.workspaceDeletedCategories = updatedWorkspaceDeletedCategories;
+
+  await saveVault(vault, vaultKey);
+  const reloaded = await decryptVaultWithKey(vaultKey);
+
+  assert.strictEqual(reloaded.passwords[0].workspace, 'Clients');
+  assert.deepStrictEqual(getWorkspaceCustomTags(reloaded, 'Clients'), ['Contracts', 'Invoices']);
+  assert.deepStrictEqual(getWorkspaceCustomTags(reloaded, 'Freelance'), []);
+  assert.deepStrictEqual(getWorkspaceDeletedCategories(reloaded, 'Clients'), ['gaming']);
+  assert.deepStrictEqual(getWorkspaceDeletedCategories(reloaded, 'Freelance'), []);
+});
+
+test('Workspace Isolation - Workspace delete merges tags into Personal and cleans up maps', async () => {
+  const vaultKey = generateSaltHex(32);
+  const vault = await createNewVault('MyPassword123!', vaultKey);
+
+  vault.customSpaces = ['Temporary'];
+  vault.passwords = [
+    { service: 'TempSvc', username: 'u', password: 'p', workspace: 'Temporary', folder: 'ProjectX' },
+  ];
+  vault.workspaceCustomTags = {
+    Temporary: ['ProjectX', 'OldNotes'],
+    Personal: ['Home'],
+  };
+  vault.workspaceDeletedCategories = {
+    Temporary: ['social'],
+    Personal: [],
+  };
+
+  // Simulate deleting 'Temporary'
+  const spaceToDelete = 'Temporary';
+  const updatedCustom = (vault.customSpaces || []).filter((s) => s !== spaceToDelete);
+  const updatedPasswords = (vault.passwords || []).map((p) =>
+    p.workspace === spaceToDelete ? { ...p, workspace: 'Personal' } : p
+  );
+  const updatedWorkspaceCustomTags = { ...(vault.workspaceCustomTags || {}) };
+  const tagsToMerge = updatedWorkspaceCustomTags[spaceToDelete] || [];
+  if (tagsToMerge.length > 0) {
+    const personalTags = updatedWorkspaceCustomTags['Personal'] || [];
+    updatedWorkspaceCustomTags['Personal'] = Array.from(new Set([...personalTags, ...tagsToMerge]));
+  }
+  delete updatedWorkspaceCustomTags[spaceToDelete];
+
+  const updatedWorkspaceDeletedCategories = { ...(vault.workspaceDeletedCategories || {}) };
+  delete updatedWorkspaceDeletedCategories[spaceToDelete];
+
+  vault.customSpaces = updatedCustom;
+  vault.passwords = updatedPasswords;
+  vault.workspaceCustomTags = updatedWorkspaceCustomTags;
+  vault.workspaceDeletedCategories = updatedWorkspaceDeletedCategories;
+
+  await saveVault(vault, vaultKey);
+  const reloaded = await decryptVaultWithKey(vaultKey);
+
+  assert.strictEqual(reloaded.passwords[0].workspace, 'Personal');
+  assert.deepStrictEqual(getWorkspaceCustomTags(reloaded, 'Personal'), ['Home', 'ProjectX', 'OldNotes']);
+  assert.strictEqual(reloaded.workspaceCustomTags.Temporary, undefined);
+  assert.strictEqual(reloaded.workspaceDeletedCategories.Temporary, undefined);
+});
