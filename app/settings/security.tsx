@@ -32,8 +32,8 @@ export default function SecuritySettings() {
   const [clipboardClearSeconds, setClipboardClearSecondsState] = React.useState(45);
   const [showClipboardModal, setShowClipboardModal] = React.useState(false);
 
-  const dullCardBg = resolved === 'dark' ? '#1c2027' : '#f1f3f6';
-  const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#d8dce2';
+  const dullCardBg = resolved === 'dark' ? '#1c2027' : '#FFFFFF';
+  const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
 
   useFocusEffect(
     React.useCallback(() => {

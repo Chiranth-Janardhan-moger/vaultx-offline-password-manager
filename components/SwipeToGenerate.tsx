@@ -111,14 +111,14 @@ export default function SwipeToGenerate({
     ? colors.primary
     : resolved === 'dark'
     ? '#2d3748'
-    : '#d1d5db';
+    : '#E5E7EB';
 
   return (
     <View
       style={[
         styles.container,
         {
-          backgroundColor: resolved === 'dark' ? '#1a202c' : '#f1f5f9',
+          backgroundColor: resolved === 'dark' ? '#1a202c' : '#F3F4F6',
           borderColor,
         },
       ]}

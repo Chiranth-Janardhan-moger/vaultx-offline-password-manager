@@ -51,7 +51,7 @@ export default function ToggleSwitch({
     onValueChange(!value);
   };
 
-  const offTrackColor = resolved === 'dark' ? '#39393D' : '#E9E9EA';
+  const offTrackColor = resolved === 'dark' ? '#39393D' : '#E5E7EB';
   const onTrackColor = activeColor || '#34C759'; // Apple System Green
 
   const trackBg = colorAnim.interpolate({

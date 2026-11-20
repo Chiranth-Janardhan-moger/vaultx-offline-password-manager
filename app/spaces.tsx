@@ -31,13 +31,13 @@ export default function WorkspacesScreen() {
     }
   }, [unlocked, router]);
 
-  // Dull card theme tokens
-  const dullCardBg = resolved === 'dark' ? '#1c2027' : '#f1f3f6';
-  const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#d8dce2';
-  const dullInputBg = resolved === 'dark' ? '#13161c' : '#ffffff';
-  const dullInputBorder = resolved === 'dark' ? '#2e3440' : '#cfd4dc';
-  const dullCancelBg = resolved === 'dark' ? '#252a34' : '#e4e7eb';
-  const dullCancelBorder = resolved === 'dark' ? '#333a48' : '#d1d6de';
+  // Light-gray / clean card tokens for dialogs matching webstack
+  const dullCardBg = resolved === 'dark' ? '#1c2027' : '#FFFFFF';
+  const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
+  const dullInputBg = resolved === 'dark' ? '#13161c' : '#F9FAFB';
+  const dullInputBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
+  const dullCancelBg = resolved === 'dark' ? '#252a34' : '#F3F4F6';
+  const dullCancelBorder = resolved === 'dark' ? '#333a48' : '#E5E7EB';
 
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [newSpaceName, setNewSpaceName] = React.useState('');

@@ -27,8 +27,8 @@ export default function GeneralSettings() {
   const [fallbackCategory, setFallbackCategory] = React.useState<string>('google');
   const [showFallbackModal, setShowFallbackModal] = React.useState(false);
 
-  const dullCardBg = resolved === 'dark' ? '#1c2027' : '#f1f3f6';
-  const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#d8dce2';
+  const dullCardBg = resolved === 'dark' ? '#1c2027' : '#FFFFFF';
+  const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
 
   useFocusEffect(
     React.useCallback(() => {

@@ -33,14 +33,14 @@ const SHOW_BORDERS_KEY = 'show_borders_v1';
 const ThemeContext = createContext<ThemeValue | undefined>(undefined);
 
 const lightColors: ThemeColors = {
-  background: '#F2F2F7',
+  background: '#F8F9FA',
   card: '#FFFFFF',
-  text: '#000000',
-  mutedText: '#8E8E93',
-  inputBg: '#E5E5EA',
+  text: '#111827',
+  mutedText: '#6B7280',
+  inputBg: '#F3F4F6',
   primary: '#007AFF',
-  border: '#D1D1D6',
-  statusBarBg: '#F2F2F7',
+  border: '#E5E7EB',
+  statusBarBg: '#F8F9FA',
 };
 
 const darkColors: ThemeColors = {
@@ -54,16 +54,16 @@ const darkColors: ThemeColors = {
   statusBarBg: '#000000',
 };
 
-// Enhanced contrast WITHOUT borders (Apple dark zinc / soft canvas with transparent borders)
+// Enhanced contrast WITHOUT borders (soft light canvas / dark zinc with transparent borders)
 const lightColorsEnhancedNoBorder: ThemeColors = {
-  background: '#F2F2F7',
+  background: '#F8F9FA',
   card: '#FFFFFF',
   text: '#000000',
-  mutedText: '#8E8E93',
-  inputBg: '#E5E5EA',
+  mutedText: '#6B7280',
+  inputBg: '#F3F4F6',
   primary: '#007AFF',
   border: 'transparent',
-  statusBarBg: '#F2F2F7',
+  statusBarBg: '#F8F9FA',
 };
 
 const darkColorsEnhancedNoBorder: ThemeColors = {
@@ -79,14 +79,14 @@ const darkColorsEnhancedNoBorder: ThemeColors = {
 
 // Enhanced contrast WITH borders
 const lightColorsEnhancedWithBorder: ThemeColors = {
-  background: '#F2F2F7',
+  background: '#F8F9FA',
   card: '#FFFFFF',
   text: '#000000',
-  mutedText: '#8E8E93',
-  inputBg: '#E5E5EA',
+  mutedText: '#6B7280',
+  inputBg: '#F3F4F6',
   primary: '#007AFF',
-  border: '#D1D1D6',
-  statusBarBg: '#F2F2F7',
+  border: '#E5E7EB',
+  statusBarBg: '#F8F9FA',
 };
 
 const darkColorsEnhancedWithBorder: ThemeColors = {
