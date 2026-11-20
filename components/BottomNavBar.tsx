@@ -99,7 +99,7 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
 
   const capsuleBg = resolved === 'dark' ? colors.card : '#ffffff';
   const capsuleBorder = colors.border;
-  const activePillBg = colors.primary + '18';
+  const activePillBg = resolved === 'dark' ? '#1A2E44' : '#E0EEFF';
 
   return (
     <View style={[styles.outerWrapper, { paddingBottom: bottomPadding }]}>

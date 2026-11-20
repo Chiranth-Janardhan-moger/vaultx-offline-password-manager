@@ -212,9 +212,9 @@ function FilterPill({
   accessibilityLabel,
   children,
 }: FilterPillProps) {
-  const { colors, showBorders } = useTheme();
+  const { colors, showBorders, resolved } = useTheme();
   const [isHovered, setIsHovered] = React.useState(false);
-  const activePillBg = colors.primary + '18'; // Matches BottomNavBar capsule pill color
+  const activePillBg = resolved === 'dark' ? '#1A2E44' : '#E0EEFF'; // Solid light sky blue matching BottomNavBar
 
   return (
     <Pressable
@@ -232,11 +232,13 @@ function FilterPill({
           isHighlighted
             ? {
                 backgroundColor: activePillBg,
-                borderColor: showBorders ? colors.primary + '35' : 'transparent',
+                borderColor: showBorders ? (resolved === 'dark' ? '#2A4A6F' : '#B8D7FC') : 'transparent',
+                elevation: 0,
               }
             : {
                 backgroundColor: colors.card,
                 borderColor: colors.border,
+                elevation: 1,
               },
         ];
       }}
@@ -1214,14 +1216,20 @@ export default function Dashboard() {
 
             {/* "+" Tag Add Button Pill */}
             <Pressable
-              style={({ pressed }) => [
-                styles.pill,
-                {
-                  backgroundColor: (pressed || isAddTagHovered) ? (colors.primary + '18') : colors.card,
-                  borderColor: colors.primary,
-                  borderStyle: 'dashed',
-                },
-              ]}
+              style={({ pressed }) => {
+                const isHighlighted = pressed || isAddTagHovered;
+                return [
+                  styles.pill,
+                  {
+                    backgroundColor: isHighlighted
+                      ? (resolved === 'dark' ? '#1A2E44' : '#E0EEFF')
+                      : colors.card,
+                    borderColor: colors.primary,
+                    borderStyle: 'dashed',
+                    elevation: isHighlighted ? 0 : 1,
+                  },
+                ];
+              }}
               onHoverIn={() => setIsAddTagHovered(true)}
               onHoverOut={() => setIsAddTagHovered(false)}
               onPress={() => {
