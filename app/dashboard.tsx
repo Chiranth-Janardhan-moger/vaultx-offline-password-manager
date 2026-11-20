@@ -1065,11 +1065,6 @@ export default function Dashboard() {
               onPress={() => setSelectedPill('all')}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name="grid-outline"
-                size={16}
-                color={selectedPill === 'all' ? colors.primary : colors.mutedText}
-              />
               <Text
                 style={[
                   styles.pillText,
@@ -1090,10 +1085,11 @@ export default function Dashboard() {
               ]}
               onPress={() => setSelectedPill('favorites')}
               activeOpacity={0.7}
+              accessibilityLabel={`Favorites (${activeWorkspaceFavoritesCount})`}
             >
               <Ionicons
                 name={selectedPill === 'favorites' ? 'star' : 'star-outline'}
-                size={15}
+                size={16}
                 color={selectedPill === 'favorites' ? '#f59e0b' : colors.mutedText}
               />
               <Text
@@ -1102,7 +1098,7 @@ export default function Dashboard() {
                   { color: selectedPill === 'favorites' ? colors.primary : colors.text },
                 ]}
               >
-                Favorites ({activeWorkspaceFavoritesCount})
+                ({activeWorkspaceFavoritesCount})
               </Text>
             </TouchableOpacity>
 
@@ -1130,11 +1126,6 @@ export default function Dashboard() {
                   delayLongPress={300}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={cat.icon as any}
-                    size={16}
-                    color={isSelected ? colors.primary : colors.mutedText}
-                  />
                   <Text
                     style={[
                       styles.pillText,
@@ -1167,11 +1158,6 @@ export default function Dashboard() {
                   delayLongPress={300}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name="pricetag-outline"
-                    size={15}
-                    color={isSelected ? colors.primary : colors.mutedText}
-                  />
                   <Text
                     style={[
                       styles.pillText,
