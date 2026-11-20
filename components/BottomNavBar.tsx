@@ -12,7 +12,7 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -66,7 +66,7 @@ const TABS: TabConfig[] = [
 export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
   const router = useRouter();
   const { colors, resolved } = useTheme();
-  const insets = useSafeAreaInsets();
+  const insets = React.useContext(SafeAreaInsetsContext);
   const [isKeyboardVisible, setKeyboardVisible] = React.useState(false);
 
   React.useEffect(() => {
@@ -95,8 +95,9 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
     router.replace(tab.route);
   };
 
-  const bottomPadding = insets.bottom > 0
-    ? insets.bottom + (Platform.OS === 'android' ? 10 : 8)
+  const bottomInset = insets?.bottom ?? 0;
+  const bottomPadding = bottomInset > 0
+    ? bottomInset + (Platform.OS === 'android' ? 10 : 8)
     : (Platform.OS === 'android' ? 20 : 22);
 
   const capsuleBg = resolved === 'dark' ? colors.card : '#ffffff';

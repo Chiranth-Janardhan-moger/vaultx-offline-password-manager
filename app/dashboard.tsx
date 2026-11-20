@@ -1570,102 +1570,104 @@ export default function Dashboard() {
 
       {/* Tag Actions Material 3 Bottom Sheet (Edit / Delete) */}
       <Modal
-        visible={showTagActionModal}
+        visible={showTagActionModal && !!selectedItemToManage}
         transparent
         animationType="slide"
         onRequestClose={() => setShowTagActionModal(false)}
       >
-        <View style={styles.bottomSheetOverlay}>
-          <TouchableOpacity
-            style={styles.bottomSheetBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowTagActionModal(false)}
-          />
-          <View style={[styles.bottomSheetContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {/* Material 3 Drag Handle */}
-            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
+        {selectedItemToManage ? (
+          <View style={styles.bottomSheetOverlay}>
+            <TouchableOpacity
+              style={styles.bottomSheetBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowTagActionModal(false)}
+            />
+            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {/* Material 3 Drag Handle */}
+              <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
 
-            {/* Header with Icon, Name, Subtitle & Close Button */}
-            <View style={styles.bottomSheetHeader}>
-              <View style={styles.bottomSheetHeaderLeft}>
-                <View style={[styles.bottomSheetIconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons
-                    name={
-                      selectedItemToManage?.type === 'category'
-                        ? (categories.find((c) => c.id === selectedItemToManage.id)?.icon as any) || 'pricetag'
-                        : 'pricetag'
-                    }
-                    size={20}
-                    color={colors.primary}
-                  />
+              {/* Header with Icon, Name, Subtitle & Close Button */}
+              <View style={styles.bottomSheetHeader}>
+                <View style={styles.bottomSheetHeaderLeft}>
+                  <View style={[styles.bottomSheetIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                    <Ionicons
+                      name={
+                        selectedItemToManage.type === 'category'
+                          ? (categories.find((c) => c.id === selectedItemToManage.id)?.icon as any) || 'pricetag'
+                          : 'pricetag'
+                      }
+                      size={20}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.bottomSheetTitle, { color: colors.text }]} numberOfLines={1}>
+                      {selectedItemToManage.name}
+                    </Text>
+                    <Text style={[styles.bottomSheetSubtitle, { color: colors.mutedText }]}>
+                      {selectedItemToManage.type === 'category'
+                        ? `Default Tag • ${categoryCounts[selectedItemToManage.id as CategoryType] || 0} accounts`
+                        : `Custom Tag • ${folderCounts[selectedItemToManage.name || ''] || 0} accounts`}
+                    </Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.bottomSheetTitle, { color: colors.text }]} numberOfLines={1}>
-                    {selectedItemToManage?.name}
-                  </Text>
-                  <Text style={[styles.bottomSheetSubtitle, { color: colors.mutedText }]}>
-                    {selectedItemToManage?.type === 'category'
-                      ? `Default Tag • ${categoryCounts[selectedItemToManage.id as CategoryType] || 0} accounts`
-                      : `Custom Tag • ${folderCounts[selectedItemToManage?.name || ''] || 0} accounts`}
-                  </Text>
-                </View>
+                <TouchableOpacity
+                  style={[styles.bottomSheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  onPress={() => setShowTagActionModal(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Close"
+                >
+                  <Ionicons name="close" size={18} color={colors.mutedText} />
+                </TouchableOpacity>
               </View>
+
+              <View style={[styles.bottomSheetDivider, { backgroundColor: colors.border }]} />
+
+              {/* Action 1: Edit Name */}
               <TouchableOpacity
-                style={[styles.bottomSheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-                onPress={() => setShowTagActionModal(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel="Close"
+                style={[styles.bottomSheetActionRow, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={handleStartEditItem}
+                activeOpacity={0.7}
               >
-                <Ionicons name="close" size={18} color={colors.mutedText} />
+                <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="pencil" size={18} color={colors.primary} />
+                </View>
+                <View style={styles.bottomSheetActionTextWrap}>
+                  <Text style={[styles.bottomSheetActionTitle, { color: colors.text }]}>Edit Name</Text>
+                  <Text style={[styles.bottomSheetActionSubtitle, { color: colors.mutedText }]}>
+                    Rename this tag
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+
+              {/* Action 2: Delete Tag / Category */}
+              <TouchableOpacity
+                style={[styles.bottomSheetActionRow, { backgroundColor: '#ef444412', borderColor: '#ef444430' }]}
+                onPress={handleConfirmDeleteItem}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: '#ef444420' }]}>
+                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                </View>
+                <View style={styles.bottomSheetActionTextWrap}>
+                  <Text style={[styles.bottomSheetActionTitle, { color: '#ef4444' }]}>
+                    Delete Tag
+                  </Text>
+                  <Text style={[styles.bottomSheetActionSubtitle, { color: '#ef4444aa' }]}>
+                    Accounts will move to default tag
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#ef4444" />
               </TouchableOpacity>
             </View>
-
-            <View style={[styles.bottomSheetDivider, { backgroundColor: colors.border }]} />
-
-            {/* Action 1: Edit Name */}
-            <TouchableOpacity
-              style={[styles.bottomSheetActionRow, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-              onPress={handleStartEditItem}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: colors.primary + '18' }]}>
-                <Ionicons name="pencil" size={18} color={colors.primary} />
-              </View>
-              <View style={styles.bottomSheetActionTextWrap}>
-                <Text style={[styles.bottomSheetActionTitle, { color: colors.text }]}>Edit Name</Text>
-                <Text style={[styles.bottomSheetActionSubtitle, { color: colors.mutedText }]}>
-                  Rename this tag
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-            </TouchableOpacity>
-
-            {/* Action 2: Delete Tag / Category */}
-            <TouchableOpacity
-              style={[styles.bottomSheetActionRow, { backgroundColor: '#ef444412', borderColor: '#ef444430' }]}
-              onPress={handleConfirmDeleteItem}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: '#ef444420' }]}>
-                <Ionicons name="trash-outline" size={18} color="#ef4444" />
-              </View>
-              <View style={styles.bottomSheetActionTextWrap}>
-                <Text style={[styles.bottomSheetActionTitle, { color: '#ef4444' }]}>
-                  Delete Tag
-                </Text>
-                <Text style={[styles.bottomSheetActionSubtitle, { color: '#ef4444aa' }]}>
-                  Accounts will move to default tag
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#ef4444" />
-            </TouchableOpacity>
           </View>
-        </View>
+        ) : null}
       </Modal>
 
       {/* Password Card Actions Material 3 Bottom Sheet (Edit & Move in 1 row 2 cols, Delete below) */}
       <Modal
-        visible={showPasswordActionModal}
+        visible={showPasswordActionModal && !!selectedPasswordForAction}
         transparent
         animationType="slide"
         onRequestClose={() => {
@@ -1673,196 +1675,188 @@ export default function Dashboard() {
           setSelectedPasswordForAction(null);
         }}
       >
-        <View style={styles.bottomSheetOverlay}>
-          <TouchableOpacity
-            style={styles.bottomSheetBackdrop}
-            activeOpacity={1}
-            onPress={() => {
-              setShowPasswordActionModal(false);
-              setSelectedPasswordForAction(null);
-            }}
-          />
-          <View style={[styles.bottomSheetContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {/* Material 3 Drag Handle */}
-            <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
+        {selectedPasswordForAction ? (
+          <View style={styles.bottomSheetOverlay}>
+            <TouchableOpacity
+              style={styles.bottomSheetBackdrop}
+              activeOpacity={1}
+              onPress={() => {
+                setShowPasswordActionModal(false);
+                setSelectedPasswordForAction(null);
+              }}
+            />
+            <View style={[styles.bottomSheetContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {/* Material 3 Drag Handle */}
+              <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
 
-            {/* Header with Icon, Name, Subtitle & Close Button */}
-            <View style={styles.bottomSheetHeader}>
-              <View style={styles.bottomSheetHeaderLeft}>
-                <View
+              {/* Header with Icon, Name, Subtitle & Close Button */}
+              <View style={styles.bottomSheetHeader}>
+                <View style={styles.bottomSheetHeaderLeft}>
+                  <View
+                    style={[
+                      styles.bottomSheetIconWrap,
+                      {
+                        backgroundColor:
+                          getServiceColor(selectedPasswordForAction.item.service, resolved === 'dark') + '18',
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={(getServiceIcon(selectedPasswordForAction.item.service) as any) || 'key'}
+                      size={22}
+                      color={getServiceColor(selectedPasswordForAction.item.service, resolved === 'dark')}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.bottomSheetTitle, { color: colors.text }]} numberOfLines={1}>
+                      {selectedPasswordForAction.item.service}
+                    </Text>
+                    <Text style={[styles.bottomSheetSubtitle, { color: colors.mutedText }]} numberOfLines={1}>
+                      {selectedPasswordForAction.item.username} • {
+                        selectedPasswordForAction.item.folder
+                          ? `Tag: ${selectedPasswordForAction.item.folder}`
+                          : (effectiveCategories.find(
+                              (c) =>
+                                c.id ===
+                                (selectedPasswordForAction.item.category ||
+                                  categorizeService(selectedPasswordForAction.item.service || ''))
+                            )?.name || 'General')
+                      }
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.bottomSheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  onPress={() => {
+                    setShowPasswordActionModal(false);
+                    setSelectedPasswordForAction(null);
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Close"
+                >
+                  <Ionicons name="close" size={18} color={colors.mutedText} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.bottomSheetDivider, { backgroundColor: colors.border }]} />
+
+              {/* Actions: 2 columns and 2 rows for Edit, Move, Favorite, Delete */}
+              {/* Row 1: Edit & Move */}
+              <View style={styles.m3ActionRow2Col}>
+                {/* Column 1: Edit */}
+                <TouchableOpacity
                   style={[
-                    styles.bottomSheetIconWrap,
+                    styles.m3ActionColCard,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                  ]}
+                  onPress={() => {
+                    const targetIdx = selectedPasswordForAction.globalIndex;
+                    setShowPasswordActionModal(false);
+                    setSelectedPasswordForAction(null);
+                    if (targetIdx !== undefined) {
+                      router.push(`/edit/${targetIdx}` as any);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                    <Ionicons name="pencil" size={18} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                    Edit
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Column 2: Move */}
+                <TouchableOpacity
+                  style={[
+                    styles.m3ActionColCard,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                  ]}
+                  onPress={() => {
+                    const target = selectedPasswordForAction;
+                    setShowPasswordActionModal(false);
+                    setSelectedPasswordForAction(null);
+                    if (target) {
+                      openMoveSheet(
+                        target.globalIndex,
+                        target.item.category || categorizeService(target.item.service),
+                        target.item.folder
+                      );
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#8b5cf618' }]}>
+                    <Ionicons name="pricetag-outline" size={18} color="#8b5cf6" />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                    Move
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Row 2: Favorite / Add & Delete */}
+              <View style={styles.m3ActionRow2Col}>
+                {/* Column 1: Favorite */}
+                <TouchableOpacity
+                  style={[
+                    styles.m3ActionColCard,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                  ]}
+                  onPress={() => {
+                    const targetIdx = selectedPasswordForAction.globalIndex;
+                    setShowPasswordActionModal(false);
+                    setSelectedPasswordForAction(null);
+                    if (targetIdx !== undefined) {
+                      handleToggleFavorite(targetIdx);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#f59e0b18' }]}>
+                    <Ionicons
+                      name={selectedPasswordForAction.item.isFavorite ? 'star' : 'star-outline'}
+                      size={18}
+                      color="#f59e0b"
+                    />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                    {selectedPasswordForAction.item.isFavorite ? 'Unfavorite' : 'Favorite'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Column 2: Delete */}
+                <TouchableOpacity
+                  style={[
+                    styles.m3ActionColCard,
                     {
-                      backgroundColor:
-                        (selectedPasswordForAction
-                          ? getServiceColor(selectedPasswordForAction.item.service, resolved === 'dark')
-                          : colors.primary) + '18',
+                      backgroundColor: '#ef444410',
+                      borderColor: showBorders ? colors.border : '#ef444430',
+                      borderWidth: colors.borderWidth,
                     },
                   ]}
+                  onPress={() => {
+                    const targetIdx = selectedPasswordForAction.globalIndex;
+                    setShowPasswordActionModal(false);
+                    setSelectedPasswordForAction(null);
+                    if (targetIdx !== undefined) {
+                      handleDelete(targetIdx);
+                    }
+                  }}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={
-                      selectedPasswordForAction
-                        ? (getServiceIcon(selectedPasswordForAction.item.service) as any)
-                        : 'key'
-                    }
-                    size={22}
-                    color={
-                      selectedPasswordForAction
-                        ? getServiceColor(selectedPasswordForAction.item.service, resolved === 'dark')
-                        : colors.primary
-                    }
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.bottomSheetTitle, { color: colors.text }]} numberOfLines={1}>
-                    {selectedPasswordForAction?.item.service}
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#ef444420' }]}>
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: '#ef4444' }]} numberOfLines={1}>
+                    Delete
                   </Text>
-                  <Text style={[styles.bottomSheetSubtitle, { color: colors.mutedText }]} numberOfLines={1}>
-                    {selectedPasswordForAction?.item.username} • {
-                      selectedPasswordForAction?.item.folder
-                        ? `Tag: ${selectedPasswordForAction.item.folder}`
-                        : (effectiveCategories.find(
-                            (c) =>
-                              c.id ===
-                              (selectedPasswordForAction?.item.category ||
-                                categorizeService(selectedPasswordForAction?.item.service || ''))
-                          )?.name || 'General')
-                    }
-                  </Text>
-                </View>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={[styles.bottomSheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-                onPress={() => {
-                  setShowPasswordActionModal(false);
-                  setSelectedPasswordForAction(null);
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel="Close"
-              >
-                <Ionicons name="close" size={18} color={colors.mutedText} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.bottomSheetDivider, { backgroundColor: colors.border }]} />
-
-            {/* Actions: 2 columns and 2 rows for Edit, Move, Favorite, Delete */}
-            {/* Row 1: Edit & Move */}
-            <View style={styles.m3ActionRow2Col}>
-              {/* Column 1: Edit */}
-              <TouchableOpacity
-                style={[
-                  styles.m3ActionColCard,
-                  { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
-                ]}
-                onPress={() => {
-                  const targetIdx = selectedPasswordForAction?.globalIndex;
-                  setShowPasswordActionModal(false);
-                  setSelectedPasswordForAction(null);
-                  if (targetIdx !== undefined) {
-                    router.push(`/edit/${targetIdx}` as any);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.m3ActionColIconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="pencil" size={18} color={colors.primary} />
-                </View>
-                <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
-                  Edit
-                </Text>
-              </TouchableOpacity>
-
-              {/* Column 2: Move */}
-              <TouchableOpacity
-                style={[
-                  styles.m3ActionColCard,
-                  { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
-                ]}
-                onPress={() => {
-                  const target = selectedPasswordForAction;
-                  setShowPasswordActionModal(false);
-                  setSelectedPasswordForAction(null);
-                  if (target) {
-                    openMoveSheet(
-                      target.globalIndex,
-                      target.item.category || categorizeService(target.item.service),
-                      target.item.folder
-                    );
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#8b5cf618' }]}>
-                  <Ionicons name="pricetag-outline" size={18} color="#8b5cf6" />
-                </View>
-                <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
-                  Move
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Row 2: Favorite / Add & Delete */}
-            <View style={styles.m3ActionRow2Col}>
-              {/* Column 1: Favorite */}
-              <TouchableOpacity
-                style={[
-                  styles.m3ActionColCard,
-                  { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
-                ]}
-                onPress={() => {
-                  const targetIdx = selectedPasswordForAction?.globalIndex;
-                  setShowPasswordActionModal(false);
-                  setSelectedPasswordForAction(null);
-                  if (targetIdx !== undefined) {
-                    handleToggleFavorite(targetIdx);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#f59e0b18' }]}>
-                  <Ionicons
-                    name={selectedPasswordForAction?.item.isFavorite ? 'star' : 'star-outline'}
-                    size={18}
-                    color="#f59e0b"
-                  />
-                </View>
-                <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
-                  {selectedPasswordForAction?.item.isFavorite ? 'Unfavorite' : 'Favorite'}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Column 2: Delete */}
-              <TouchableOpacity
-                style={[
-                  styles.m3ActionColCard,
-                  {
-                    backgroundColor: '#ef444410',
-                    borderColor: showBorders ? colors.border : '#ef444430',
-                    borderWidth: colors.borderWidth,
-                  },
-                ]}
-                onPress={() => {
-                  const targetIdx = selectedPasswordForAction?.globalIndex;
-                  setShowPasswordActionModal(false);
-                  setSelectedPasswordForAction(null);
-                  if (targetIdx !== undefined) {
-                    handleDelete(targetIdx);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#ef444420' }]}>
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                </View>
-                <Text style={[styles.m3ActionColTitle, { color: '#ef4444' }]} numberOfLines={1}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
+        ) : null}
       </Modal>
 
       {/* Move Account Material 3 Bottom Sheet (Categories & Tags) */}

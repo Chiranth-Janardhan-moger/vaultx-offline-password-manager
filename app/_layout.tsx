@@ -6,6 +6,7 @@ import { Stack } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   // Apply screenshot blocking setting on app start
@@ -23,52 +24,54 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <SessionProvider>
-        <Stack 
-          screenOptions={{ 
-            headerShown: false,
-            animation: 'slide_from_right',
-            animationDuration: 200,
-            gestureEnabled: true,
-            gestureDirection: 'horizontal',
-            animationTypeForReplace: 'push',
-            ...(Platform.OS === 'android' && {
-              animation: 'fade_from_bottom',
-              animationDuration: 180,
-            }),
-          }} 
-        >
-          <Stack.Screen 
-            name="dashboard" 
-            options={{ 
-              animation: 'fade',
-              animationDuration: 180,
+    <SafeAreaProvider style={{ flex: 1 }}>
+      <ThemeProvider>
+        <SessionProvider>
+          <Stack 
+            screenOptions={{ 
+              headerShown: false,
+              animation: 'slide_from_right',
+              animationDuration: 200,
+              gestureEnabled: true,
+              gestureDirection: 'horizontal',
+              animationTypeForReplace: 'push',
+              ...(Platform.OS === 'android' && {
+                animation: 'fade_from_bottom',
+                animationDuration: 180,
+              }),
             }} 
-          />
-          <Stack.Screen 
-            name="cards" 
-            options={{ 
-              animation: 'fade',
-              animationDuration: 180,
-            }} 
-          />
-          <Stack.Screen 
-            name="generate-password" 
-            options={{ 
-              animation: 'fade',
-              animationDuration: 180,
-            }} 
-          />
-          <Stack.Screen 
-            name="settings/index" 
-            options={{ 
-              animation: 'fade',
-              animationDuration: 180,
-            }} 
-          />
-        </Stack>
-      </SessionProvider>
-    </ThemeProvider>
+          >
+            <Stack.Screen 
+              name="dashboard" 
+              options={{ 
+                animation: 'fade',
+                animationDuration: 180,
+              }} 
+            />
+            <Stack.Screen 
+              name="cards" 
+              options={{ 
+                animation: 'fade',
+                animationDuration: 180,
+              }} 
+            />
+            <Stack.Screen 
+              name="generate-password" 
+              options={{ 
+                animation: 'fade',
+                animationDuration: 180,
+              }} 
+            />
+            <Stack.Screen 
+              name="settings/index" 
+              options={{ 
+                animation: 'fade',
+                animationDuration: 180,
+              }} 
+            />
+          </Stack>
+        </SessionProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
