@@ -1,7 +1,7 @@
 Version 1.4.5:
-• Resolved startup and card long-press crashes with hardened modal state and safe area context
-• Refined floating navigation bar clearance and capsule height following Material 3 guidelines
-• Updated password long-press action sheet to a streamlined 2x2 compact grid layout
-• Standardized 1px solid borders across navigation, search, tags, and cards with high-contrast toggle
+• Fixed startup and password card long-press stability issues
+• Standardized 1px crisp borders across cards, search, and navigation
+• Updated floating navigation bar height and clearance for Material 3
+• Streamlined password action sheet to a 2x2 compact grid layout
 • Added complete data wipeout and vault reset option in App Info
-• Cleaned up platform imports and workspace item count rendering
+• General performance, accessibility, and UI enhancements
