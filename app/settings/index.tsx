@@ -75,7 +75,7 @@ export default function SettingsIndex() {
           bounces={true}
           alwaysBounceVertical={true}
         >
-          <View style={[styles.cardGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.cardGroup, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardGroupInner}>
               {SETTING_CATEGORIES.map((item, idx) => {
                 const isLast = idx === SETTING_CATEGORIES.length - 1;
@@ -131,7 +131,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   cardGroup: {
     borderRadius: 20,
-    borderWidth: 0.6,
     marginTop: 6,
     ...Platform.select({
       ios: {

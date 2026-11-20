@@ -36,7 +36,7 @@ export default function BackupSettings() {
           bounces={true}
           alwaysBounceVertical={true}
         >
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Export Backup */}
               <TouchableOpacity style={styles.row} onPress={() => router.push('/export')} activeOpacity={0.7}>
@@ -92,7 +92,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     borderRadius: 18,
-    borderWidth: 0.6,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',

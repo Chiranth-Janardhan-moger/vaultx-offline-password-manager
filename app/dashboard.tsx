@@ -1313,7 +1313,7 @@ export default function Dashboard() {
             const isExpanded = expandedIndex === item.globalIndex;
 
             return (
-              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
                 {/* Collapsed Card Row (Tap to expand, Long-press for Material 3 actions sheet) */}
                 <TouchableOpacity
                   style={styles.cardHeader}
@@ -2454,7 +2454,6 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   card: {
-    borderWidth: 0.6,
     padding: 14,
     borderRadius: 16,
     marginBottom: 10,

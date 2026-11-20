@@ -138,7 +138,7 @@ export default function SecuritySettings() {
         >
           {/* Authentication Section */}
           <Text style={[styles.sectionHeader, { color: colors.mutedText, marginTop: 4 }]}>AUTHENTICATION</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Change Master Password */}
               <TouchableOpacity style={styles.row} onPress={() => router.push('/change-password')} activeOpacity={0.7}>
@@ -156,7 +156,7 @@ export default function SecuritySettings() {
 
           {/* App Locking Section */}
           <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>APP LOCKING</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Auto-lock Timer */}
               <TouchableOpacity style={styles.row} onPress={() => setShowAutoLockModal(true)} activeOpacity={0.7}>
@@ -195,7 +195,7 @@ export default function SecuritySettings() {
 
           {/* Privacy & Protection Section */}
           <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>PRIVACY & PROTECTION</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Auto-clear Clipboard */}
               <TouchableOpacity style={styles.row} onPress={() => setShowClipboardModal(true)} activeOpacity={0.7}>
@@ -357,7 +357,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 18,
-    borderWidth: 0.6,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',

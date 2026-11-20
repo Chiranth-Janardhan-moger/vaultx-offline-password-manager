@@ -84,7 +84,7 @@ export default function GeneralSettings() {
         >
           {/* Theme & Display Section */}
           <Text style={[styles.sectionHeader, { color: colors.mutedText, marginTop: 4 }]}>THEME & DISPLAY</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Theme Segmented Control matching uploaded design */}
               <View style={styles.themeRow}>
@@ -154,7 +154,7 @@ export default function GeneralSettings() {
 
           {/* Workspaces Section */}
           <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>WORKSPACES</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Workspace on Login Switch */}
               <View style={styles.row}>
@@ -178,7 +178,7 @@ export default function GeneralSettings() {
 
           {/* Tags & Categories Section */}
           <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>TAGS & CATEGORIES</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Tag Deletion Target */}
               <TouchableOpacity style={styles.row} onPress={() => setShowFallbackModal(true)} activeOpacity={0.7}>
@@ -279,7 +279,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 18,
-    borderWidth: 0.6,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',

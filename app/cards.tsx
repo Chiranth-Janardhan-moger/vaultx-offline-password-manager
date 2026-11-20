@@ -736,8 +736,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0.6,
     maxWidth: 140,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+        shadowColor: '#000000',
+      },
+    }),
   },
   spacePillText: {
     fontSize: 13,

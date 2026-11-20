@@ -12,6 +12,8 @@ type ThemeColors = {
   inputBg: string;
   primary: string;
   border: string;
+  cardBorder: string;
+  cardBorderWidth: number;
   statusBarBg: string;
 };
 
@@ -29,18 +31,18 @@ const SHOW_BORDERS_KEY = 'show_borders_v1';
 
 const ThemeContext = createContext<ThemeValue | undefined>(undefined);
 
-const lightColors: ThemeColors = {
+const lightColors: Omit<ThemeColors, 'cardBorder' | 'cardBorderWidth'> = {
   background: '#F8F9FA',
   card: '#FFFFFF',
   text: '#111827',
   mutedText: '#6B7280',
   inputBg: '#F3F4F6',
   primary: '#007AFF',
-  border: '#E5E7EB',
+  border: '#D1D5DB',
   statusBarBg: '#F8F9FA',
 };
 
-const darkColors: ThemeColors = {
+const darkColors: Omit<ThemeColors, 'cardBorder' | 'cardBorderWidth'> = {
   background: '#000000',
   card: '#1C1C1E',
   text: '#FFFFFF',
@@ -83,7 +85,11 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
   const resolved = mode === 'system' ? (systemColorScheme === 'light' ? 'light' : 'dark') : mode;
 
   const baseColors = resolved === 'dark' ? darkColors : lightColors;
-  const colors: ThemeColors = showBorders ? baseColors : { ...baseColors, border: 'transparent' };
+  const colors: ThemeColors = {
+    ...baseColors,
+    cardBorder: showBorders ? (resolved === 'dark' ? '#3A3A3C' : '#000000') : 'transparent',
+    cardBorderWidth: showBorders ? 1.5 : 0,
+  };
 
   const value = useMemo<ThemeValue>(
     () => ({ mode, resolved, colors, showBorders, setMode, setShowBorders }),

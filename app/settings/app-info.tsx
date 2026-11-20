@@ -87,24 +87,9 @@ export default function AppInfoSettings() {
             </Text>
           </View>
 
-          {/* Larger, Enhanced Info Card */}
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* Info Card with Source Code & Feedback */}
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
-              {/* Architecture / Offline Guarantee */}
-              <View style={styles.row}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="lock-closed" size={20} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Architecture</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    Zero cloud dependencies • 100% on-device AES-256 encryption
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
               {/* Source Code */}
               <TouchableOpacity style={styles.row} onPress={openGitHub} activeOpacity={0.7}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
@@ -114,21 +99,7 @@ export default function AppInfoSettings() {
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Source Code</Text>
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>View open-source repository on GitHub</Text>
                 </View>
-                <Ionicons name="open-outline" size={18} color={colors.mutedText} />
-              </TouchableOpacity>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Star on GitHub */}
-              <TouchableOpacity style={styles.row} onPress={openGitHub} activeOpacity={0.7}>
-                <View style={[styles.iconWrap, { backgroundColor: '#fbbf2418' }]}>
-                  <Ionicons name="star" size={20} color="#fbbf24" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Star on GitHub</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Support this project with a ⭐</Text>
-                </View>
-                <Ionicons name="open-outline" size={18} color={colors.mutedText} />
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
 
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -142,9 +113,17 @@ export default function AppInfoSettings() {
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Feedback & Support</Text>
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>Report bugs or suggest new features</Text>
                 </View>
-                <Ionicons name="send-outline" size={18} color={colors.mutedText} />
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Privacy & Offline Guarantee Footer Note */}
+          <View style={styles.footerWrap}>
+            <Ionicons name="shield-checkmark-outline" size={15} color={colors.mutedText} />
+            <Text style={[styles.footerText, { color: colors.mutedText }]}>
+              VaultX is 100% offline. Zero cloud dependencies. All data is protected with on-device AES-256 encryption.
+            </Text>
           </View>
         </ScrollView>
       </View>
@@ -214,7 +193,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 22,
-    borderWidth: 0.6,
     marginTop: 12,
     ...Platform.select({
       ios: {
@@ -259,5 +237,19 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     width: '100%',
+  },
+  footerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingHorizontal: 20,
+  },
+  footerText: {
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    flex: 1,
   },
 });
