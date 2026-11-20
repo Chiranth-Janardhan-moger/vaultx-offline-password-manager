@@ -140,7 +140,7 @@ export default function GeneralSettings() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Show Card Borders</Text>
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    Display outline borders around cards
+                    Display solid bold borders instead of default light outlines
                   </Text>
                 </View>
                 <ToggleSwitch
