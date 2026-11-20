@@ -7,9 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "vaultx",
     "userInterfaceStyle": "automatic",
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
       "allowBackup": false,
       "versionCode": 253,
@@ -32,10 +29,6 @@
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_WIFI_STATE"
       ]
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.webp"
     },
     "plugins": [
       "expo-router",
