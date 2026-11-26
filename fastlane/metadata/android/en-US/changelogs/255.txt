@@ -1,6 +1,6 @@
 Version 1.4.6:
-- Added offline 2FA QR code scanner (CameraX + ZXing) on Add & Edit screens
-- Added Auto Backup to user-selected folder with customizable schedule
-- Added immediate lock on app exit with Lock on App Exit & Biometric toggles
-- Updated React dependency to 19.3.1
-- Security, lifecycle, and stability enhancements
+- Offline 2FA QR scanner, Google Auth & Aegis/2FAS/Ente batch import
+- Secure Notes, Website URL field/search, and 2FA backup codes
+- Offline Password Health audit and Chrome/Edge/Bitwarden CSV import
+- Auto Backup to selected folder and immediate lock on app exit
+- Minimalist UI polish, Wallet detail sheet, toasts & App Info redesign

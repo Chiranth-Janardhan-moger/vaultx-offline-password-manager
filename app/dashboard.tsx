@@ -1251,9 +1251,9 @@ export default function Dashboard() {
                 {({ isHighlighted }) => (
                   <>
                     <Ionicons
-                      name={selectedPill === 'favorites' ? 'star' : 'star-outline'}
+                      name="star"
                       size={16}
-                      color={selectedPill === 'favorites' ? '#f59e0b' : isHighlighted ? colors.primary : colors.mutedText}
+                      color="#f59e0b"
                     />
                     <PillCountBadge count={activeWorkspaceFavoritesCount} isHighlighted={isHighlighted} />
                   </>
