@@ -11,6 +11,12 @@ import {
   recordFailedAttempt,
   getLockoutState,
   clearLockoutState,
+  isLockOnBackgroundEnabled,
+  setLockOnBackgroundEnabled,
+  disableBiometric,
+  saveBiometricKey,
+  isBiometricEnabled,
+  generateVaultKey,
 } from '../lib/secure.ts';
 import { shouldBlockScreenshotsByDefault } from '../lib/screen-security.ts';
 import { _clearStore } from './mocks/expo-secure-store.mjs';
@@ -128,4 +134,26 @@ test('Security Fix - VAULTX-SEC-014: Non-Array Backup Schema Normalization', asy
   assert.strictEqual(decrypted.passwords.length, 0);
   assert.ok(Array.isArray(decrypted.cards), 'cards must be an array');
   assert.strictEqual(decrypted.cards.length, 0);
+});
+
+test('Security Fix - VAULTX-SEC-015: Lock on Background Defaults to ON and Persists', async () => {
+  // 1. Defaults to ON (true) when unconfigured
+  assert.strictEqual(await isLockOnBackgroundEnabled(), true, 'Lock on background must default to ON');
+
+  // 2. Can be disabled
+  await setLockOnBackgroundEnabled(false);
+  assert.strictEqual(await isLockOnBackgroundEnabled(), false, 'Disabling lock on background must persist');
+
+  // 3. Can be re-enabled
+  await setLockOnBackgroundEnabled(true);
+  assert.strictEqual(await isLockOnBackgroundEnabled(), true, 'Re-enabling lock on background must persist');
+});
+
+test('Security Fix - VAULTX-SEC-016: disableBiometric Wipes Flag and Key', async () => {
+  const vaultKey = await generateVaultKey();
+  await saveBiometricKey(vaultKey);
+  assert.strictEqual(await isBiometricEnabled(), true);
+
+  await disableBiometric();
+  assert.strictEqual(await isBiometricEnabled(), false);
 });

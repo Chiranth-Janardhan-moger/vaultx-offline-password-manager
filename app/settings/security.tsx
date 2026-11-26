@@ -5,7 +5,9 @@ import { useTheme } from '@/context/ThemeProvider';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import { getClipboardClearSeconds, setClipboardClearSeconds } from '@/lib/clipboard';
 import { setScreenshotBlocking } from '@/lib/screen-security';
+import { isBiometricEnabled, saveBiometricKey, disableBiometric } from '@/lib/secure';
 import { Ionicons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
@@ -16,7 +18,7 @@ const BLOCK_SCREENSHOTS_KEY = 'block_screenshots';
 
 export default function SecuritySettings() {
   const router = useRouter();
-  const { unlocked, autoLockMinutes, updateAutoLockMinutes } = useSession();
+  const { unlocked, vaultKey, autoLockMinutes, updateAutoLockMinutes, lockOnBackground, updateLockOnBackground } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
@@ -28,6 +30,8 @@ export default function SecuritySettings() {
 
   const [doubleTapLock, setDoubleTapLock] = React.useState(false);
   const [blockScreenshots, setBlockScreenshots] = React.useState(true);
+  const [bioSupported, setBioSupported] = React.useState(false);
+  const [bioEnabled, setBioEnabled] = React.useState(false);
   const [showAutoLockModal, setShowAutoLockModal] = React.useState(false);
   const [clipboardClearSeconds, setClipboardClearSecondsState] = React.useState(45);
   const [showClipboardModal, setShowClipboardModal] = React.useState(false);
@@ -46,9 +50,69 @@ export default function SecuritySettings() {
 
         const cbSec = await getClipboardClearSeconds();
         setClipboardClearSecondsState(cbSec);
+
+        const isBioOn = await isBiometricEnabled();
+        setBioEnabled(isBioOn);
+        try {
+          const hasHw = await LocalAuthentication.hasHardwareAsync();
+          const isEnr = await LocalAuthentication.isEnrolledAsync();
+          setBioSupported(hasHw && isEnr);
+        } catch {
+          setBioSupported(false);
+        }
       })();
     }, [])
   );
+
+  const toggleBiometric = async () => {
+    if (!bioSupported) {
+      showAlert({
+        title: 'Not Supported',
+        message: 'Biometric authentication is not supported or not enrolled on this device.',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    if (bioEnabled) {
+      await disableBiometric();
+      setBioEnabled(false);
+      showAlert({
+        title: 'Biometric Disabled',
+        message: 'Biometric unlock has been turned off.',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    } else {
+      if (!vaultKey) {
+        showAlert({
+          title: 'Error',
+          message: 'Active session key is unavailable. Please lock and unlock with your master password.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+      try {
+        await saveBiometricKey(vaultKey);
+        setBioEnabled(true);
+        showAlert({
+          title: 'Biometric Enabled',
+          message: 'Biometric unlock has been enabled for your vault.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+      } catch (err: any) {
+        showAlert({
+          title: 'Setup Failed',
+          message: err?.message ?? 'Failed to enable biometric authentication.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+      }
+    }
+  };
 
   const toggleDoubleTapLock = async () => {
     const newValue = !doubleTapLock;
@@ -151,6 +215,27 @@ export default function SecuritySettings() {
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* Biometric Unlock */}
+              <View style={styles.row}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="finger-print-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Biometric Unlock</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    {bioSupported ? 'Unlock with fingerprint or face' : 'Not supported on this device'}
+                  </Text>
+                </View>
+                <ToggleSwitch
+                  value={bioEnabled}
+                  onValueChange={toggleBiometric}
+                  disabled={!bioSupported}
+                  accessibilityLabel="Biometric Unlock"
+                />
+              </View>
             </View>
           </View>
 
@@ -158,6 +243,24 @@ export default function SecuritySettings() {
           <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>APP LOCKING</Text>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
+              {/* Lock on App Exit */}
+              <View style={styles.row}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="exit-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Lock on App Exit</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Lock immediately when leaving the app</Text>
+                </View>
+                <ToggleSwitch
+                  value={lockOnBackground}
+                  onValueChange={updateLockOnBackground}
+                  accessibilityLabel="Lock on App Exit"
+                />
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
               {/* Auto-lock Timer */}
               <TouchableOpacity style={styles.row} onPress={() => setShowAutoLockModal(true)} activeOpacity={0.7}>
                 <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>

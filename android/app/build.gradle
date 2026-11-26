@@ -98,8 +98,8 @@ android {
         applicationId 'com.chiranth7.vaultx'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 254
-        versionName "1.4.5"
+        versionCode 255
+        versionName "1.4.6"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
 

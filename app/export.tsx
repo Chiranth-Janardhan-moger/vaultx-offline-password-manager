@@ -15,7 +15,7 @@ const LAST_BACKUP_DATE_KEY = 'last_backup_date';
 
 export default function ExportScreen() {
   const router = useRouter();
-  const { unlocked, vaultKey } = useSession();
+  const { unlocked, vaultKey, runWithBackgroundLockSuppressed } = useSession();
   const { colors } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
@@ -39,7 +39,9 @@ export default function ExportScreen() {
       });
       return;
     }
-    await Sharing.shareAsync(path, mimeType ? { mimeType } : undefined);
+    await runWithBackgroundLockSuppressed(() =>
+      Sharing.shareAsync(path, mimeType ? { mimeType } : undefined)
+    );
   };
 
   const exportEncrypted = React.useCallback(async () => {

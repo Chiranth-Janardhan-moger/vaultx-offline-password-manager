@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   Animated,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -43,6 +44,9 @@ export default function Login() {
   const [canBio, setCanBio] = React.useState(false);
   const [hasUnlockMethod, setHasUnlockMethod] = React.useState(false);
   const inputRef = React.useRef<any>(null);
+  const bioInFlightRef = React.useRef(false);
+  const pendingAutoBioRef = React.useRef(false);
+  const autoBioTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Smooth, high-performance UI animations
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -134,11 +138,22 @@ export default function Login() {
       }
 
       if (biometricAvailable) {
-        setTimeout(() => unlockByBio(), 400);
+        if (AppState.currentState === 'active') {
+          autoBioTimerRef.current = setTimeout(() => unlockByBio(), 400);
+        } else {
+          pendingAutoBioRef.current = true;
+        }
       } else {
         setTimeout(() => inputRef.current?.focus(), 300);
       }
     })();
+
+    return () => {
+      if (autoBioTimerRef.current) {
+        clearTimeout(autoBioTimerRef.current);
+        autoBioTimerRef.current = null;
+      }
+    };
   }, [router]);
 
   const unlockWithVaultKey = React.useCallback(
@@ -211,18 +226,29 @@ export default function Login() {
   }, [ensureNotLocked, loading, password, unlockWithVaultKey, registerFailure, showAlert]);
 
   const unlockByBio = React.useCallback(async () => {
+    if (bioInFlightRef.current || loading) return;
+    if (AppState.currentState !== 'active') {
+      pendingAutoBioRef.current = true;
+      return;
+    }
     if (!(await ensureNotLocked())) return;
-    if (loading) return;
 
     try {
+      bioInFlightRef.current = true;
+      pendingAutoBioRef.current = false;
       setLoading(true);
       const vaultKey = await loadBiometricKey();
       await unlockWithVaultKey(vaultKey);
     } catch (e: any) {
       const msg = (e?.message || '').toLowerCase();
+      if (AppState.currentState !== 'active' || msg.includes('not in the foreground')) {
+        pendingAutoBioRef.current = true;
+        return;
+      }
       if (
         msg.includes('cancel') ||
         msg.includes('user_cancel') ||
+        msg.includes('already in progress') ||
         e?.code === 'ERR_SECURE_STORE_USER_CANCELED' ||
         e?.code === 'ERR_KEYSTORE_USER_CANCELED' ||
         e?.code === 'ERR_AUTH_CANCELLED'
@@ -231,14 +257,28 @@ export default function Login() {
       }
       showAlert({
         title: 'Biometric Failed',
-        message: e?.message ?? 'Biometric verification unsuccessful. Please enter your master password.',
+        message: 'Biometric verification unsuccessful. Please try again or enter your master password.',
         confirmText: 'OK',
         onConfirm: () => {},
       });
     } finally {
+      bioInFlightRef.current = false;
       setLoading(false);
     }
   }, [ensureNotLocked, loading, showAlert, unlockWithVaultKey]);
+
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && pendingAutoBioRef.current && canBio) {
+        pendingAutoBioRef.current = false;
+        if (autoBioTimerRef.current) clearTimeout(autoBioTimerRef.current);
+        autoBioTimerRef.current = setTimeout(() => {
+          unlockByBio();
+        }, 250);
+      }
+    });
+    return () => subscription.remove();
+  }, [canBio, unlockByBio]);
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>

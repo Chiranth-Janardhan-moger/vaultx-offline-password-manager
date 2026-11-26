@@ -1,0 +1,9 @@
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-pngs-0 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\build\generated\res\pngs\release
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-updated_navigation_xml-1 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\build\generated\updated_navigation_xml\release
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-mergeReleaseResources-2 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-mergeReleaseResources-3 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-4 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\build\intermediates\merged_res\release\mergeReleaseResources
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-5 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-main-6 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\res
+com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-7 D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\release\res
+gradleHome-0 C:\Users\Chiranth\.gradle

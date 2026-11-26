@@ -1,0 +1,19 @@
+<lint-module
+    format="1"
+    dir="D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android"
+    name=":vaultx-qr-scanner"
+    type="LIBRARY"
+    maven="com.chiranth7.vaultx:vaultx-qr-scanner:1.0.0"
+    agpVersion="9.2.1"
+    buildFolder="build"
+    bootClassPath="C:\Users\Chiranth\AppData\Local\Android\Sdk\platforms\android-37.0\android.jar;C:\Users\Chiranth\AppData\Local\Android\Sdk\build-tools\36.0.0\core-lambda-stubs.jar"
+    javaSourceLevel="17"
+    compileTarget="android-37.0"
+    neverShrinking="true"
+    highlightGradualR8Api="false">
+  <lintOptions
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>

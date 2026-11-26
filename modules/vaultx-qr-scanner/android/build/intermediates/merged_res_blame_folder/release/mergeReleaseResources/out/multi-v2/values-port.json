@@ -1,0 +1,34 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-mergeReleaseResources-30:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Chiranth\\.gradle\\caches\\9.4.1\\transforms\\4a8ab76c974ee9d6e503bbfcee08ec4a\\transformed\\appcompat-1.7.1\\res\\values-port\\values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Chiranth\\.gradle\\caches\\9.4.1\\transforms\\4a8ab76c974ee9d6e503bbfcee08ec4a\\transformed\\appcompat-1.7.1\\res\\values-port\\values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        }
+    ]
+}

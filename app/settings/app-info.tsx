@@ -67,10 +67,13 @@ export default function AppInfoSettings() {
 
       // 2. Clear all secure keys
       await clearAllSecure();
+      const { clearAutoBackupConfig } = await import('@/lib/auto-backup');
+      await clearAutoBackupConfig();
       await Promise.all([
         SecureStore.deleteItemAsync('vaultx_lockout_state_v1'),
         SecureStore.deleteItemAsync('vaultx_active_workspace'),
         SecureStore.deleteItemAsync('auto_lock_timer'),
+        SecureStore.deleteItemAsync('vaultx_lock_on_background'),
         SecureStore.deleteItemAsync('select_workspace_on_login'),
         SecureStore.deleteItemAsync('default_delete_category'),
         SecureStore.deleteItemAsync('double_tap_lock'),

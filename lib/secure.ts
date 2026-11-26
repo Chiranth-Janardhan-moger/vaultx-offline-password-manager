@@ -287,6 +287,13 @@ export const loadBiometricKey = async () => {
   return v;
 };
 
+export const disableBiometric = async (): Promise<void> => {
+  await setBiometricEnabled(false);
+  try {
+    await SecureStore.deleteItemAsync(KEYS.bioKey);
+  } catch {}
+};
+
 export const clearAllSecure = async () => {
   await Promise.all([
     SecureStore.deleteItemAsync(KEYS.meta),
@@ -349,6 +356,24 @@ export const clearLockoutState = async (): Promise<void> => {
 };
 
 export const SELECT_WORKSPACE_ON_LOGIN_KEY = 'vaultx_select_workspace_on_login';
+export const LOCK_ON_BACKGROUND_KEY = 'vaultx_lock_on_background';
+
+export const isLockOnBackgroundEnabled = async (): Promise<boolean> => {
+  try {
+    const v = await SecureStore.getItemAsync(LOCK_ON_BACKGROUND_KEY);
+    return v === null ? true : v === '1' || v === 'true'; // Default true
+  } catch {
+    return true;
+  }
+};
+
+export const setLockOnBackgroundEnabled = async (enabled: boolean): Promise<void> => {
+  try {
+    await SecureStore.setItemAsync(LOCK_ON_BACKGROUND_KEY, enabled ? '1' : '0');
+  } catch (error) {
+    console.error('Failed to update lock on background setting:', error);
+  }
+};
 
 export const isSelectWorkspaceOnLoginEnabled = async (): Promise<boolean> => {
   try {

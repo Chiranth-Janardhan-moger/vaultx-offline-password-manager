@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/layout-v21/notification_template_icon_group.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-core-1.13.0-10:/layout-v21/notification_template_icon_group.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/layout-v21/notification_action.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-core-1.13.0-10:/layout-v21/notification_action.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/layout-v21/notification_template_custom_big.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-core-1.13.0-10:/layout-v21/notification_template_custom_big.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/layout-v21/notification_action_tombstone.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-core-1.13.0-10:/layout-v21/notification_action_tombstone.xml"
+    }
+]

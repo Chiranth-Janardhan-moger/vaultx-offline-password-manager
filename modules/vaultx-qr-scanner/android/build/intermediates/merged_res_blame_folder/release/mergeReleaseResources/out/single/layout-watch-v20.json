@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/layout-watch-v20/abc_alert_dialog_button_bar_material.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-appcompat-1.7.1-8:/layout-watch-v20/abc_alert_dialog_button_bar_material.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/layout-watch-v20/abc_alert_dialog_title_material.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-appcompat-1.7.1-8:/layout-watch-v20/abc_alert_dialog_title_material.xml"
+    }
+]

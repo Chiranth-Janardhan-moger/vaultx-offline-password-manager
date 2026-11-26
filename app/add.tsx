@@ -5,6 +5,7 @@ import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { categorizeService, getEffectiveCategories, CategoryType } from '@/lib/categories';
 import { checkPasswordStrength, generateSecurePassword, getStrengthLabel } from '@/lib/password-strength';
+import { scanTotpQrCode } from '@/lib/qr-scanner';
 import { normalizeServiceName } from '@/lib/service-icons';
 import { PasswordItem, saveVault, getEffectiveWorkspaces, getWorkspaceCustomTags, moveItemUp, moveItemDown, type VaultData } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,7 @@ import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 
 export default function AddPassword() {
   const router = useRouter();
-  const { unlocked, vault, vaultKey, setVault, activeWorkspace } = useSession();
+  const { unlocked, vault, vaultKey, setVault, activeWorkspace, runWithBackgroundLockSuppressed } = useSession();
   const { colors, resolved } = useTheme();
 
   // Light-gray / clean card tokens for dialogs matching webstack
@@ -328,6 +329,37 @@ export default function AddPassword() {
     }
   }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, workspace, totpSecret, setVault, router, showAlert]);
 
+  const handleScan2FA = React.useCallback(async () => {
+    const outcome = await scanTotpQrCode(runWithBackgroundLockSuppressed);
+    if (outcome.status === 'cancelled') return;
+    if (outcome.status === 'error') {
+      showAlert({
+        title: outcome.title,
+        message: outcome.message,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    const { parsed } = outcome;
+    setTotpSecret(parsed.secret);
+    if (!service.trim() && parsed.issuer) {
+      handleServiceChange(parsed.issuer);
+    }
+    if (!username.trim() && parsed.account) {
+      setUsername(parsed.account);
+    }
+    if (parsed.warning) {
+      showAlert({
+        title: '2FA Secret Added',
+        message: parsed.warning,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    }
+  }, [runWithBackgroundLockSuppressed, service, username, handleServiceChange, showAlert]);
+
   const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
 
   return (
@@ -596,18 +628,28 @@ export default function AddPassword() {
 
           {/* 2FA Secret Key */}
           <Text style={[styles.label, { color: colors.mutedText }]}>2FA Secret Key (Optional)</Text>
-          <TextInput
-            style={inputStyle}
-            placeholder="e.g. JBSWY3DPEHPK3PXP"
-            placeholderTextColor={colors.mutedText}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            autoComplete="off"
-            textContentType="none"
-            importantForAutofill="no"
-            value={totpSecret}
-            onChangeText={(t) => setTotpSecret(t.replace(/\s+/g, '').toUpperCase())}
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={[...inputStyle, { paddingRight: 44 }]}
+              placeholder="e.g. JBSWY3DPEHPK3PXP"
+              placeholderTextColor={colors.mutedText}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              autoComplete="off"
+              textContentType="none"
+              importantForAutofill="no"
+              value={totpSecret}
+              onChangeText={(t) => setTotpSecret(t.replace(/\s+/g, '').toUpperCase())}
+            />
+            <TouchableOpacity
+              onPress={handleScan2FA}
+              style={styles.eyeBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Scan 2FA QR code"
+            >
+              <Ionicons name="scan-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
 
           {/* PIN Section Toggle */}
           <TouchableOpacity

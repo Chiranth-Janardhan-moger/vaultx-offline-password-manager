@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/animator/fragment_open_enter.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-fragment-1.5.4-11:/animator/fragment_open_enter.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/animator/fragment_fade_enter.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-fragment-1.5.4-11:/animator/fragment_fade_enter.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/animator/fragment_close_exit.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-fragment-1.5.4-11:/animator/fragment_close_exit.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/animator/fragment_fade_exit.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-fragment-1.5.4-11:/animator/fragment_fade_exit.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/animator/fragment_close_enter.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-fragment-1.5.4-11:/animator/fragment_close_enter.xml"
+    },
+    {
+        "merged": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-release-32:/animator/fragment_open_exit.xml",
+        "source": "com.chiranth7.vaultx.qrscanner.vaultx-qr-scanner-fragment-1.5.4-11:/animator/fragment_open_exit.xml"
+    }
+]

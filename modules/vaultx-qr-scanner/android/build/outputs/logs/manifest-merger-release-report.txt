@@ -1,0 +1,38 @@
+-- Merging decision tree log ---
+manifest
+ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:1:1-12:12
+INJECTED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:1:1-12:12
+	package
+		INJECTED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:1:11-69
+uses-permission#android.permission.CAMERA
+ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:2:5-65
+	android:name
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:2:22-62
+uses-feature#android.hardware.camera
+ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:3:5-85
+	android:required
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:3:58-82
+	android:name
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:3:19-57
+application
+ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:5:5-11:19
+activity#com.chiranth7.vaultx.qrscanner.QrScannerActivity
+ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:6:9-10:66
+	android:screenOrientation
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:9:13-49
+	android:exported
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:8:13-37
+	android:theme
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:10:13-63
+	android:name
+		ADDED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:7:13-76
+uses-sdk
+INJECTED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml
+INJECTED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.chiranth7.vaultx.qrscanner" >
+
+    <uses-sdk android:minSdkVersion="24" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <application>
+        <activity
+            android:name="com.chiranth7.vaultx.qrscanner.QrScannerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+    </application>
+
+</manifest>

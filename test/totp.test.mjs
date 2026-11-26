@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getTOTPCode, getTOTPDetails } from '../lib/totp.ts';
+import { getTOTPCode, getTOTPDetails, parseOtpAuthUri } from '../lib/totp.ts';
 
 test('TOTP - Empty or Missing Secret', () => {
   assert.strictEqual(getTOTPCode(''), '------');
@@ -98,4 +98,53 @@ test('TOTP - End-to-End Vault Persistence and Edit Protection', async () => {
   const restoredBackup = await decryptBackupData(backupCiphertext, 'BackupPass123!');
   assert.strictEqual(restoredBackup.passwords.length, 1);
   assert.strictEqual(restoredBackup.passwords[0].totpSecret, originalSecret);
+});
+
+test('TOTP - parseOtpAuthUri extracts secrets, issuer, account, and rejects invalid QR formats', () => {
+  // 1. Standard otpauth://totp URI with URL encoding and spaces/lowercase
+  const standard = parseOtpAuthUri(
+    'otpauth://totp/GitHub%3Aalice%40example.com?secret=jbsw%20y3dp%20ehpk%203pxp%3D%3D&issuer=GitHub&algorithm=SHA1&digits=6&period=30'
+  );
+  assert.strictEqual(standard.ok, true);
+  assert.strictEqual(standard.secret, 'JBSWY3DPEHPK3PXP');
+  assert.strictEqual(standard.issuer, 'GitHub');
+  assert.strictEqual(standard.account, 'alice@example.com');
+  assert.strictEqual(standard.warning, undefined);
+
+  // 2. Fallback issuer extraction from label prefix when issuer query param omitted
+  const labelOnly = parseOtpAuthUri('otpauth://totp/Proton:dev@proton.me?secret=GEZDGNBVGY3TQOJQ');
+  assert.strictEqual(labelOnly.ok, true);
+  assert.strictEqual(labelOnly.secret, 'GEZDGNBVGY3TQOJQ');
+  assert.strictEqual(labelOnly.issuer, 'Proton');
+  assert.strictEqual(labelOnly.account, 'dev@proton.me');
+
+  // 3. Non-standard parameters emit a clear warning while preserving secret
+  const customParams = parseOtpAuthUri('otpauth://totp/Bank?secret=JBSWY3DPEHPK3PXP&digits=8&period=60');
+  assert.strictEqual(customParams.ok, true);
+  assert.strictEqual(customParams.secret, 'JBSWY3DPEHPK3PXP');
+  assert.ok(customParams.warning?.includes('digits=8'));
+  assert.ok(customParams.warning?.includes('period=60s'));
+
+  // 4. Raw Base32 secret string accepted cleanly
+  const bare = parseOtpAuthUri('  jbsw y3dp ehpk 3pxp== ');
+  assert.strictEqual(bare.ok, true);
+  assert.strictEqual(bare.secret, 'JBSWY3DPEHPK3PXP');
+
+  // 5. Rejects HOTP, Google batch export, random URLs, missing/invalid secrets
+  const hotp = parseOtpAuthUri('otpauth://hotp/Test?secret=JBSWY3DPEHPK3PXP&counter=1');
+  assert.strictEqual(hotp.ok, false);
+  assert.ok(hotp.error.includes('HOTP'));
+
+  const migration = parseOtpAuthUri('otpauth-migration://offline?data=abc');
+  assert.strictEqual(migration.ok, false);
+  assert.ok(migration.error.includes('batch export'));
+
+  const url = parseOtpAuthUri('https://example.com/2fa');
+  assert.strictEqual(url.ok, false);
+
+  const missingSecret = parseOtpAuthUri('otpauth://totp/Test?issuer=Test');
+  assert.strictEqual(missingSecret.ok, false);
+
+  const badBase32 = parseOtpAuthUri('otpauth://totp/Test?secret=INVALID9999');
+  assert.strictEqual(badBase32.ok, false);
 });

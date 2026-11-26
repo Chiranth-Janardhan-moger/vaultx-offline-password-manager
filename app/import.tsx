@@ -13,7 +13,7 @@ import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 
 export default function ImportScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { unlocked, vaultKey, setVault } = useSession();
+  const { unlocked, vaultKey, setVault, runWithBackgroundLockSuppressed } = useSession();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   const [backupFile, setBackupFile] = React.useState<string | null>(null);
@@ -23,17 +23,20 @@ export default function ImportScreen() {
 
   const pickFile = React.useCallback(async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: true,
-      });
+      const result = await runWithBackgroundLockSuppressed(() =>
+        DocumentPicker.getDocumentAsync({
+          type: '*/*',
+          copyToCacheDirectory: true,
+        })
+      );
 
       if (result.canceled) return;
       
       const file = result.assets[0];
+      const lowerName = file.name.toLowerCase();
       
-      // Validate file extension
-      if (!file.name.toLowerCase().endsWith('.vxb')) {
+      // Validate file extension (also tolerate SAF providers that append .json or .bin to .vxb)
+      if (!lowerName.endsWith('.vxb') && !lowerName.endsWith('.vxb.json') && !lowerName.endsWith('.vxb.bin')) {
         showAlert({
           title: 'Invalid File',
           message: 'Please select a VaultX backup file (.vxb)',
@@ -58,7 +61,7 @@ export default function ImportScreen() {
         onConfirm: () => {},
       });
     }
-  }, []);
+  }, [runWithBackgroundLockSuppressed, showAlert]);
 
   const handleImport = React.useCallback(async () => {
     if (!backupFile) {

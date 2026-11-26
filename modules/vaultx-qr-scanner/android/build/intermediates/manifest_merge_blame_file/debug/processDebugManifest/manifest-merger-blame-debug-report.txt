@@ -1,0 +1,34 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.chiranth7.vaultx.qrscanner" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+5-->INJECTED
+5-->INJECTED
+6
+7    <uses-permission android:name="android.permission.CAMERA" />
+7-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:2:5-65
+7-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:2:22-62
+8
+9    <uses-feature
+9-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:3:5-85
+10        android:name="android.hardware.camera"
+10-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:3:19-57
+11        android:required="false" />
+11-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:3:58-82
+12
+13    <application>
+13-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:5:5-11:19
+14        <activity
+14-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:6:9-10:66
+15            android:name="com.chiranth7.vaultx.qrscanner.QrScannerActivity"
+15-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:7:13-76
+16            android:exported="false"
+16-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:8:13-37
+17            android:screenOrientation="portrait"
+17-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:9:13-49
+18            android:theme="@style/Theme.AppCompat.NoActionBar" />
+18-->D:\Projects\apps\VaultX\modules\vaultx-qr-scanner\android\src\main\AndroidManifest.xml:10:13-63
+19    </application>
+20
+21</manifest>
