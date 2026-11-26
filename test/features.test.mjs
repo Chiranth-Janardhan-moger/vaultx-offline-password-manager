@@ -2,9 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { analyzePasswordHealth } from '../lib/password-health.ts';
 import { parseCsvRows, parsePasswordCsv } from '../lib/csv-import.ts';
-import { isHapticsEnabled, setHapticsEnabled } from '../lib/haptics.ts';
 
-test('Password Health - detects weak, reused, and 2FA-missing accounts per workspace', () => {
+test('Password Health - detects weak and reused accounts per workspace', () => {
   const passwords = [
     { service: 'Bank', username: 'u1', password: '123', workspace: 'Personal' },
     { service: 'Forum', username: 'u2', password: 'SharedStrongPassword!99', workspace: 'Personal', totpSecret: 'JBSWY3DPEHPK3PXP' },
@@ -19,7 +18,6 @@ test('Password Health - detects weak, reused, and 2FA-missing accounts per works
   assert.strictEqual(personal.weakItems[0].item.service, 'Bank');
   assert.strictEqual(personal.reusedGroups.length, 1);
   assert.strictEqual(personal.reusedAccountCount, 2);
-  assert.strictEqual(personal.missing2faItems.length, 2);
 });
 
 test('CSV Import - parses Chrome/Edge CSV with quoted commas and escaped quotes', () => {
@@ -58,12 +56,4 @@ test('CSV Import - parses Bitwarden CSV including TOTP URI', () => {
   assert.strictEqual(res.items.length, 1);
   assert.strictEqual(res.items[0].totpSecret, 'GEZDGNBVGY3TQOJQ');
   assert.strictEqual(res.items[0].website, 'https://proton.me');
-});
-
-test('Haptics - defaults to enabled and persists user toggle', async () => {
-  assert.strictEqual(await isHapticsEnabled(), true);
-  await setHapticsEnabled(false);
-  assert.strictEqual(await isHapticsEnabled(), false);
-  await setHapticsEnabled(true);
-  assert.strictEqual(await isHapticsEnabled(), true);
 });

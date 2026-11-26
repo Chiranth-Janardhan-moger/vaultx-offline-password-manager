@@ -7,7 +7,6 @@ import { categories, categorizeService, CategoryType, getCategoryById } from '@/
 import { getServiceColor, getServiceIcon, normalizeServiceName } from '@/lib/service-icons';
 import { saveVault } from '@/lib/vault';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
-import { triggerLightHaptic } from '@/lib/haptics';
 import { getTOTPDetails } from '@/lib/totp';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -173,7 +172,6 @@ export default function SearchScreen() {
 
   const copyToClipboard = async (text: string, label: string) => {
     await copyToClipboardWithAutoClear(text);
-    triggerLightHaptic();
     showToast(`${label} copied`);
   };
 

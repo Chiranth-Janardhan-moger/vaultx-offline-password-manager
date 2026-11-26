@@ -5,7 +5,6 @@ import { useTheme } from '@/context/ThemeProvider';
 import { useToast } from '@/context/ToastProvider';
 import { CardItem, CardType, saveVault } from '@/lib/vault';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
-import { triggerLightHaptic } from '@/lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -103,7 +102,6 @@ export default function CardsScreen() {
   const copyToClipboard = async (text: string, label: string) => {
     if (!text) return;
     await copyToClipboardWithAutoClear(text);
-    triggerLightHaptic();
     showToast(`${label} copied`);
   };
 

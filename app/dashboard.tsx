@@ -6,7 +6,6 @@ import { useToast } from '@/context/ToastProvider';
 import { categories, categorizeService, DEFAULT_DELETE_CATEGORY_KEY, getCategoryById, getEffectiveCategories, type CategoryType } from '@/lib/categories';
 import { getServiceColor, getServiceIcon } from '@/lib/service-icons';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
-import { triggerLightHaptic } from '@/lib/haptics';
 import { getTOTPDetails } from '@/lib/totp';
 import {
   getWorkspaceCustomTags,
@@ -559,7 +558,6 @@ export default function Dashboard() {
   const copyToClipboard = React.useCallback(
     async (text: string, label: string) => {
       await copyToClipboardWithAutoClear(text);
-      triggerLightHaptic();
       showToast(`${label} copied`);
     },
     [showToast]

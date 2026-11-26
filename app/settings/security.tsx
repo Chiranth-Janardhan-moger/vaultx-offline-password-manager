@@ -236,7 +236,7 @@ export default function SecuritySettings() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Password Health</Text>
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    Check weak, reused, and 2FA-missing passwords
+                    Check weak and reused passwords
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />

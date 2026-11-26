@@ -17,12 +17,11 @@ export interface PasswordHealthReport {
   weakItems: HealthEntry[];
   reusedGroups: ReusedPasswordGroup[];
   reusedAccountCount: number;
-  missing2faItems: HealthEntry[];
 }
 
 /**
- * Analyzes passwords in the given workspace completely offline for weak,
- * reused, and 2FA-missing accounts.
+ * Analyzes passwords in the given workspace completely offline for weak
+ * and reused passwords.
  */
 export function analyzePasswordHealth(
   passwords: PasswordItem[] | undefined | null,
@@ -32,7 +31,6 @@ export function analyzePasswordHealth(
   const targetWs = workspace || 'Personal';
 
   const weakItems: HealthEntry[] = [];
-  const missing2faItems: HealthEntry[] = [];
   const byPassword = new Map<string, HealthEntry[]>();
   let totalChecked = 0;
 
@@ -61,10 +59,6 @@ export function analyzePasswordHealth(
         byPassword.set(pw, [entry]);
       }
     }
-
-    if (!item.totpSecret) {
-      missing2faItems.push(entry);
-    }
   });
 
   const reusedGroups: ReusedPasswordGroup[] = [];
@@ -81,6 +75,5 @@ export function analyzePasswordHealth(
     weakItems,
     reusedGroups,
     reusedAccountCount,
-    missing2faItems,
   };
 }

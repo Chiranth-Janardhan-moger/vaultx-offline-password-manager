@@ -4,7 +4,6 @@ import ToggleSwitch from '@/components/ToggleSwitch';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { categories, DEFAULT_DELETE_CATEGORY_KEY } from '@/lib/categories';
-import { isHapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
 import { isSelectWorkspaceOnLoginEnabled, setSelectWorkspaceOnLoginEnabled } from '@/lib/secure';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -25,7 +24,6 @@ export default function GeneralSettings() {
   }, [unlocked, router]);
 
   const [selectWorkspaceOnLogin, setSelectWorkspaceOnLogin] = React.useState(false);
-  const [hapticsEnabled, setHapticsEnabledState] = React.useState(true);
   const [fallbackCategory, setFallbackCategory] = React.useState<string>('google');
   const [showFallbackModal, setShowFallbackModal] = React.useState(false);
 
@@ -38,9 +36,6 @@ export default function GeneralSettings() {
         const wsOnLogin = await isSelectWorkspaceOnLoginEnabled();
         setSelectWorkspaceOnLogin(wsOnLogin);
 
-        const haptics = await isHapticsEnabled();
-        setHapticsEnabledState(haptics);
-
         const fbCat = await SecureStore.getItemAsync(DEFAULT_DELETE_CATEGORY_KEY);
         setFallbackCategory(fbCat || 'google');
       })();
@@ -51,12 +46,6 @@ export default function GeneralSettings() {
     const newValue = !selectWorkspaceOnLogin;
     setSelectWorkspaceOnLogin(newValue);
     await setSelectWorkspaceOnLoginEnabled(newValue);
-  };
-
-  const toggleHaptics = async () => {
-    const next = !hapticsEnabled;
-    setHapticsEnabledState(next);
-    await setHapticsEnabled(next);
   };
 
   const handleSelectFallbackCategory = async (catId: string) => {
@@ -162,8 +151,8 @@ export default function GeneralSettings() {
             </View>
           </View>
 
-          {/* Workspaces & Behavior Section */}
-          <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>BEHAVIOR</Text>
+          {/* Workspaces Section */}
+          <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>WORKSPACES</Text>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Workspace on Login Switch */}
@@ -181,26 +170,6 @@ export default function GeneralSettings() {
                   value={selectWorkspaceOnLogin}
                   onValueChange={toggleSelectWorkspaceOnLogin}
                   accessibilityLabel="Select Workspace on Login"
-                />
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Haptic Feedback */}
-              <View style={styles.row}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="radio-button-on-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Haptic Feedback</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    Subtle vibration when copying or toggling switches
-                  </Text>
-                </View>
-                <ToggleSwitch
-                  value={hapticsEnabled}
-                  onValueChange={toggleHaptics}
-                  accessibilityLabel="Haptic Feedback"
                 />
               </View>
             </View>

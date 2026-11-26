@@ -112,21 +112,6 @@ export default function PasswordHealthScreen() {
               </Text>
               <Text style={[styles.summaryLabel, { color: colors.mutedText }]}>Reused</Text>
             </View>
-            <View
-              style={[
-                styles.summaryCard,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.cardBorder,
-                  borderWidth: colors.cardBorderWidth,
-                },
-              ]}
-            >
-              <Text style={[styles.summaryNum, { color: report.missing2faItems.length > 0 ? colors.primary : '#30D158' }]}>
-                {report.missing2faItems.length}
-              </Text>
-              <Text style={[styles.summaryLabel, { color: colors.mutedText }]}>No 2FA</Text>
-            </View>
           </View>
 
           {report.totalChecked === 0 ? (
@@ -134,7 +119,7 @@ export default function PasswordHealthScreen() {
               <Ionicons name="shield-checkmark-outline" size={44} color={colors.primary} />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No Passwords to Audit</Text>
               <Text style={[styles.emptySub, { color: colors.mutedText }]}>
-                Add accounts to analyze password strength, reuse, and 2FA coverage offline.
+                Add accounts to analyze password strength and reuse offline.
               </Text>
             </View>
           ) : (
@@ -161,23 +146,13 @@ export default function PasswordHealthScreen() {
                 </>
               )}
 
-              {report.missing2faItems.length > 0 && (
-                <>
-                  <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>MISSING 2FA</Text>
-                  <View style={styles.listGap}>
-                    {report.missing2faItems.map((entry) => renderAccountRow(entry, 'Add 2FA', colors.primary))}
-                  </View>
-                </>
-              )}
-
               {report.weakItems.length === 0 &&
-                report.reusedGroups.length === 0 &&
-                report.missing2faItems.length === 0 && (
+                report.reusedGroups.length === 0 && (
                   <View style={styles.emptyBox}>
                     <Ionicons name="checkmark-circle-outline" size={48} color="#30D158" />
                     <Text style={[styles.emptyTitle, { color: colors.text }]}>All Clear</Text>
                     <Text style={[styles.emptySub, { color: colors.mutedText }]}>
-                      All {report.totalChecked} accounts use strong, unique passwords with 2FA enabled.
+                      All {report.totalChecked} accounts use strong, unique passwords.
                     </Text>
                   </View>
                 )}

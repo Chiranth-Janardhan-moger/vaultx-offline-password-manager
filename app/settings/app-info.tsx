@@ -128,21 +128,43 @@ export default function AppInfoSettings() {
         >
           {/* Centered Hero Section */}
           <View style={styles.heroSection}>
-            <View style={[styles.logoWrap, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '35' }]}>
-              <Ionicons name="shield-checkmark" size={42} color={colors.primary} />
+            <View style={[styles.logoWrap, { backgroundColor: colors.primary + '16' }]}>
+              <Ionicons name="shield-checkmark" size={38} color={colors.primary} />
             </View>
             <Text style={[styles.appName, { color: colors.text }]}>VaultX</Text>
-            <View style={[styles.versionBadge, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+            <View style={[styles.versionBadge, { backgroundColor: colors.primary + '14' }]}>
               <Text style={[styles.versionText, { color: colors.primary }]}>
                 Version {appConfig.expo.version}
               </Text>
             </View>
             <Text style={[styles.heroTagline, { color: colors.mutedText }]}>
-              Offline • Secure • Yours
+              Offline. Secure. Yours.
             </Text>
           </View>
 
-          {/* Info Card with Source Code & Feedback */}
+          {/* Security Architecture Summary */}
+          <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>SECURITY ARCHITECTURE</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
+            <View style={styles.cardInner}>
+              <View style={styles.specRow}>
+                <Text style={[styles.specLabel, { color: colors.mutedText }]}>Encryption</Text>
+                <Text style={[styles.specValue, { color: colors.text }]}>AES-256 + PBKDF2-HMAC</Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.specRow}>
+                <Text style={[styles.specLabel, { color: colors.mutedText }]}>Network</Text>
+                <Text style={[styles.specValue, { color: '#30D158' }]}>100% Offline</Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.specRow}>
+                <Text style={[styles.specLabel, { color: colors.mutedText }]}>Storage</Text>
+                <Text style={[styles.specValue, { color: colors.text }]}>On-Device Vault</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Community & Support */}
+          <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>PROJECT & SUPPORT</Text>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Source Code */}
@@ -152,7 +174,7 @@ export default function AppInfoSettings() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Source Code</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>View open-source repository on GitHub</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Open-source repository on GitHub</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
@@ -166,14 +188,17 @@ export default function AppInfoSettings() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Feedback & Support</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Report bugs or suggest new features</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Report bugs or suggest features</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
+            </View>
+          </View>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Erase All Data */}
+          {/* Danger Zone */}
+          <Text style={[styles.sectionHeader, { color: '#ef4444' }]}>DANGER ZONE</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
+            <View style={styles.cardInner}>
               <TouchableOpacity style={styles.row} onPress={confirmWipeAllData} activeOpacity={0.7}>
                 <View style={[styles.iconWrap, { backgroundColor: '#ef444418' }]}>
                   <Ionicons name="trash-outline" size={20} color="#ef4444" />
@@ -181,20 +206,12 @@ export default function AppInfoSettings() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.itemTitle, { color: '#ef4444' }]}>Erase All Data</Text>
                   <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    Full wipe out and factory reset
+                    Permanently wipe vault, keys, and settings
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#ef444480" />
               </TouchableOpacity>
             </View>
-          </View>
-
-          {/* Privacy & Offline Guarantee Footer Note */}
-          <View style={styles.footerWrap}>
-            <Ionicons name="shield-checkmark-outline" size={15} color={colors.mutedText} />
-            <Text style={[styles.footerText, { color: colors.mutedText }]}>
-              VaultX is 100% offline. Zero cloud dependencies. All data is protected with on-device AES-256 encryption.
-            </Text>
           </View>
         </ScrollView>
       </View>
@@ -226,20 +243,19 @@ const styles = StyleSheet.create({
   heroSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 24,
+    paddingVertical: 18,
     gap: 8,
   },
   logoWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    borderWidth: 1.5,
+    width: 76,
+    height: 76,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.5,
     textAlign: 'center',
@@ -248,23 +264,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 999,
-    borderWidth: 1,
     marginTop: 2,
   },
   versionText: {
     fontSize: 13,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   heroTagline: {
     fontSize: 13,
     fontWeight: '500',
-    marginTop: 4,
-    letterSpacing: 0.2,
+    marginTop: 2,
+  },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    marginTop: 20,
+    marginBottom: 8,
+    marginLeft: 4,
+    textTransform: 'uppercase',
   },
   card: {
-    borderRadius: 22,
-    marginTop: 12,
+    borderRadius: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
@@ -279,48 +301,49 @@ const styles = StyleSheet.create({
     }),
   },
   cardInner: {
-    borderRadius: 21.4,
+    borderRadius: 19.4,
     overflow: 'hidden',
+  },
+  specRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  specLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  specValue: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    gap: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
+    gap: 14,
   },
   iconWrap: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   itemSub: {
-    fontSize: 13,
-    marginTop: 3,
-    lineHeight: 18,
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 17,
   },
   divider: {
     height: 1,
     width: '100%',
-  },
-  footerWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 24,
-    paddingHorizontal: 20,
-  },
-  footerText: {
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: 'center',
-    flex: 1,
   },
 });

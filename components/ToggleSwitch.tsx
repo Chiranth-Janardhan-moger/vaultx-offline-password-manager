@@ -1,5 +1,4 @@
 import { useTheme } from '@/context/ThemeProvider';
-import { triggerLightHaptic } from '@/lib/haptics';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -49,7 +48,6 @@ export default function ToggleSwitch({
 
   const handlePress = () => {
     if (disabled) return;
-    triggerLightHaptic();
     onValueChange(!value);
   };
 
