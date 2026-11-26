@@ -36,6 +36,7 @@ export default function EditPassword() {
   const [pw, setPw] = React.useState(existingPassword?.password || '');
   const [showPw, setShowPw] = React.useState(false);
   const [notes, setNotes] = React.useState(existingPassword?.notes || '');
+  const [website, setWebsite] = React.useState(existingPassword?.website || '');
   const [loginPin, setLoginPin] = React.useState(existingPassword?.loginPin || '');
   const [showLoginPin, setShowLoginPin] = React.useState(false);
   const [transactionPin, setTransactionPin] = React.useState(existingPassword?.transactionPin || '');
@@ -49,6 +50,8 @@ export default function EditPassword() {
   );
   const [workspace, setWorkspace] = React.useState(existingPassword?.workspace || 'Personal');
   const [totpSecret, setTotpSecret] = React.useState(existingPassword?.totpSecret || '');
+  const [totpBackupCodes, setTotpBackupCodes] = React.useState(existingPassword?.totpBackupCodes || '');
+  const isNote = existingPassword?.itemType === 'note';
   const [showAddTagModal, setShowAddTagModal] = React.useState(false);
   const [newTagName, setNewTagName] = React.useState('');
 
@@ -210,31 +213,43 @@ export default function EditPassword() {
     if (!service.trim()) {
       showAlert({
         title: 'Required',
-        message: 'Service name is required',
+        message: isNote ? 'Note title is required' : 'Service name is required',
         confirmText: 'OK',
         onConfirm: () => {},
       });
       return;
     }
-    if (!username.trim()) {
-      showAlert({
-        title: 'Required',
-        message: 'Username is required',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-      return;
-    }
+    if (isNote) {
+      if (!notes.trim()) {
+        showAlert({
+          title: 'Required',
+          message: 'Note content is required',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+    } else {
+      if (!username.trim()) {
+        showAlert({
+          title: 'Required',
+          message: 'Username is required',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
 
-    const hasAnyPin = loginPin || transactionPin || otherPins.some(p => p.pin);
-    if (!pw && !hasAnyPin) {
-      showAlert({
-        title: 'Required',
-        message: 'Password or at least one PIN / custom field is required',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-      return;
+      const hasAnyPin = loginPin || transactionPin || otherPins.some(p => p.pin);
+      if (!pw && !hasAnyPin) {
+        showAlert({
+          title: 'Required',
+          message: 'Password or at least one PIN / custom field is required',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
     }
 
     if (!folder && !selectedCategory) {
@@ -262,21 +277,37 @@ export default function EditPassword() {
         category = categorizeService(service.trim());
       }
 
-      const item: PasswordItem = {
-        service: service.trim(),
-        username: username.trim(),
-        password: pw,
-        notes: notes || undefined,
-        category,
-        loginPin: loginPin || undefined,
-        transactionPin: transactionPin || undefined,
-        otherPin: validOtherPins.length > 0 ? JSON.stringify(validOtherPins.map(p => ({ label: p.label, pin: p.pin }))) : undefined,
-        createdAt: existingPassword?.createdAt || Date.now(),
-        modifiedAt: Date.now(),
-        folder: folder.trim() || undefined,
-        workspace: workspace.trim() || 'Personal',
-        totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
-      };
+      const item: PasswordItem = isNote
+        ? {
+            itemType: 'note',
+            service: service.trim(),
+            username: '',
+            password: '',
+            notes: notes.trim(),
+            category,
+            createdAt: existingPassword?.createdAt || Date.now(),
+            modifiedAt: Date.now(),
+            folder: folder.trim() || undefined,
+            workspace: workspace.trim() || 'Personal',
+          }
+        : {
+            itemType: 'password',
+            service: service.trim(),
+            username: username.trim(),
+            password: pw,
+            website: website.trim() || undefined,
+            notes: notes || undefined,
+            category,
+            loginPin: loginPin || undefined,
+            transactionPin: transactionPin || undefined,
+            otherPin: validOtherPins.length > 0 ? JSON.stringify(validOtherPins.map(p => ({ label: p.label, pin: p.pin }))) : undefined,
+            createdAt: existingPassword?.createdAt || Date.now(),
+            modifiedAt: Date.now(),
+            folder: folder.trim() || undefined,
+            workspace: workspace.trim() || 'Personal',
+            totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
+            totpBackupCodes: totpBackupCodes.trim() || undefined,
+          };
 
       const updatedPasswords = [...vault.passwords];
       updatedPasswords[passwordIndex] = item;
@@ -333,7 +364,7 @@ export default function EditPassword() {
     }
   }, [runWithBackgroundLockSuppressed, service, username, showAlert]);
 
-  const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
+  const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border, borderWidth: colors.borderWidth }];
 
   return (
     <Screen>
@@ -347,11 +378,13 @@ export default function EditPassword() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Edit Password</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isNote ? 'Edit Secure Note' : 'Edit Password'}
+          </Text>
           <View style={styles.NoiconBtn} />
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: colors.borderWidth }]}>
           {/* Tags (1st) */}
           <Text style={[styles.label, { color: colors.mutedText }]}>Tags *</Text>
           <ScrollView
@@ -383,15 +416,10 @@ export default function EditPassword() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={(isSelected ? 'checkmark-circle' : (cat.icon || 'folder-outline')) as any}
-                    size={15}
-                    color={isSelected ? colors.primary : colors.mutedText}
-                  />
                   <Text
                     style={[
                       styles.tagChipText,
-                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '600' : '500' },
                     ]}
                   >
                     {cat.name}
@@ -423,15 +451,10 @@ export default function EditPassword() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={isSelected ? 'checkmark-circle' : 'pricetag-outline'}
-                    size={15}
-                    color={isSelected ? colors.primary : colors.mutedText}
-                  />
                   <Text
                     style={[
                       styles.tagChipText,
-                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '600' : '500' },
                     ]}
                   >
                     {tagName}
@@ -463,14 +486,30 @@ export default function EditPassword() {
             </TouchableOpacity>
           </ScrollView>
 
-          <Text style={[styles.label, { color: colors.mutedText }]}>Website / App name</Text>
+          <Text style={[styles.label, { color: colors.mutedText }]}>
+            {isNote ? 'Note Title' : 'Website / App name'}
+          </Text>
           <TextInput
             style={inputStyle}
-            placeholder="e.g. Google"
+            placeholder={isNote ? 'e.g. Home Wi-Fi / Recovery Key' : 'e.g. Google'}
             placeholderTextColor={colors.mutedText}
             value={service}
             onChangeText={setService}
           />
+          {isNote ? (
+            <>
+              <Text style={[styles.label, { color: colors.mutedText }]}>Note Content</Text>
+              <TextInput
+                style={[...inputStyle, { minHeight: 140, textAlignVertical: 'top' }]}
+                placeholder="Write your encrypted note, license key, or memo..."
+                placeholderTextColor={colors.mutedText}
+                multiline
+                value={notes}
+                onChangeText={setNotes}
+              />
+            </>
+          ) : (
+            <>
           {normalizedSuggestion ? (
             <TouchableOpacity 
               style={[styles.suggestionChip, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}
@@ -482,6 +521,18 @@ export default function EditPassword() {
               </Text>
             </TouchableOpacity>
           ) : null}
+
+          <Text style={[styles.label, { color: colors.mutedText }]}>Website / URL (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. https://google.com"
+            placeholderTextColor={colors.mutedText}
+            value={website}
+            onChangeText={setWebsite}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
 
           <Text style={[styles.label, { color: colors.mutedText }]}>Username / Email</Text>
           <TextInput
@@ -617,6 +668,19 @@ export default function EditPassword() {
             </TouchableOpacity>
           </View>
 
+          {/* 2FA Backup / Recovery Codes */}
+          <Text style={[styles.label, { color: colors.mutedText }]}>2FA Backup / Recovery Codes (Optional)</Text>
+          <TextInput
+            style={[...inputStyle, { minHeight: 74, textAlignVertical: 'top' }]}
+            placeholder="Paste one-time recovery codes (one per line)"
+            placeholderTextColor={colors.mutedText}
+            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={totpBackupCodes}
+            onChangeText={setTotpBackupCodes}
+          />
+
           {/* PIN Section Toggle */}
           <TouchableOpacity
             style={[styles.pinToggle, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
@@ -735,6 +799,8 @@ export default function EditPassword() {
               </TouchableOpacity>
             </View>
           ) : null}
+            </>
+          )}
 
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.primary }, loading && { opacity: 0.6 }]}
@@ -823,16 +889,16 @@ export default function EditPassword() {
 const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  title: { fontSize: 20, fontWeight: '900' },
+  iconBtn: { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  title: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
   NoiconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderColor: 'transparent' },
-  card: { borderWidth: 1, borderRadius: 16, padding: 14 },
-  label: { fontSize: 12, fontWeight: '800', marginTop: 8, marginBottom: 6 },
-  input: { borderWidth: 1, padding: 12, borderRadius: 12, fontSize: 15 },
+  card: { borderWidth: 1, borderRadius: 20, padding: 14 },
+  label: { fontSize: 12, fontWeight: '600', marginTop: 8, marginBottom: 6 },
+  input: { borderWidth: 1, padding: 12, borderRadius: 14, fontSize: 15 },
   inputWrap: { position: 'relative' },
-  eyeBtn: { position: 'absolute', right: 12, top: 12 },
-  button: { padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 14 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  eyeBtn: { position: 'absolute', right: 2, top: 0, bottom: 0, width: 44, alignItems: 'center', justifyContent: 'center' },
+  button: { padding: 14, borderRadius: 999, alignItems: 'center', marginTop: 14 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   pinToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginTop: 12 },
   pinToggleText: { flex: 1, fontSize: 14, fontWeight: '700' },
   pinSection: { marginTop: 12 },

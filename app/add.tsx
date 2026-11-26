@@ -28,11 +28,13 @@ export default function AddPassword() {
   const { showAlert, AlertComponent } = useCustomAlert();
   const params = useLocalSearchParams();
 
+  const [itemType, setItemType] = React.useState<'password' | 'note'>('password');
   const [service, setService] = React.useState('');
   const [username, setUsername] = React.useState('');
   const [pw, setPw] = React.useState('');
   const [showPw, setShowPw] = React.useState(false);
   const [notes, setNotes] = React.useState('');
+  const [website, setWebsite] = React.useState('');
   const [loginPin, setLoginPin] = React.useState('');
   const [showLoginPin, setShowLoginPin] = React.useState(false);
   const [transactionPin, setTransactionPin] = React.useState('');
@@ -43,6 +45,7 @@ export default function AddPassword() {
   const [folder, setFolder] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<CategoryType | null>(null);
   const [totpSecret, setTotpSecret] = React.useState('');
+  const [totpBackupCodes, setTotpBackupCodes] = React.useState('');
   const userManuallySelectedTagRef = React.useRef(false);
   const [workspace, setWorkspace] = React.useState<string>(
     (params.workspace as string) || activeWorkspace || 'Personal'
@@ -231,30 +234,52 @@ export default function AddPassword() {
       });
       return;
     }
-    if (!username.trim()) {
+    if (!service.trim()) {
       showAlert({
         title: 'Required',
-        message: 'Username/Email is required',
+        message: itemType === 'note' ? 'Note title is required' : 'Website / App name is required',
         confirmText: 'OK',
         onConfirm: () => {},
       });
       return;
     }
-    
-    // Check if at least password OR any PIN is provided
-    const hasLoginPin = loginPin.trim().length > 0;
-    const hasTransactionPin = transactionPin.trim().length > 0;
-    const hasOtherPins = otherPins.some(p => p.pin.trim().length > 0);
-    const hasAnyPin = hasLoginPin || hasTransactionPin || hasOtherPins;
-    
-    if (!pw && !hasAnyPin) {
-      showAlert({
-        title: 'Required',
-        message: 'Please provide either a password or at least one PIN / custom field',
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
-      return;
+
+    if (itemType === 'note') {
+      if (!notes.trim()) {
+        showAlert({
+          title: 'Required',
+          message: 'Note content is required',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+    } else {
+      if (!username.trim()) {
+        showAlert({
+          title: 'Required',
+          message: 'Username/Email is required',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+      
+      // Check if at least password OR any PIN is provided
+      const hasLoginPin = loginPin.trim().length > 0;
+      const hasTransactionPin = transactionPin.trim().length > 0;
+      const hasOtherPins = otherPins.some(p => p.pin.trim().length > 0);
+      const hasAnyPin = hasLoginPin || hasTransactionPin || hasOtherPins;
+      
+      if (!pw && !hasAnyPin) {
+        showAlert({
+          title: 'Required',
+          message: 'Please provide either a password or at least one PIN / custom field',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
     }
 
     let finalCategory = selectedCategory;
@@ -298,21 +323,38 @@ export default function AddPassword() {
         .filter(p => p.label.trim() && p.pin.trim())
         .map(p => ({ label: p.label.trim(), pin: p.pin.trim() }));
       
-      const item: PasswordItem = { 
-        service: service.trim(), 
-        username: username.trim(), 
-        password: pw || '', 
-        notes,
-        category,
-        loginPin: loginPin.trim() || undefined,
-        transactionPin: transactionPin.trim() || undefined,
-        otherPin: otherPinsData.length > 0 ? JSON.stringify(otherPinsData) : undefined,
-        createdAt: Date.now(),
-        modifiedAt: Date.now(),
-        folder: finalFolder.trim() || undefined,
-        workspace: workspace.trim() || 'Personal',
-        totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
-      };
+      const item: PasswordItem =
+        itemType === 'note'
+          ? {
+              itemType: 'note',
+              service: service.trim(),
+              username: '',
+              password: '',
+              notes: notes.trim(),
+              category,
+              createdAt: Date.now(),
+              modifiedAt: Date.now(),
+              folder: finalFolder.trim() || undefined,
+              workspace: workspace.trim() || 'Personal',
+            }
+          : {
+              itemType: 'password',
+              service: service.trim(),
+              username: username.trim(),
+              password: pw || '',
+              website: website.trim() || undefined,
+              notes,
+              category,
+              loginPin: loginPin.trim() || undefined,
+              transactionPin: transactionPin.trim() || undefined,
+              otherPin: otherPinsData.length > 0 ? JSON.stringify(otherPinsData) : undefined,
+              createdAt: Date.now(),
+              modifiedAt: Date.now(),
+              folder: finalFolder.trim() || undefined,
+              workspace: workspace.trim() || 'Personal',
+              totpSecret: totpSecret.trim().replace(/\s+/g, '').toUpperCase() || undefined,
+              totpBackupCodes: totpBackupCodes.trim() || undefined,
+            };
       const next = { ...vault, passwords: [...vault.passwords, item] };
       await saveVault(next, vaultKey);
       setVault(() => next);
@@ -327,7 +369,7 @@ export default function AddPassword() {
     } finally {
       setLoading(false);
     }
-  }, [loading, vault, vaultKey, service, username, pw, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, workspace, totpSecret, setVault, router, showAlert]);
+  }, [loading, vault, vaultKey, itemType, service, username, pw, website, notes, loginPin, transactionPin, otherPins, folder, selectedCategory, workspace, totpSecret, totpBackupCodes, setVault, router, showAlert]);
 
   const handleScan2FA = React.useCallback(async () => {
     const outcome = await scanTotpQrCode(runWithBackgroundLockSuppressed);
@@ -360,7 +402,7 @@ export default function AddPassword() {
     }
   }, [runWithBackgroundLockSuppressed, service, username, handleServiceChange, showAlert]);
 
-  const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border }];
+  const inputStyle = [styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.border, borderWidth: colors.borderWidth }];
 
   return (
     <Screen>
@@ -374,11 +416,37 @@ export default function AddPassword() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Add Password</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {itemType === 'note' ? 'Add Secure Note' : 'Add Password'}
+          </Text>
           <View style={styles.NoiconBtn} />
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* Password / Secure Note Switcher */}
+        <View style={[styles.typeSwitcher, { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth }]}>
+          {(['password', 'note'] as const).map((typeKey) => {
+            const active = itemType === typeKey;
+            return (
+              <TouchableOpacity
+                key={typeKey}
+                style={[styles.typeTab, active && { backgroundColor: colors.card }]}
+                onPress={() => setItemType(typeKey)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={typeKey === 'password' ? 'key-outline' : 'document-text-outline'}
+                  size={16}
+                  color={active ? colors.primary : colors.mutedText}
+                />
+                <Text style={[styles.typeTabText, { color: active ? colors.text : colors.mutedText }]}>
+                  {typeKey === 'password' ? 'Password' : 'Secure Note'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: colors.borderWidth }]}>
           {/* Tags (1st) */}
           <Text style={[styles.label, { color: colors.mutedText }]}>Tags *</Text>
           <ScrollView
@@ -411,15 +479,10 @@ export default function AddPassword() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={(isSelected ? 'checkmark-circle' : (cat.icon || 'folder-outline')) as any}
-                    size={15}
-                    color={isSelected ? colors.primary : colors.mutedText}
-                  />
                   <Text
                     style={[
                       styles.tagChipText,
-                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '600' : '500' },
                     ]}
                   >
                     {cat.name}
@@ -452,15 +515,10 @@ export default function AddPassword() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={isSelected ? 'checkmark-circle' : 'pricetag-outline'}
-                    size={15}
-                    color={isSelected ? colors.primary : colors.mutedText}
-                  />
                   <Text
                     style={[
                       styles.tagChipText,
-                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '700' : '500' },
+                      { color: isSelected ? colors.primary : colors.text, fontWeight: isSelected ? '600' : '500' },
                     ]}
                   >
                     {tagName}
@@ -492,14 +550,30 @@ export default function AddPassword() {
             </TouchableOpacity>
           </ScrollView>
 
-          <Text style={[styles.label, { color: colors.mutedText }]}>Website / App name</Text>
+          <Text style={[styles.label, { color: colors.mutedText }]}>
+            {itemType === 'note' ? 'Note Title' : 'Website / App name'}
+          </Text>
           <TextInput
             style={inputStyle}
-            placeholder="e.g. Google"
+            placeholder={itemType === 'note' ? 'e.g. Home Wi-Fi / Recovery Key' : 'e.g. Google'}
             placeholderTextColor={colors.mutedText}
             value={service}
             onChangeText={handleServiceChange}
           />
+          {itemType === 'note' ? (
+            <>
+              <Text style={[styles.label, { color: colors.mutedText }]}>Note Content</Text>
+              <TextInput
+                style={[...inputStyle, { minHeight: 140, textAlignVertical: 'top' }]}
+                placeholder="Write your encrypted note, license key, or memo..."
+                placeholderTextColor={colors.mutedText}
+                multiline
+                value={notes}
+                onChangeText={setNotes}
+              />
+            </>
+          ) : (
+            <>
           {normalizedSuggestion ? (
             <TouchableOpacity 
               style={[styles.suggestionChip, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}
@@ -511,6 +585,18 @@ export default function AddPassword() {
               </Text>
             </TouchableOpacity>
           ) : null}
+
+          <Text style={[styles.label, { color: colors.mutedText }]}>Website / URL (Optional)</Text>
+          <TextInput
+            style={inputStyle}
+            placeholder="e.g. https://google.com"
+            placeholderTextColor={colors.mutedText}
+            value={website}
+            onChangeText={setWebsite}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
 
           <Text style={[styles.label, { color: colors.mutedText }]}>Username / Email</Text>
           <TextInput
@@ -650,6 +736,19 @@ export default function AddPassword() {
               <Ionicons name="scan-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
+
+          {/* 2FA Backup / Recovery Codes */}
+          <Text style={[styles.label, { color: colors.mutedText }]}>2FA Backup / Recovery Codes (Optional)</Text>
+          <TextInput
+            style={[...inputStyle, { minHeight: 74, textAlignVertical: 'top' }]}
+            placeholder="Paste one-time recovery codes (one per line)"
+            placeholderTextColor={colors.mutedText}
+            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={totpBackupCodes}
+            onChangeText={setTotpBackupCodes}
+          />
 
           {/* PIN Section Toggle */}
           <TouchableOpacity
@@ -800,6 +899,8 @@ export default function AddPassword() {
               </TouchableOpacity>
             </View>
           ) : null}
+            </>
+          )}
 
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.primary }, loading && { opacity: 0.6 }]}
@@ -888,16 +989,36 @@ export default function AddPassword() {
 const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  typeSwitcher: {
+    flexDirection: 'row',
+    borderRadius: 999,
+    padding: 4,
+    marginBottom: 14,
+    gap: 4,
+  },
+  typeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  typeTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   NoiconBtn: { width: 40, height: 40 ,borderColor: 'transparent'},
-  iconBtn: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  title: { fontSize: 20, fontWeight: '900' },
-  card: { borderWidth: 1, borderRadius: 16, padding: 14 },
-  label: { fontSize: 12, fontWeight: '800', marginTop: 8, marginBottom: 6 },
-  input: { borderWidth: 1, padding: 12, borderRadius: 12, fontSize: 15 },
+  iconBtn: { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  title: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
+  card: { borderWidth: 1, borderRadius: 20, padding: 14 },
+  label: { fontSize: 12, fontWeight: '600', marginTop: 8, marginBottom: 6 },
+  input: { borderWidth: 1, padding: 12, borderRadius: 14, fontSize: 15 },
   inputWrap: { position: 'relative' },
-  eyeBtn: { position: 'absolute', right: 2, top: 0, bottom: 0, height: 44, width: 44, alignItems: 'center', justifyContent: 'center' },
-  button: { padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 14 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  eyeBtn: { position: 'absolute', right: 2, top: 0, bottom: 0, width: 44, alignItems: 'center', justifyContent: 'center' },
+  button: { padding: 14, borderRadius: 999, alignItems: 'center', marginTop: 14 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   pinToggle: {
     flexDirection: 'row',
     alignItems: 'center',

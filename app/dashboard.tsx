@@ -1,11 +1,12 @@
-import BottomNavBar from '@/components/BottomNavBar';
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
+import { useToast } from '@/context/ToastProvider';
 import { categories, categorizeService, DEFAULT_DELETE_CATEGORY_KEY, getCategoryById, getEffectiveCategories, type CategoryType } from '@/lib/categories';
 import { getServiceColor, getServiceIcon } from '@/lib/service-icons';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
+import { triggerLightHaptic } from '@/lib/haptics';
 import { getTOTPDetails } from '@/lib/totp';
 import {
   getWorkspaceCustomTags,
@@ -20,6 +21,7 @@ import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import {
   FlatList,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -235,7 +237,7 @@ function FilterPill({
 }: FilterPillProps) {
   const { colors, showBorders, resolved } = useTheme();
   const [isHovered, setIsHovered] = React.useState(false);
-  const activePillBg = resolved === 'dark' ? '#1A2E44' : '#E0EEFF'; // Solid light sky blue matching BottomNavBar
+  const activePillBg = resolved === 'dark' ? 'rgba(77, 150, 255, 0.16)' : 'rgba(59, 125, 237, 0.12)';
 
   return (
     <Pressable
@@ -255,7 +257,7 @@ function FilterPill({
                 backgroundColor: activePillBg,
                 borderColor: showBorders
                   ? (resolved === 'dark' ? '#3A3A3C' : '#000000')
-                  : (resolved === 'dark' ? '#2A4A6F' : '#B8D7FC'),
+                  : 'transparent',
                 borderWidth: colors.borderWidth,
                 elevation: 0,
               }
@@ -263,7 +265,7 @@ function FilterPill({
                 backgroundColor: colors.card,
                 borderColor: colors.border,
                 borderWidth: colors.borderWidth,
-                elevation: 1,
+                elevation: 0,
               },
         ];
       }}
@@ -276,6 +278,21 @@ function FilterPill({
   );
 }
 
+function PillCountBadge({ count, isHighlighted }: { count: number; isHighlighted: boolean }) {
+  const { colors, resolved } = useTheme();
+  const bg = isHighlighted
+    ? (resolved === 'dark' ? 'rgba(77, 150, 255, 0.22)' : 'rgba(59, 125, 237, 0.16)')
+    : (resolved === 'dark' ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)');
+
+  return (
+    <View style={[styles.pillCountCircle, { backgroundColor: bg }]}>
+      <Text style={[styles.pillCountText, { color: isHighlighted ? colors.primary : colors.mutedText }]}>
+        {count}
+      </Text>
+    </View>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const { unlocked, vault, vaultKey, setVault, lock, resetAutoLockTimer, activeWorkspace } = useSession();
@@ -283,12 +300,14 @@ export default function Dashboard() {
 
   // Light-gray / clean card tokens for dialogs matching webstack
   const dullCardBg = resolved === 'dark' ? '#1c2027' : '#FFFFFF';
+  const actionTileBg = resolved === 'dark' ? 'rgba(255, 255, 255, 0.06)' : '#F5F5F7';
   const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
   const dullInputBg = resolved === 'dark' ? '#13161c' : '#F9FAFB';
   const dullInputBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
   const dullCancelBg = resolved === 'dark' ? '#252a34' : '#F3F4F6';
   const dullCancelBorder = resolved === 'dark' ? '#333a48' : '#E5E7EB';
   const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast } = useToast();
 
   // Selected filter: 'all' | 'favorites' | CategoryType | `folder:${string}`
   const [selectedPill, setSelectedPill] = React.useState<string>('all');
@@ -336,10 +355,17 @@ export default function Dashboard() {
   );
 
 
-  // Unique custom folders & user created tags (filtered to active workspace)
+  // Unique custom folders & user created tags (filtered to active workspace, excluding built-in categories)
   const uniqueFolders = React.useMemo(() => {
     if (!vault) return [];
     const currentWs = activeWorkspace || 'Personal';
+    const currentWsDeleted = getWorkspaceDeletedCategories(vault, currentWs);
+    const effectiveCats = getEffectiveCategories(currentWsDeleted, vault.categoryOverrides);
+    const builtInNames = new Set<string>();
+    effectiveCats.forEach((c) => {
+      builtInNames.add(c.name.toLowerCase());
+      builtInNames.add(c.id.toLowerCase());
+    });
     const pFolders = (vault.passwords || [])
       .filter((p) => (p.workspace || 'Personal') === currentWs)
       .map((p) => p.folder)
@@ -349,7 +375,17 @@ export default function Dashboard() {
       .map((c) => c.folder)
       .filter(Boolean) as string[];
     const custom = getWorkspaceCustomTags(vault, currentWs);
-    return Array.from(new Set([...custom, ...pFolders, ...cFolders]));
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const raw of [...custom, ...pFolders, ...cFolders]) {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      const lower = trimmed.toLowerCase();
+      if (builtInNames.has(lower) || seen.has(lower)) continue;
+      seen.add(lower);
+      result.push(trimmed);
+    }
+    return result;
   }, [vault, activeWorkspace]);
 
   // Total passwords in the active workspace
@@ -367,6 +403,27 @@ export default function Dashboard() {
       (pwd) => (pwd.workspace || 'Personal') === currentWs && Boolean(pwd.isFavorite)
     ).length;
   }, [vault?.passwords, activeWorkspace]);
+
+  React.useEffect(() => {
+    if (selectedPill === 'favorites' && activeWorkspaceFavoritesCount === 0) {
+      setSelectedPill('all');
+    }
+  }, [selectedPill, activeWorkspaceFavoritesCount]);
+
+  // Total secure notes in the active workspace
+  const activeWorkspaceNotesCount = React.useMemo(() => {
+    if (!vault?.passwords) return 0;
+    const currentWs = activeWorkspace || 'Personal';
+    return vault.passwords.filter(
+      (pwd) => (pwd.workspace || 'Personal') === currentWs && pwd.itemType === 'note'
+    ).length;
+  }, [vault?.passwords, activeWorkspace]);
+
+  React.useEffect(() => {
+    if (selectedPill === 'notes' && activeWorkspaceNotesCount === 0) {
+      setSelectedPill('all');
+    }
+  }, [selectedPill, activeWorkspaceNotesCount]);
 
   // All 2FA enabled accounts in the active workspace
   const activeWorkspace2faAccounts = React.useMemo(() => {
@@ -405,8 +462,9 @@ export default function Dashboard() {
     vault.passwords.forEach((pwd) => {
       const itemWs = pwd.workspace || 'Personal';
       if (itemWs !== (activeWorkspace || 'Personal')) return;
-      if (pwd.folder) {
-        counts[pwd.folder] = (counts[pwd.folder] || 0) + 1;
+      const key = pwd.folder?.trim().toLowerCase();
+      if (key) {
+        counts[key] = (counts[key] || 0) + 1;
       }
     });
     return counts;
@@ -425,10 +483,12 @@ export default function Dashboard() {
 
         if (selectedPill === 'favorites') {
           if (!pwd.isFavorite) return false;
+        } else if (selectedPill === 'notes') {
+          if (pwd.itemType !== 'note') return false;
         } else if (selectedPill !== 'all') {
           if (selectedPill.startsWith('folder:')) {
-            const folderName = selectedPill.replace('folder:', '');
-            if (pwd.folder !== folderName) return false;
+            const folderName = selectedPill.replace('folder:', '').trim().toLowerCase();
+            if ((pwd.folder || '').trim().toLowerCase() !== folderName) return false;
           } else {
             const wsDeleted = getWorkspaceDeletedCategories(vault, activeWorkspace || 'Personal');
             const pwdCategory = pwd.category || categorizeService(pwd.service, wsDeleted);
@@ -439,9 +499,10 @@ export default function Dashboard() {
         if (q) {
           const matchService = pwd.service.toLowerCase().includes(q);
           const matchUsername = pwd.username.toLowerCase().includes(q);
+          const matchWebsite = pwd.website?.toLowerCase().includes(q);
           const matchFolder = pwd.folder?.toLowerCase().includes(q);
           const matchNotes = pwd.notes?.toLowerCase().includes(q);
-          return matchService || matchUsername || matchFolder || matchNotes;
+          return matchService || matchUsername || matchWebsite || matchFolder || matchNotes;
         }
 
         return true;
@@ -498,12 +559,37 @@ export default function Dashboard() {
   const copyToClipboard = React.useCallback(
     async (text: string, label: string) => {
       await copyToClipboardWithAutoClear(text);
-      showAlert({
-        title: 'Copied',
-        message: `${label} copied to clipboard (auto-clears in 45s)`,
-        confirmText: 'OK',
-        onConfirm: () => {},
-      });
+      triggerLightHaptic();
+      showToast(`${label} copied`);
+    },
+    [showToast]
+  );
+
+  const openWebsite = React.useCallback(
+    async (rawUrl: string) => {
+      const trimmed = rawUrl.trim();
+      if (!trimmed) return;
+      const schemeMatch = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(trimmed);
+      const targetUrl = schemeMatch ? trimmed : `https://${trimmed}`;
+      if (!/^https?:\/\//i.test(targetUrl)) {
+        showAlert({
+          title: 'Invalid URL',
+          message: 'Only http:// and https:// links can be opened.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+      try {
+        await Linking.openURL(targetUrl);
+      } catch {
+        showAlert({
+          title: 'Unable to Open',
+          message: 'Could not open this website in your browser.',
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+      }
     },
     [showAlert]
   );
@@ -1143,41 +1229,67 @@ export default function Dashboard() {
               accessibilityLabel={`All (${activeWorkspacePasswordsCount})`}
             >
               {({ isHighlighted }) => (
-                <Text
-                  style={[
-                    styles.pillText,
-                    { color: isHighlighted ? colors.primary : colors.text },
-                  ]}
-                >
-                  All ({activeWorkspacePasswordsCount})
-                </Text>
-              )}
-            </FilterPill>
-
-            {/* Favorites Pill */}
-            <FilterPill
-              isSelected={selectedPill === 'favorites'}
-              onPress={() => setSelectedPill('favorites')}
-              accessibilityLabel={`Favorites (${activeWorkspaceFavoritesCount})`}
-            >
-              {({ isHighlighted }) => (
                 <>
-                  <Ionicons
-                    name={selectedPill === 'favorites' ? 'star' : 'star-outline'}
-                    size={16}
-                    color={selectedPill === 'favorites' ? '#f59e0b' : isHighlighted ? colors.primary : colors.mutedText}
-                  />
                   <Text
                     style={[
                       styles.pillText,
                       { color: isHighlighted ? colors.primary : colors.text },
                     ]}
                   >
-                    ({activeWorkspaceFavoritesCount})
+                    All
                   </Text>
+                  <PillCountBadge count={activeWorkspacePasswordsCount} isHighlighted={isHighlighted} />
                 </>
               )}
             </FilterPill>
+
+            {/* Favorites Pill (only shown when at least 1 favorite exists) */}
+            {activeWorkspaceFavoritesCount > 0 ? (
+              <FilterPill
+                isSelected={selectedPill === 'favorites'}
+                onPress={() => setSelectedPill('favorites')}
+                accessibilityLabel={`Favorites (${activeWorkspaceFavoritesCount})`}
+              >
+                {({ isHighlighted }) => (
+                  <>
+                    <Ionicons
+                      name={selectedPill === 'favorites' ? 'star' : 'star-outline'}
+                      size={16}
+                      color={selectedPill === 'favorites' ? '#f59e0b' : isHighlighted ? colors.primary : colors.mutedText}
+                    />
+                    <PillCountBadge count={activeWorkspaceFavoritesCount} isHighlighted={isHighlighted} />
+                  </>
+                )}
+              </FilterPill>
+            ) : null}
+
+            {/* Notes Pill (only shown when at least 1 secure note exists) */}
+            {activeWorkspaceNotesCount > 0 ? (
+              <FilterPill
+                isSelected={selectedPill === 'notes'}
+                onPress={() => setSelectedPill('notes')}
+                accessibilityLabel={`Notes (${activeWorkspaceNotesCount})`}
+              >
+                {({ isHighlighted }) => (
+                  <>
+                    <Ionicons
+                      name={selectedPill === 'notes' ? 'document-text' : 'document-text-outline'}
+                      size={15}
+                      color={isHighlighted ? colors.primary : colors.mutedText}
+                    />
+                    <Text
+                      style={[
+                        styles.pillText,
+                        { color: isHighlighted ? colors.primary : colors.text },
+                      ]}
+                    >
+                      Notes
+                    </Text>
+                    <PillCountBadge count={activeWorkspaceNotesCount} isHighlighted={isHighlighted} />
+                  </>
+                )}
+              </FilterPill>
+            ) : null}
 
             {/* Standard Category Pills */}
             {effectiveCategories.map((cat) => {
@@ -1198,14 +1310,17 @@ export default function Dashboard() {
                   accessibilityLabel={`${cat.name} (${count})`}
                 >
                   {({ isHighlighted }) => (
-                    <Text
-                      style={[
-                        styles.pillText,
-                        { color: isHighlighted ? colors.primary : colors.text },
-                      ]}
-                    >
-                      {cat.name} ({count})
-                    </Text>
+                    <>
+                      <Text
+                        style={[
+                          styles.pillText,
+                          { color: isHighlighted ? colors.primary : colors.text },
+                        ]}
+                      >
+                        {cat.name}
+                      </Text>
+                      <PillCountBadge count={count} isHighlighted={isHighlighted} />
+                    </>
                   )}
                 </FilterPill>
               );
@@ -1213,7 +1328,7 @@ export default function Dashboard() {
 
             {/* Custom Folders & Tags Pills */}
             {uniqueFolders.map((folderName) => {
-              const count = folderCounts[folderName] || 0;
+              const count = folderCounts[folderName.trim().toLowerCase()] || 0;
               const pillId = `folder:${folderName}`;
               const isSelected = selectedPill === pillId;
 
@@ -1226,14 +1341,17 @@ export default function Dashboard() {
                   accessibilityLabel={`${folderName} (${count})`}
                 >
                   {({ isHighlighted }) => (
-                    <Text
-                      style={[
-                        styles.pillText,
-                        { color: isHighlighted ? colors.primary : colors.text },
-                      ]}
-                    >
-                      {folderName} ({count})
-                    </Text>
+                    <>
+                      <Text
+                        style={[
+                          styles.pillText,
+                          { color: isHighlighted ? colors.primary : colors.text },
+                        ]}
+                      >
+                        {folderName}
+                      </Text>
+                      <PillCountBadge count={count} isHighlighted={isHighlighted} />
+                    </>
                   )}
                 </FilterPill>
               );
@@ -1312,8 +1430,9 @@ export default function Dashboard() {
             </View>
           }
           renderItem={({ item }) => {
-            const iconName = getServiceIcon(item.service);
-            const iconColor = getServiceColor(item.service, resolved === 'dark');
+            const isNote = item.itemType === 'note';
+            const iconName = isNote ? 'document-text-outline' : getServiceIcon(item.service);
+            const iconColor = isNote ? colors.primary : getServiceColor(item.service, resolved === 'dark');
             const isExpanded = expandedIndex === item.globalIndex;
 
             return (
@@ -1339,7 +1458,7 @@ export default function Dashboard() {
                       {item.service}
                     </Text>
                     <Text style={[styles.cardSub, { color: colors.mutedText }]} numberOfLines={1}>
-                      {item.username}
+                      {isNote ? 'Secure Note' : item.username}
                     </Text>
                   </View>
 
@@ -1372,17 +1491,45 @@ export default function Dashboard() {
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
                     {/* Username */}
-                    <View style={styles.detailRow}>
-                      <Text style={[styles.detailLabel, { color: colors.mutedText }]}>Username</Text>
-                      <View style={styles.detailValue}>
-                        <Text style={[styles.detailText, { color: colors.text }]} numberOfLines={1}>
-                          {item.username}
-                        </Text>
-                        <TouchableOpacity onPress={() => copyToClipboard(item.username, 'Username')}>
-                          <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                        </TouchableOpacity>
+                    {item.username ? (
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, { color: colors.mutedText }]}>Username</Text>
+                        <View style={styles.detailValue}>
+                          <Text style={[styles.detailText, { color: colors.text }]} numberOfLines={1}>
+                            {item.username}
+                          </Text>
+                          <TouchableOpacity onPress={() => copyToClipboard(item.username, 'Username')}>
+                            <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    </View>
+                    ) : null}
+
+                    {/* Website */}
+                    {item.website ? (
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, { color: colors.mutedText }]}>Website</Text>
+                        <View style={styles.detailValue}>
+                          <Text style={[styles.detailText, { color: colors.primary }]} numberOfLines={1}>
+                            {item.website}
+                          </Text>
+                          <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <TouchableOpacity
+                              onPress={() => openWebsite(item.website!)}
+                              accessibilityLabel="Open website"
+                            >
+                              <Ionicons name="open-outline" size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => copyToClipboard(item.website!, 'Website')}
+                              accessibilityLabel="Copy website"
+                            >
+                              <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    ) : null}
 
                     {/* Password */}
                     {item.password ? (
@@ -1421,11 +1568,71 @@ export default function Dashboard() {
                       <TotpCodeDisplay secret={item.totpSecret} colors={colors} copyToClipboard={copyToClipboard} />
                     ) : null}
 
+                    {/* 2FA Backup / Recovery Codes */}
+                    {item.totpBackupCodes ? (
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, { color: colors.mutedText }]}>2FA Backup Codes</Text>
+                        <View style={styles.detailValue}>
+                          <Text style={[styles.detailText, { color: colors.text }]}>
+                            {showPasswordIndex === item.globalIndex
+                              ? item.totpBackupCodes
+                              : '●●●●-●●●●  ●●●●-●●●●'}
+                          </Text>
+                          <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <TouchableOpacity
+                              onPress={() =>
+                                setShowPasswordIndex(
+                                  showPasswordIndex === item.globalIndex ? null : item.globalIndex
+                                )
+                              }
+                            >
+                              <Ionicons
+                                name={showPasswordIndex === item.globalIndex ? 'eye-off-outline' : 'eye-outline'}
+                                size={18}
+                                color={colors.primary}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => copyToClipboard(item.totpBackupCodes!, 'Backup Codes')}>
+                              <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    ) : null}
+
                     {/* Notes */}
                     {item.notes ? (
                       <View style={styles.detailRow}>
-                        <Text style={[styles.detailLabel, { color: colors.mutedText }]}>Notes</Text>
-                        <Text style={[styles.detailText, { color: colors.text }]}>{item.notes}</Text>
+                        <Text style={[styles.detailLabel, { color: colors.mutedText }]}>
+                          {isNote ? 'Secure Note' : 'Notes'}
+                        </Text>
+                        <View style={styles.detailValue}>
+                          <Text style={[styles.detailText, { color: colors.text }]}>
+                            {isNote && showPasswordIndex !== item.globalIndex
+                              ? '●●●●●●●●●●●●'
+                              : item.notes}
+                          </Text>
+                          <View style={{ flexDirection: 'row', gap: 12 }}>
+                            {isNote ? (
+                              <TouchableOpacity
+                                onPress={() =>
+                                  setShowPasswordIndex(
+                                    showPasswordIndex === item.globalIndex ? null : item.globalIndex
+                                  )
+                                }
+                              >
+                                <Ionicons
+                                  name={showPasswordIndex === item.globalIndex ? 'eye-off-outline' : 'eye-outline'}
+                                  size={18}
+                                  color={colors.primary}
+                                />
+                              </TouchableOpacity>
+                            ) : null}
+                            <TouchableOpacity onPress={() => copyToClipboard(item.notes!, isNote ? 'Note' : 'Notes')}>
+                              <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
                       </View>
                     ) : null}
 
@@ -1563,9 +1770,6 @@ export default function Dashboard() {
             );
           }}
         />
-
-        {/* Bottom Navigation Bar */}
-        <BottomNavBar activeTab="vault" />
       </View>
 
       {/* Tag Actions Material 3 Bottom Sheet (Edit / Delete) */}
@@ -1607,12 +1811,12 @@ export default function Dashboard() {
                     <Text style={[styles.bottomSheetSubtitle, { color: colors.mutedText }]}>
                       {selectedItemToManage.type === 'category'
                         ? `Default Tag • ${categoryCounts[selectedItemToManage.id as CategoryType] || 0} accounts`
-                        : `Custom Tag • ${folderCounts[selectedItemToManage.name || ''] || 0} accounts`}
+                        : `Custom Tag • ${folderCounts[(selectedItemToManage.name || '').trim().toLowerCase()] || 0} accounts`}
                     </Text>
                   </View>
                 </View>
                 <TouchableOpacity
-                  style={[styles.bottomSheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  style={[styles.bottomSheetCloseBtn, { backgroundColor: actionTileBg, borderColor: colors.border }]}
                   onPress={() => setShowTagActionModal(false)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityLabel="Close"
@@ -1623,43 +1827,44 @@ export default function Dashboard() {
 
               <View style={[styles.bottomSheetDivider, { backgroundColor: colors.border }]} />
 
-              {/* Action 1: Edit Name */}
-              <TouchableOpacity
-                style={[styles.bottomSheetActionRow, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-                onPress={handleStartEditItem}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="pencil" size={18} color={colors.primary} />
-                </View>
-                <View style={styles.bottomSheetActionTextWrap}>
-                  <Text style={[styles.bottomSheetActionTitle, { color: colors.text }]}>Edit Name</Text>
-                  <Text style={[styles.bottomSheetActionSubtitle, { color: colors.mutedText }]}>
-                    Rename this tag
+              {/* 1 row 2 columns: Rename & Delete */}
+              <View style={styles.m3ActionRow2Col}>
+                <TouchableOpacity
+                  style={[
+                    styles.m3ActionColCard,
+                    { backgroundColor: actionTileBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                  ]}
+                  onPress={handleStartEditItem}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                    <Ionicons name="pencil" size={18} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                    Rename
                   </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-              </TouchableOpacity>
+                </TouchableOpacity>
 
-              {/* Action 2: Delete Tag / Category */}
-              <TouchableOpacity
-                style={[styles.bottomSheetActionRow, { backgroundColor: '#ef444412', borderColor: '#ef444430' }]}
-                onPress={handleConfirmDeleteItem}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.bottomSheetActionIconWrap, { backgroundColor: '#ef444420' }]}>
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                </View>
-                <View style={styles.bottomSheetActionTextWrap}>
-                  <Text style={[styles.bottomSheetActionTitle, { color: '#ef4444' }]}>
-                    Delete Tag
+                <TouchableOpacity
+                  style={[
+                    styles.m3ActionColCard,
+                    {
+                      backgroundColor: '#ef444410',
+                      borderColor: showBorders ? colors.border : '#ef444430',
+                      borderWidth: colors.borderWidth,
+                    },
+                  ]}
+                  onPress={handleConfirmDeleteItem}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#ef444420' }]}>
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: '#ef4444' }]} numberOfLines={1}>
+                    Delete
                   </Text>
-                  <Text style={[styles.bottomSheetActionSubtitle, { color: '#ef4444aa' }]}>
-                    Accounts will move to default tag
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#ef4444" />
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         ) : null}
@@ -1726,7 +1931,7 @@ export default function Dashboard() {
                   </View>
                 </View>
                 <TouchableOpacity
-                  style={[styles.bottomSheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  style={[styles.bottomSheetCloseBtn, { backgroundColor: actionTileBg, borderColor: colors.border }]}
                   onPress={() => {
                     setShowPasswordActionModal(false);
                     setSelectedPasswordForAction(null);
@@ -1747,7 +1952,7 @@ export default function Dashboard() {
                 <TouchableOpacity
                   style={[
                     styles.m3ActionColCard,
-                    { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                    { backgroundColor: actionTileBg, borderColor: colors.border, borderWidth: colors.borderWidth },
                   ]}
                   onPress={() => {
                     const targetIdx = selectedPasswordForAction.globalIndex;
@@ -1771,7 +1976,7 @@ export default function Dashboard() {
                 <TouchableOpacity
                   style={[
                     styles.m3ActionColCard,
-                    { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                    { backgroundColor: actionTileBg, borderColor: colors.border, borderWidth: colors.borderWidth },
                   ]}
                   onPress={() => {
                     const target = selectedPasswordForAction;
@@ -1802,7 +2007,7 @@ export default function Dashboard() {
                 <TouchableOpacity
                   style={[
                     styles.m3ActionColCard,
-                    { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                    { backgroundColor: actionTileBg, borderColor: colors.border, borderWidth: colors.borderWidth },
                   ]}
                   onPress={() => {
                     const targetIdx = selectedPasswordForAction.globalIndex;
@@ -1943,10 +2148,9 @@ export default function Dashboard() {
             >
               {/* Single Unified TAGS Header */}
               <View style={styles.moveSectionHeaderRow}>
-                <Ionicons name="pricetag-outline" size={14} color={colors.primary} />
                 <Text style={[styles.moveSectionTitle, { color: colors.mutedText }]}>TAGS</Text>
                 <Text style={[styles.moveSectionCount, { color: colors.mutedText }]}>
-                  ({effectiveCategories.length + uniqueFolders.filter((f) => !effectiveCategories.some((c) => c.name.toLowerCase() === f.toLowerCase())).length})
+                  ({effectiveCategories.length + uniqueFolders.length})
                 </Text>
               </View>
 
@@ -1965,21 +2169,19 @@ export default function Dashboard() {
                       style={[
                         styles.moveCategoryCard,
                         {
-                          backgroundColor: isCurrent ? colors.primary + '12' : colors.inputBg,
+                          backgroundColor: isCurrent ? colors.primary + '14' : actionTileBg,
                           borderColor: isCurrent ? colors.primary : colors.border,
+                          borderWidth: isCurrent ? 1 : colors.borderWidth,
                         },
                       ]}
                       onPress={() => moveToCategory(cat.id)}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.categoryIconWrap, { backgroundColor: cat.gradient[0] + '20' }]}>
-                        <Ionicons name={(cat.icon || 'folder-outline') as any} size={22} color={cat.gradient[0]} />
-                      </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.moveCategoryName, { color: colors.text }]} numberOfLines={1}>
+                        <Text style={[styles.moveCategoryName, { color: isCurrent ? colors.primary : colors.text }]} numberOfLines={1}>
                           {cat.name}
                         </Text>
-                        <Text style={[styles.moveCategoryCount, { color: colors.mutedText }]}>
+                        <Text style={[styles.moveCategoryCount, { color: colors.mutedText }]} numberOfLines={1}>
                           {count} {count === 1 ? 'account' : 'accounts'}
                         </Text>
                       </View>
@@ -1987,53 +2189,45 @@ export default function Dashboard() {
                         <View style={[styles.currentBadge, { backgroundColor: colors.primary }]}>
                           <Ionicons name="checkmark" size={14} color="#ffffff" />
                         </View>
-                      ) : (
-                        <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-                      )}
+                      ) : null}
                     </TouchableOpacity>
                   );
                 })}
 
                 {/* Custom User Tags */}
-                {uniqueFolders
-                  .filter((folderName) => !effectiveCategories.some((c) => c.name.toLowerCase() === folderName.toLowerCase()))
-                  .map((folderName) => {
-                    const isCurrent = currentTag?.toLowerCase() === folderName.toLowerCase();
-                    const count = folderCounts[folderName] || 0;
-                    return (
-                      <TouchableOpacity
-                        key={`tag-${folderName}`}
-                        style={[
-                          styles.moveCategoryCard,
-                          {
-                            backgroundColor: isCurrent ? '#8b5cf615' : colors.inputBg,
-                            borderColor: isCurrent ? '#8b5cf6' : colors.border,
-                          },
-                        ]}
-                        onPress={() => moveToTag(folderName)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.categoryIconWrap, { backgroundColor: '#8b5cf620' }]}>
-                          <Ionicons name="pricetag" size={20} color="#8b5cf6" />
+                {uniqueFolders.map((folderName) => {
+                  const isCurrent = currentTag?.toLowerCase() === folderName.toLowerCase();
+                  const count = folderCounts[folderName.trim().toLowerCase()] || 0;
+                  return (
+                    <TouchableOpacity
+                      key={`tag-${folderName}`}
+                      style={[
+                        styles.moveCategoryCard,
+                        {
+                          backgroundColor: isCurrent ? colors.primary + '14' : actionTileBg,
+                          borderColor: isCurrent ? colors.primary : colors.border,
+                          borderWidth: isCurrent ? 1 : colors.borderWidth,
+                        },
+                      ]}
+                      onPress={() => moveToTag(folderName)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.moveCategoryName, { color: isCurrent ? colors.primary : colors.text }]} numberOfLines={1}>
+                          {folderName}
+                        </Text>
+                        <Text style={[styles.moveCategoryCount, { color: colors.mutedText }]} numberOfLines={1}>
+                          {count} {count === 1 ? 'account' : 'accounts'}
+                        </Text>
+                      </View>
+                      {isCurrent ? (
+                        <View style={[styles.currentBadge, { backgroundColor: colors.primary }]}>
+                          <Ionicons name="checkmark" size={14} color="#ffffff" />
                         </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.moveCategoryName, { color: colors.text }]} numberOfLines={1}>
-                            {folderName}
-                          </Text>
-                          <Text style={[styles.moveCategoryCount, { color: colors.mutedText }]}>
-                            {count} {count === 1 ? 'account' : 'accounts'}
-                          </Text>
-                        </View>
-                        {isCurrent ? (
-                          <View style={[styles.currentBadge, { backgroundColor: '#8b5cf6' }]}>
-                            <Ionicons name="checkmark" size={14} color="#ffffff" />
-                          </View>
-                        ) : (
-                          <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
           </View>
@@ -2210,7 +2404,7 @@ export default function Dashboard() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={[styles.totpSheetTitle, { color: colors.text }]}>
-                    Authenticator (2FA)
+                    Authenticator
                   </Text>
                   <View style={[styles.totpSheetCountBadge, { backgroundColor: colors.primary + '18' }]}>
                     <Text style={[styles.totpSheetCountText, { color: colors.primary }]}>
@@ -2327,7 +2521,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: '700',
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 13,
@@ -2344,25 +2539,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     height: 38,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingHorizontal: 13,
+    borderRadius: 999,
     borderWidth: 1,
   },
   totpHeaderBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   addHeaderBtn: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.18,
+        shadowOpacity: 0.14,
         shadowRadius: 3,
       },
       android: {
@@ -2373,7 +2568,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 42,
     height: 42,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 0.6,
@@ -2387,18 +2582,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: 44,
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 0.6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.04,
         shadowRadius: 4,
       },
       android: {
-        elevation: 1,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
@@ -2423,24 +2618,38 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 20,
+    borderRadius: 999,
     borderWidth: 0.6,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.04,
         shadowRadius: 3,
       },
       android: {
-        elevation: 1,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
   },
   pillText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  pillCountCircle: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillCountText: {
+    fontSize: 11,
+    fontWeight: '600',
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
@@ -2450,18 +2659,18 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   card: {
-    padding: 14,
-    borderRadius: 16,
+    padding: 15,
+    borderRadius: 20,
     marginBottom: 10,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.04,
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
@@ -2474,13 +2683,14 @@ const styles = StyleSheet.create({
   badge: {
     width: 42,
     height: 42,
-    borderRadius: 13,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   cardSub: {
     marginTop: 2,
@@ -2498,20 +2708,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     gap: 10,
   },
   m3ActionColIconWrap: {
     width: 32,
     height: 32,
-    borderRadius: 9,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   m3ActionColTitle: {
     fontSize: 14.5,
-    fontWeight: '700',
+    fontWeight: '600',
     flexShrink: 1,
   },
   expandedContent: {
@@ -2573,13 +2783,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
+    letterSpacing: -0.3,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -2590,12 +2801,12 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 999,
   },
   emptyButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   fab: {
     position: 'absolute',
@@ -2855,19 +3066,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   moveCategoriesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   moveCategoryCard: {
+    width: '48%',
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 16,
     borderWidth: 1,
-    gap: 12,
+    gap: 8,
   },
   moveCategoryName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
   },
   moveCategoryCount: {
     fontSize: 12,

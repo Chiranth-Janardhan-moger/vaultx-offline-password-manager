@@ -1,15 +1,16 @@
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
 import { categories, DEFAULT_DELETE_CATEGORY_KEY } from '@/lib/categories';
+import { isHapticsEnabled, setHapticsEnabled } from '@/lib/haptics';
 import { isSelectWorkspaceOnLoginEnabled, setSelectWorkspaceOnLoginEnabled } from '@/lib/secure';
 import { Ionicons } from '@expo/vector-icons';
-import ToggleSwitch from '@/components/ToggleSwitch';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
-import { LayoutAnimation, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function GeneralSettings() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function GeneralSettings() {
   }, [unlocked, router]);
 
   const [selectWorkspaceOnLogin, setSelectWorkspaceOnLogin] = React.useState(false);
+  const [hapticsEnabled, setHapticsEnabledState] = React.useState(true);
   const [fallbackCategory, setFallbackCategory] = React.useState<string>('google');
   const [showFallbackModal, setShowFallbackModal] = React.useState(false);
 
@@ -36,6 +38,9 @@ export default function GeneralSettings() {
         const wsOnLogin = await isSelectWorkspaceOnLoginEnabled();
         setSelectWorkspaceOnLogin(wsOnLogin);
 
+        const haptics = await isHapticsEnabled();
+        setHapticsEnabledState(haptics);
+
         const fbCat = await SecureStore.getItemAsync(DEFAULT_DELETE_CATEGORY_KEY);
         setFallbackCategory(fbCat || 'google');
       })();
@@ -46,6 +51,12 @@ export default function GeneralSettings() {
     const newValue = !selectWorkspaceOnLogin;
     setSelectWorkspaceOnLogin(newValue);
     await setSelectWorkspaceOnLoginEnabled(newValue);
+  };
+
+  const toggleHaptics = async () => {
+    const next = !hapticsEnabled;
+    setHapticsEnabledState(next);
+    await setHapticsEnabled(next);
   };
 
   const handleSelectFallbackCategory = async (catId: string) => {
@@ -108,7 +119,6 @@ export default function GeneralSettings() {
                           isSelected && [styles.segmentBtnActive, { backgroundColor: colors.primary }],
                         ]}
                         onPress={() => {
-                          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                           setMode(t);
                         }}
                         activeOpacity={0.8}
@@ -152,8 +162,8 @@ export default function GeneralSettings() {
             </View>
           </View>
 
-          {/* Workspaces Section */}
-          <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>WORKSPACES</Text>
+          {/* Workspaces & Behavior Section */}
+          <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>BEHAVIOR</Text>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
             <View style={styles.cardInner}>
               {/* Workspace on Login Switch */}
@@ -171,6 +181,26 @@ export default function GeneralSettings() {
                   value={selectWorkspaceOnLogin}
                   onValueChange={toggleSelectWorkspaceOnLogin}
                   accessibilityLabel="Select Workspace on Login"
+                />
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* Haptic Feedback */}
+              <View style={styles.row}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="radio-button-on-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Haptic Feedback</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Subtle vibration when copying or toggling switches
+                  </Text>
+                </View>
+                <ToggleSwitch
+                  value={hapticsEnabled}
+                  onValueChange={toggleHaptics}
+                  accessibilityLabel="Haptic Feedback"
                 />
               </View>
             </View>
@@ -262,15 +292,15 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 24, fontWeight: '900' },
+  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionHeader: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.8,
     marginBottom: 8,
     marginTop: 20,
@@ -278,22 +308,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   card: {
-    borderRadius: 18,
+    borderRadius: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.04,
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
   },
   cardInner: {
-    borderRadius: 17.4,
+    borderRadius: 19.4,
     overflow: 'hidden',
   },
   themeRow: {
@@ -301,7 +331,7 @@ const styles = StyleSheet.create({
   },
   segmentedWrapper: {
     flexDirection: 'row',
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 0.6,
     padding: 4,
   },
@@ -310,7 +340,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 999,
   },
   segmentBtnActive: {
     elevation: 2,
@@ -332,13 +362,13 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   itemSub: {
     fontSize: 12,

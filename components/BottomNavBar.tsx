@@ -4,19 +4,13 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   Keyboard,
-  LayoutAnimation,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
-  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 export type TabKey = 'vault' | 'cards' | 'generator' | 'settings';
 
@@ -91,7 +85,6 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
 
   const handlePress = (tab: TabConfig) => {
     if (tab.key === activeTab) return;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     router.replace(tab.route);
   };
 
@@ -102,7 +95,7 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
 
   const capsuleBg = resolved === 'dark' ? colors.card : '#ffffff';
   const capsuleBorder = colors.border;
-  const activePillBg = resolved === 'dark' ? '#1A2E44' : '#E0EEFF';
+  const activePillBg = resolved === 'dark' ? 'rgba(77, 150, 255, 0.16)' : 'rgba(59, 125, 237, 0.12)';
 
   return (
     <View style={[styles.outerWrapper, { paddingBottom: bottomPadding }]} pointerEvents="box-none">
@@ -112,7 +105,7 @@ export default function BottomNavBar({ activeTab }: BottomNavBarProps) {
           {
             backgroundColor: capsuleBg,
             borderColor: capsuleBorder,
-            borderWidth: colors.borderWidth,
+            borderWidth: colors.borderWidth === 0 ? 0.5 : colors.borderWidth,
           },
         ]}
       >
@@ -199,7 +192,7 @@ const styles = StyleSheet.create({
   },
   activeLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.1,
+    fontWeight: '600',
+    letterSpacing: -0.1,
   },
 });

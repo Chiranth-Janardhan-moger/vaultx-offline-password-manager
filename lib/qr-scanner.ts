@@ -1,30 +1,42 @@
 import { scanQrCodeAsync } from '../modules/vaultx-qr-scanner';
-import { parseOtpAuthUri, type OtpAuthParseResult } from './totp';
+import {
+  parseGoogleAuthMigrationUri,
+  parseOtpAuthUri,
+  type GoogleAuthMigrationResult,
+  type OtpAuthParseResult,
+} from './totp';
 
 export type ScanTotpOutcome =
   | { status: 'cancelled' }
   | { status: 'error'; title: string; message: string }
   | { status: 'success'; parsed: Extract<OtpAuthParseResult, { ok: true }> };
 
-/**
- * Launches the native offline QR scanner while suppressing background auto-lock,
- * then parses and validates the scanned TOTP URI or Base32 secret.
- */
-export async function scanTotpQrCode(
-  runWithBackgroundLockSuppressed: <T>(fn: () => Promise<T>) => Promise<T>
-): Promise<ScanTotpOutcome> {
+export type ScanMigrationOutcome =
+  | { status: 'cancelled' }
+  | { status: 'error'; title: string; message: string }
+  | { status: 'success'; parsed: Extract<GoogleAuthMigrationResult, { ok: true }> };
+
+async function scanAndParseQr<T extends { ok: true } | { ok: false; error: string }>(
+  runWithBackgroundLockSuppressed: <R>(fn: () => Promise<R>) => Promise<R>,
+  parser: (raw: string) => T,
+  invalidTitle: string
+): Promise<
+  | { status: 'cancelled' }
+  | { status: 'error'; title: string; message: string }
+  | { status: 'success'; parsed: Extract<T, { ok: true }> }
+> {
   try {
     const raw = await runWithBackgroundLockSuppressed(() => scanQrCodeAsync());
     if (raw === null || raw === undefined) {
       return { status: 'cancelled' };
     }
 
-    const parsed = parseOtpAuthUri(raw);
+    const parsed = parser(raw);
     if (!parsed.ok) {
-      return { status: 'error', title: 'Invalid 2FA QR Code', message: parsed.error };
+      return { status: 'error', title: invalidTitle, message: parsed.error };
     }
 
-    return { status: 'success', parsed };
+    return { status: 'success', parsed: parsed as Extract<T, { ok: true }> };
   } catch (err: any) {
     const code = err?.code;
     if (code === 'ERR_CAMERA_PERMISSION') {
@@ -40,4 +52,28 @@ export async function scanTotpQrCode(
       message: err?.message ?? 'Unable to scan QR code. You can still paste the 2FA secret manually.',
     };
   }
+}
+
+/**
+ * Launches the native offline QR scanner while suppressing background auto-lock,
+ * then parses and validates the scanned TOTP URI or Base32 secret.
+ */
+export function scanTotpQrCode(
+  runWithBackgroundLockSuppressed: <T>(fn: () => Promise<T>) => Promise<T>
+): Promise<ScanTotpOutcome> {
+  return scanAndParseQr(runWithBackgroundLockSuppressed, parseOtpAuthUri, 'Invalid 2FA QR Code');
+}
+
+/**
+ * Launches the native offline QR scanner while suppressing background auto-lock,
+ * then decodes a Google Authenticator `otpauth-migration://` batch export QR code.
+ */
+export function scanGoogleAuthMigrationQrCode(
+  runWithBackgroundLockSuppressed: <T>(fn: () => Promise<T>) => Promise<T>
+): Promise<ScanMigrationOutcome> {
+  return scanAndParseQr(
+    runWithBackgroundLockSuppressed,
+    parseGoogleAuthMigrationUri,
+    'Invalid Google Authenticator QR'
+  );
 }

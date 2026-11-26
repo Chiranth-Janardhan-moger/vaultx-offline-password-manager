@@ -2,10 +2,12 @@ import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
+import { useToast } from '@/context/ToastProvider';
 import { categories, categorizeService, CategoryType, getCategoryById } from '@/lib/categories';
 import { getServiceColor, getServiceIcon, normalizeServiceName } from '@/lib/service-icons';
 import { saveVault } from '@/lib/vault';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
+import { triggerLightHaptic } from '@/lib/haptics';
 import { getTOTPDetails } from '@/lib/totp';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -29,13 +31,14 @@ type SearchResult = {
   service: string;
   username: string;
   password: string;
+  website?: string;
   notes?: string;
   loginPin?: string;
   transactionPin?: string;
   otherPin?: string;
   category: string;
   globalIndex: number;
-  matchType: 'service' | 'username' | 'notes';
+  matchType: 'service' | 'username' | 'website' | 'notes';
   isFavorite?: boolean;
   totpSecret?: string;
 };
@@ -89,6 +92,7 @@ export default function SearchScreen() {
   const { unlocked, vault, vaultKey, setVault, activeWorkspace } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast } = useToast();
 
   React.useEffect(() => {
     if (!unlocked) {
@@ -169,12 +173,8 @@ export default function SearchScreen() {
 
   const copyToClipboard = async (text: string, label: string) => {
     await copyToClipboardWithAutoClear(text);
-    showAlert({
-      title: 'Copied',
-      message: `${label} copied to clipboard (auto-clears in 45s)`,
-      confirmText: 'OK',
-      onConfirm: () => {},
-    });
+    triggerLightHaptic();
+    showToast(`${label} copied`);
   };
 
   const toggleFavorite = async (globalIndex: number) => {
@@ -337,12 +337,14 @@ export default function SearchScreen() {
       if (itemWs !== currentWs) return;
 
       const category = pwd.category || categorizeService(pwd.service);
-      let matchType: 'service' | 'username' | 'notes' | null = null;
+      let matchType: 'service' | 'username' | 'website' | 'notes' | null = null;
 
       if (pwd.service.toLowerCase().includes(query)) {
         matchType = 'service';
       } else if (pwd.username.toLowerCase().includes(query)) {
         matchType = 'username';
+      } else if (pwd.website?.toLowerCase().includes(query)) {
+        matchType = 'website';
       } else if (pwd.notes?.toLowerCase().includes(query)) {
         matchType = 'notes';
       }
@@ -872,14 +874,14 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   favoriteBtn: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -889,7 +891,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: 48,
-    borderRadius: 14,
+    borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 14,
     gap: 10,
@@ -923,8 +925,8 @@ const styles = StyleSheet.create({
   },
   resultCard: {
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 20,
+    padding: 15,
     marginBottom: 10,
   },
   resultHeader: {
@@ -935,14 +937,14 @@ const styles = StyleSheet.create({
   resultIcon: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     display: 'flex',
   },
   resultService: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     marginBottom: 4,
   },
   resultMeta: {

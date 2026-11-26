@@ -334,7 +334,7 @@ export default function Login() {
                 <View
                   style={[
                     styles.inputCard,
-                    { backgroundColor: colors.inputBg, borderColor: colors.border },
+                    { backgroundColor: colors.inputBg, borderColor: colors.border, borderWidth: colors.borderWidth },
                   ]}
                 >
                   <Ionicons name="key-outline" size={20} color={colors.primary} style={styles.inputIcon} />
@@ -380,14 +380,14 @@ export default function Login() {
                   <TouchableOpacity
                     style={[
                       styles.bioBtn,
-                      { backgroundColor: colors.card, borderColor: colors.border },
+                      { backgroundColor: colors.primary + '18', borderColor: colors.border, borderWidth: colors.borderWidth },
                     ]}
                     onPress={unlockByBio}
                     disabled={loading}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="finger-print" size={22} color={colors.primary} />
-                    <Text style={[styles.bioText, { color: colors.text }]}>Unlock with Biometrics</Text>
+                    <Text style={[styles.bioText, { color: colors.primary }]}>Unlock with Biometrics</Text>
                   </TouchableOpacity>
                 ) : null}
 
@@ -479,8 +479,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 14,
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   unlockBtn: {
     marginTop: 20,
     height: 54,
-    borderRadius: 16,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   unlockBtnText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   bioBtn: {
     flexDirection: 'row',
@@ -544,8 +544,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 12,
     height: 50,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 999,
   },
   bioText: {
     fontSize: 15,

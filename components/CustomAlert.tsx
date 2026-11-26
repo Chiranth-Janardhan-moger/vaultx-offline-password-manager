@@ -173,13 +173,13 @@ export const useCustomAlert = () => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   container: {
-    borderRadius: 16,
+    borderRadius: 26,
     padding: 24,
     minWidth: 280,
     maxWidth: 340,
@@ -191,13 +191,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 12,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+    marginBottom: 10,
     textAlign: 'center',
   },
   message: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '400',
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 24,
@@ -210,17 +211,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   confirmText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#ffffff',
   },
 });

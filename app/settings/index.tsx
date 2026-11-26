@@ -1,4 +1,3 @@
-import BottomNavBar from '@/components/BottomNavBar';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
@@ -57,8 +56,7 @@ export default function SettingsIndex() {
     }
   }, [unlocked, router]);
 
-  const footerColor = resolved === 'dark' ? '#D1D5DB' : '#9CA3AF';
-  const lineColor = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
+  const footerColor = resolved === 'dark' ? '#8E8E93' : '#9CA3AF';
 
   return (
     <Screen edges={['top', 'left', 'right']}>
@@ -102,23 +100,14 @@ export default function SettingsIndex() {
             </View>
           </View>
 
-          {/* Hero Brand Footer */}
+          {/* Brand Footer */}
           <View style={styles.footer}>
-            <Text style={[styles.footerHero, { color: footerColor }]}>
-              Your last{'\n'}password manager
-            </Text>
-            
-            <View style={[styles.dividerLine, { backgroundColor: lineColor }]} />
-            
             <Text style={[styles.footerBrand, { color: footerColor }]}>VaultX</Text>
             <Text style={[styles.footerTagline, { color: footerColor }]}>
               Offline. Secure. Yours.
             </Text>
           </View>
         </ScrollView>
-
-        {/* Bottom Navigation Bar */}
-        <BottomNavBar activeTab="settings" />
       </View>
     </Screen>
   );
@@ -127,7 +116,7 @@ export default function SettingsIndex() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerRow: { paddingHorizontal: 20, paddingTop: 14, marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: '900' },
+  title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.4 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
   cardGroup: {
     borderRadius: 20,
@@ -136,11 +125,11 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.04,
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
@@ -159,13 +148,13 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 42,
     height: 42,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   menuSubtitle: {
     fontSize: 12,
@@ -176,26 +165,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   footer: {
-    alignItems: 'flex-start',
-    paddingVertical: 32,
-    marginTop: 24,
-  },
-  footerHero: {
-    fontSize: 44,
-    fontWeight: '600',
-    textAlign: 'left',
-    lineHeight: 52,
-    marginBottom: 32,
-  },
-  dividerLine: {
-    width: '80%',
-    height: 1,
-    marginBottom: 20,
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginTop: 12,
   },
   footerBrand: {
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'left',
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
     marginBottom: 4,
   },
   footerTagline: {

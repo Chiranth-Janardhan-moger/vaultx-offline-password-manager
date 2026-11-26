@@ -33,25 +33,25 @@ const SHOW_BORDERS_KEY = 'show_solid_borders_v1';
 const ThemeContext = createContext<ThemeValue | undefined>(undefined);
 
 const lightColors: Omit<ThemeColors, 'borderWidth' | 'cardBorder' | 'cardBorderWidth'> = {
-  background: '#F8F9FA',
+  background: '#F2F2F7',
   card: '#FFFFFF',
   text: '#111827',
   mutedText: '#6B7280',
-  inputBg: '#F3F4F6',
-  primary: '#007AFF',
-  border: '#E5E7EB',
-  statusBarBg: '#F8F9FA',
+  inputBg: '#E8E8ED',
+  primary: '#3B7DED',
+  border: 'rgba(0, 0, 0, 0.07)',
+  statusBarBg: '#F2F2F7',
 };
 
 const darkColors: Omit<ThemeColors, 'borderWidth' | 'cardBorder' | 'cardBorderWidth'> = {
-  background: '#000000',
-  card: '#1C1C1E',
-  text: '#FFFFFF',
+  background: '#0D0E11',
+  card: '#17181C',
+  text: '#F5F5F7',
   mutedText: '#8E8E93',
-  inputBg: '#2C2C2E',
-  primary: '#0A84FF',
-  border: '#27272A',
-  statusBarBg: '#000000',
+  inputBg: '#22242A',
+  primary: '#4D96FF',
+  border: 'rgba(255, 255, 255, 0.07)',
+  statusBarBg: '#0D0E11',
 };
 
 export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -86,9 +86,9 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
   const resolved = mode === 'system' ? (systemColorScheme === 'light' ? 'light' : 'dark') : mode;
 
   const baseColors = resolved === 'dark' ? darkColors : lightColors;
-  const solidBorder = resolved === 'dark' ? '#3A3A3C' : '#000000';
+  const solidBorder = resolved === 'dark' ? '#3A3A3C' : '#D1D1D6';
   const activeBorder = showBorders ? solidBorder : baseColors.border;
-  const activeWidth = showBorders ? 1 : 0.6;
+  const activeWidth = showBorders ? 1 : 0;
 
   const colors: ThemeColors = {
     ...baseColors,

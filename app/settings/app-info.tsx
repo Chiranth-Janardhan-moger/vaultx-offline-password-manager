@@ -217,11 +217,11 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 24, fontWeight: '900' },
+  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   heroSection: {
     alignItems: 'center',
@@ -240,27 +240,27 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 0.8,
+    fontWeight: '700',
+    letterSpacing: -0.5,
     textAlign: 'center',
   },
   versionBadge: {
     paddingHorizontal: 14,
     paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: 999,
     borderWidth: 1,
     marginTop: 2,
   },
   versionText: {
     fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   heroTagline: {
     fontSize: 13,
     fontWeight: '500',
     marginTop: 4,
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
   },
   card: {
     borderRadius: 22,
@@ -269,11 +269,11 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.04,
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
@@ -292,13 +292,13 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   itemSub: {
     fontSize: 13,

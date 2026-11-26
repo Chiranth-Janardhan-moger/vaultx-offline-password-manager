@@ -5,9 +5,11 @@ import { getRandomHex, getRandomWordArray } from './crypto-shim';
 import { pbkdf2Key } from './secure';
 
 export type PasswordItem = {
+  itemType?: 'password' | 'note'; // Defaults to 'password' for backwards compatibility
   service: string;
   username: string;
   password: string;
+  website?: string;
   notes?: string;
   category?: CategoryType;
   loginPin?: string;
@@ -19,6 +21,7 @@ export type PasswordItem = {
   folder?: string; // Custom folder category
   workspace?: string; // Workspace space (e.g. 'Personal', 'Work')
   totpSecret?: string; // Base32 2FA secret key
+  totpBackupCodes?: string; // One-time 2FA recovery / backup codes
 };
 
 export type CardField = {

@@ -14,10 +14,17 @@ import {
   setAutoBackupFrequency,
   setAutoBackupPassword,
 } from '@/lib/auto-backup';
+import { categorizeService } from '@/lib/categories';
+import { parsePasswordCsv } from '@/lib/csv-import';
+import { scanGoogleAuthMigrationQrCode } from '@/lib/qr-scanner';
+import { type MigrationAccount, parseAuthenticatorExportFile } from '@/lib/totp';
+import { saveVault, type PasswordItem } from '@/lib/vault';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { LayoutAnimation, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const FREQUENCY_OPTIONS: { value: AutoBackupFrequency; label: string; sub: string }[] = [
   { value: 'on_change', label: 'On every change', sub: 'Back up automatically after saving items' },
@@ -27,7 +34,7 @@ const FREQUENCY_OPTIONS: { value: AutoBackupFrequency; label: string; sub: strin
 
 export default function BackupSettings() {
   const router = useRouter();
-  const { unlocked, vault, runWithBackgroundLockSuppressed } = useSession();
+  const { unlocked, vault, vaultKey, setVault, activeWorkspace, runWithBackgroundLockSuppressed } = useSession();
   const { colors, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
@@ -56,8 +63,13 @@ export default function BackupSettings() {
     }
   }, [unlocked, router]);
 
+  const prevEnabledRef = React.useRef<boolean | null>(null);
   const reloadConfig = React.useCallback(async () => {
     const next = await getAutoBackupConfig();
+    if (prevEnabledRef.current !== null && prevEnabledRef.current !== next.enabled) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+    prevEnabledRef.current = next.enabled;
     setConfig(next);
     return next;
   }, []);
@@ -188,6 +200,207 @@ export default function BackupSettings() {
     }
   };
 
+  const importTotpAccountsIntoVault = React.useCallback(
+    async (accounts: MigrationAccount[], skippedHotp: number, extraNote?: string) => {
+      if (!vault || !vaultKey) return;
+      const ws = activeWorkspace || 'Personal';
+      const nextPasswords = [...(vault.passwords || [])];
+      let added = 0;
+      let linked = 0;
+      let duplicates = 0;
+      const now = Date.now();
+
+      for (const acc of accounts) {
+        const exactSecretMatch = nextPasswords.some(
+          (p) => (p.workspace || 'Personal') === ws && (p.totpSecret || '').toUpperCase() === acc.secret
+        );
+        if (exactSecretMatch) {
+          duplicates++;
+          continue;
+        }
+
+        const existingIdx = nextPasswords.findIndex(
+          (p) =>
+            (p.workspace || 'Personal') === ws &&
+            !p.totpSecret &&
+            p.service.trim().toLowerCase() === acc.service.trim().toLowerCase() &&
+            p.username.trim().toLowerCase() === acc.username.trim().toLowerCase()
+        );
+
+        if (existingIdx !== -1) {
+          nextPasswords[existingIdx] = {
+            ...nextPasswords[existingIdx],
+            totpSecret: acc.secret,
+            modifiedAt: now,
+          };
+          linked++;
+        } else {
+          const newItem: PasswordItem = {
+            service: acc.service,
+            username: acc.username,
+            password: '',
+            category: categorizeService(acc.service),
+            totpSecret: acc.secret,
+            workspace: ws,
+            createdAt: now,
+            modifiedAt: now,
+          };
+          nextPasswords.push(newItem);
+          added++;
+        }
+      }
+
+      const totalImported = added + linked;
+      if (totalImported > 0) {
+        const nextVault = { ...vault, passwords: nextPasswords };
+        await saveVault(nextVault, vaultKey);
+        setVault(() => nextVault);
+      }
+
+      const parts: string[] = [];
+      if (added > 0) parts.push(`${added} new`);
+      if (linked > 0) parts.push(`${linked} linked`);
+      if (duplicates > 0) parts.push(`${duplicates} already in vault`);
+      if (skippedHotp > 0) parts.push(`${skippedHotp} HOTP skipped`);
+
+      showAlert({
+        title: totalImported > 0 ? '2FA Accounts Imported' : 'Nothing New Imported',
+        message: `${parts.join(', ')}.${extraNote || ''}`,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    },
+    [vault, vaultKey, setVault, activeWorkspace, showAlert]
+  );
+
+  const handleImportGoogleAuth = React.useCallback(async () => {
+    if (!vault || !vaultKey) return;
+    const outcome = await scanGoogleAuthMigrationQrCode(runWithBackgroundLockSuppressed);
+    if (outcome.status === 'cancelled') return;
+    if (outcome.status === 'error') {
+      showAlert({
+        title: outcome.title,
+        message: outcome.message,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    const batchNote =
+      outcome.parsed.batchSize && outcome.parsed.batchSize > 1
+        ? `\n\nBatch ${(outcome.parsed.batchIndex ?? 0) + 1} of ${outcome.parsed.batchSize} scanned. If Google Authenticator showed multiple QR codes, scan the next one too.`
+        : '';
+
+    await importTotpAccountsIntoVault(outcome.parsed.accounts, outcome.parsed.skippedHotp, batchNote);
+  }, [vault, vaultKey, runWithBackgroundLockSuppressed, importTotpAccountsIntoVault, showAlert]);
+
+  const handleImportAuthenticatorFile = React.useCallback(async () => {
+    if (!vault || !vaultKey) return;
+    try {
+      const result = await runWithBackgroundLockSuppressed(() =>
+        DocumentPicker.getDocumentAsync({
+          type: '*/*',
+          copyToCacheDirectory: true,
+        })
+      );
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      const parsed = parseAuthenticatorExportFile(content);
+      if (!parsed.ok) {
+        showAlert({
+          title: 'Import Failed',
+          message: parsed.error,
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
+      await importTotpAccountsIntoVault(parsed.accounts, parsed.skippedHotp);
+    } catch (e: any) {
+      showAlert({
+        title: 'Import Error',
+        message: e?.message ?? 'Could not read the selected authenticator file.',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    }
+  }, [vault, vaultKey, runWithBackgroundLockSuppressed, importTotpAccountsIntoVault, showAlert]);
+
+  const handleImportCsvPasswords = React.useCallback(async () => {
+    if (!vault || !vaultKey) return;
+    try {
+      const result = await runWithBackgroundLockSuppressed(() =>
+        DocumentPicker.getDocumentAsync({
+          type: '*/*',
+          copyToCacheDirectory: true,
+        })
+      );
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      const ws = activeWorkspace || 'Personal';
+      const parsed = parsePasswordCsv(content, ws);
+      if (!parsed.ok) {
+        showAlert({
+          title: 'CSV Import Failed',
+          message: parsed.error,
+          confirmText: 'OK',
+          onConfirm: () => {},
+        });
+        return;
+      }
+
+      const existing = vault.passwords || [];
+      const nextPasswords = [...existing];
+      let added = 0;
+      let duplicates = 0;
+
+      for (const item of parsed.items) {
+        const isDup = nextPasswords.some(
+          (p) =>
+            (p.workspace || 'Personal') === ws &&
+            p.service.trim().toLowerCase() === item.service.trim().toLowerCase() &&
+            p.username.trim().toLowerCase() === item.username.trim().toLowerCase() &&
+            p.password === item.password
+        );
+        if (isDup) {
+          duplicates++;
+          continue;
+        }
+        nextPasswords.push(item);
+        added++;
+      }
+
+      if (added > 0) {
+        const nextVault = { ...vault, passwords: nextPasswords };
+        await saveVault(nextVault, vaultKey);
+        setVault(() => nextVault);
+      }
+
+      const parts: string[] = [];
+      if (added > 0) parts.push(`${added} imported`);
+      if (duplicates > 0) parts.push(`${duplicates} duplicates skipped`);
+      if (parsed.skippedEmpty > 0) parts.push(`${parsed.skippedEmpty} empty skipped`);
+
+      showAlert({
+        title: added > 0 ? 'CSV Passwords Imported' : 'Nothing New Imported',
+        message: `${parts.join(', ')}.`,
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    } catch (e: any) {
+      showAlert({
+        title: 'CSV Import Error',
+        message: e?.message ?? 'Could not read the selected CSV file.',
+        confirmText: 'OK',
+        onConfirm: () => {},
+      });
+    }
+  }, [vault, vaultKey, setVault, activeWorkspace, runWithBackgroundLockSuppressed, showAlert]);
+
   const handleSelectFrequency = async (frequency: AutoBackupFrequency) => {
     await setAutoBackupFrequency(frequency);
     setShowFrequencyModal(false);
@@ -268,87 +481,91 @@ export default function BackupSettings() {
                 />
               </View>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              {config.enabled && (
+                <>
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-              {/* Backup Folder */}
-              <TouchableOpacity style={styles.row} onPress={handleSelectFolder} activeOpacity={0.7}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="folder-open-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Backup Folder</Text>
-                  <Text style={[styles.itemSub, { color: config.directoryUri ? colors.primary : colors.mutedText }]} numberOfLines={1}>
-                    {formatSafDirectoryName(config.directoryUri)}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-              </TouchableOpacity>
+                  {/* Backup Folder */}
+                  <TouchableOpacity style={styles.row} onPress={handleSelectFolder} activeOpacity={0.7}>
+                    <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                      <Ionicons name="folder-open-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.itemTitle, { color: colors.text }]}>Backup Folder</Text>
+                      <Text style={[styles.itemSub, { color: config.directoryUri ? colors.primary : colors.mutedText }]} numberOfLines={1}>
+                        {formatSafDirectoryName(config.directoryUri)}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+                  </TouchableOpacity>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-              {/* Frequency */}
-              <TouchableOpacity style={styles.row} onPress={() => setShowFrequencyModal(true)} activeOpacity={0.7}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="time-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Backup Schedule</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>When automatic backups run</Text>
-                </View>
-                <View style={styles.badgeWrap}>
-                  <Text style={[styles.badgeText, { color: colors.primary }]}>{getFrequencyLabel()}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.mutedText} />
-                </View>
-              </TouchableOpacity>
+                  {/* Frequency */}
+                  <TouchableOpacity style={styles.row} onPress={() => setShowFrequencyModal(true)} activeOpacity={0.7}>
+                    <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                      <Ionicons name="time-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.itemTitle, { color: colors.text }]}>Backup Schedule</Text>
+                      <Text style={[styles.itemSub, { color: colors.mutedText }]}>When automatic backups run</Text>
+                    </View>
+                    <View style={styles.badgeWrap}>
+                      <Text style={[styles.badgeText, { color: colors.primary }]}>{getFrequencyLabel()}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.mutedText} />
+                    </View>
+                  </TouchableOpacity>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-              {/* Auto-Backup Password */}
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => {
-                  setPendingEnableAfterPw(false);
-                  setPwInput('');
-                  setPwConfirm('');
-                  setShowPasswordModal(true);
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="key-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Backup Password</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
-                    {config.hasPassword ? 'Configured (tap to update)' : 'Required to encrypt auto-backups'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-              </TouchableOpacity>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Back Up Now */}
-              <TouchableOpacity style={styles.row} onPress={handleBackupNow} disabled={backingUp} activeOpacity={0.7}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="cloud-done-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>
-                    {backingUp ? 'Backing Up...' : 'Back Up Now'}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.itemSub,
-                      { color: config.lastError ? '#ef4444' : colors.mutedText },
-                    ]}
-                    numberOfLines={2}
+                  {/* Auto-Backup Password */}
+                  <TouchableOpacity
+                    style={styles.row}
+                    onPress={() => {
+                      setPendingEnableAfterPw(false);
+                      setPwInput('');
+                      setPwConfirm('');
+                      setShowPasswordModal(true);
+                    }}
+                    activeOpacity={0.7}
                   >
-                    {getLastBackupSubtitle()}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-              </TouchableOpacity>
+                    <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                      <Ionicons name="key-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.itemTitle, { color: colors.text }]}>Backup Password</Text>
+                      <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                        {config.hasPassword ? 'Configured (tap to update)' : 'Required to encrypt auto-backups'}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+                  </TouchableOpacity>
+
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+                  {/* Back Up Now */}
+                  <TouchableOpacity style={styles.row} onPress={handleBackupNow} disabled={backingUp} activeOpacity={0.7}>
+                    <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                      <Ionicons name="cloud-done-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.itemTitle, { color: colors.text }]}>
+                        {backingUp ? 'Backing Up...' : 'Back Up Now'}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.itemSub,
+                          { color: config.lastError ? '#ef4444' : colors.mutedText },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {getLastBackupSubtitle()}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
 
@@ -376,7 +593,58 @@ export default function BackupSettings() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.itemTitle, { color: colors.text }]}>Import Backup</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Restore vault items from a backup file</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Restore vault items from a .vxb file</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* Import Passwords (CSV) */}
+              <TouchableOpacity style={styles.row} onPress={handleImportCsvPasswords} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="document-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Import Passwords (CSV)</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Chrome, Edge, or Bitwarden CSV export
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={[styles.sectionHeader, { color: colors.mutedText }]}>IMPORT 2FA ACCOUNTS</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder, borderWidth: colors.cardBorderWidth }]}>
+            <View style={styles.cardInner}>
+              {/* Google Authenticator (QR) */}
+              <TouchableOpacity style={styles.row} onPress={handleImportGoogleAuth} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Google Authenticator (QR)</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Scan export QR to move 2FA at once
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* Authenticator File (JSON / TXT) */}
+              <TouchableOpacity style={styles.row} onPress={handleImportAuthenticatorFile} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Authenticator File (JSON / TXT)</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Import from Aegis, 2FAS, or Ente Auth
+                  </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
               </TouchableOpacity>
@@ -519,15 +787,15 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 24, fontWeight: '900' },
+  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionHeader: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.8,
     marginBottom: 8,
     marginTop: 20,
@@ -535,22 +803,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   card: {
-    borderRadius: 18,
+    borderRadius: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.04,
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
   },
   cardInner: {
-    borderRadius: 17.4,
+    borderRadius: 19.4,
     overflow: 'hidden',
   },
   row: {
@@ -563,13 +831,13 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   itemSub: {
     fontSize: 12,
@@ -590,21 +858,22 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   dialogCard: {
     width: '100%',
-    borderRadius: 20,
+    borderRadius: 26,
     borderWidth: 1,
     padding: 20,
     elevation: 5,
   },
   dialogTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   dialogSub: {
     fontSize: 13,
@@ -628,13 +897,13 @@ const styles = StyleSheet.create({
   dialogCancelBtn: {
     marginTop: 14,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     borderWidth: 1,
   },
   dialogCancelText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   modalInputWrap: {
     position: 'relative',
@@ -642,7 +911,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
     fontSize: 15,
     marginBottom: 10,
@@ -664,7 +933,7 @@ const styles = StyleSheet.create({
   modalActionBtn: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
   },
 });

@@ -13,7 +13,6 @@ import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const DOUBLE_TAP_LOCK_KEY = 'double_tap_lock';
 const BLOCK_SCREENSHOTS_KEY = 'block_screenshots';
 
 export default function SecuritySettings() {
@@ -28,7 +27,6 @@ export default function SecuritySettings() {
     }
   }, [unlocked, router]);
 
-  const [doubleTapLock, setDoubleTapLock] = React.useState(false);
   const [blockScreenshots, setBlockScreenshots] = React.useState(true);
   const [bioSupported, setBioSupported] = React.useState(false);
   const [bioEnabled, setBioEnabled] = React.useState(false);
@@ -42,9 +40,6 @@ export default function SecuritySettings() {
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
-        const doubleTap = await SecureStore.getItemAsync(DOUBLE_TAP_LOCK_KEY);
-        setDoubleTapLock(doubleTap === 'true');
-
         const blockSS = await SecureStore.getItemAsync(BLOCK_SCREENSHOTS_KEY);
         setBlockScreenshots(blockSS !== 'false');
 
@@ -112,12 +107,6 @@ export default function SecuritySettings() {
         });
       }
     }
-  };
-
-  const toggleDoubleTapLock = async () => {
-    const newValue = !doubleTapLock;
-    setDoubleTapLock(newValue);
-    await SecureStore.setItemAsync(DOUBLE_TAP_LOCK_KEY, newValue.toString());
   };
 
   const toggleBlockScreenshots = async () => {
@@ -236,6 +225,22 @@ export default function SecuritySettings() {
                   accessibilityLabel="Biometric Unlock"
                 />
               </View>
+
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* Password Health */}
+              <TouchableOpacity style={styles.row} onPress={() => router.push('/password-health' as any)} activeOpacity={0.7}>
+                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+                  <Ionicons name="pulse-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>Password Health</Text>
+                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>
+                    Check weak, reused, and 2FA-missing passwords
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -275,24 +280,6 @@ export default function SecuritySettings() {
                   <Ionicons name="chevron-forward" size={16} color={colors.mutedText} />
                 </View>
               </TouchableOpacity>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              {/* Double Tap to Lock */}
-              <View style={styles.row}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="hand-left-outline" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>Double Tap to Lock</Text>
-                  <Text style={[styles.itemSub, { color: colors.mutedText }]}>Tap empty space on Dashboard to lock</Text>
-                </View>
-                <ToggleSwitch
-                  value={doubleTapLock}
-                  onValueChange={toggleDoubleTapLock}
-                  accessibilityLabel="Double Tap to Lock"
-                />
-              </View>
             </View>
           </View>
 
@@ -443,15 +430,15 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 24, fontWeight: '900' },
+  title: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   sectionHeader: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.8,
     marginBottom: 8,
     marginTop: 20,
@@ -459,22 +446,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   card: {
-    borderRadius: 18,
+    borderRadius: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.04,
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
   },
   cardInner: {
-    borderRadius: 17.4,
+    borderRadius: 19.4,
     overflow: 'hidden',
   },
   row: {
@@ -487,13 +474,13 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   itemSub: {
     fontSize: 12,
@@ -514,21 +501,22 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   dialogCard: {
     width: '100%',
-    borderRadius: 20,
+    borderRadius: 26,
     borderWidth: 1,
     padding: 20,
     elevation: 5,
   },
   dialogTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   dialogSub: {
     fontSize: 13,
@@ -552,12 +540,12 @@ const styles = StyleSheet.create({
   dialogCancelBtn: {
     marginTop: 14,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: 'center',
     borderWidth: 1,
   },
   dialogCancelText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

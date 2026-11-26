@@ -505,20 +505,20 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: -0.2,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   headerSaveBtn: {
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerSaveText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   previewContainer: {
     alignItems: 'center',

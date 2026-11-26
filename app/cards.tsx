@@ -1,10 +1,11 @@
-import BottomNavBar from '@/components/BottomNavBar';
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import { useSession } from '@/context/SessionProvider';
 import { useTheme } from '@/context/ThemeProvider';
+import { useToast } from '@/context/ToastProvider';
 import { CardItem, CardType, saveVault } from '@/lib/vault';
 import { copyToClipboardWithAutoClear } from '@/lib/clipboard';
+import { triggerLightHaptic } from '@/lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -25,6 +26,7 @@ export default function CardsScreen() {
   const { colors } = useTheme();
   const { unlocked, vault, vaultKey, setVault, activeWorkspace } = useSession();
   const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast } = useToast();
 
   React.useEffect(() => {
     if (!unlocked) router.replace('/login');
@@ -60,6 +62,7 @@ export default function CardsScreen() {
   const [shareFields, setShareFields] = React.useState<{ [key: string]: boolean }>({});
 
   const initiateShare = (card: CardItem) => {
+    setSelectedCard(null);
     setSharingCard(card);
     const initial: { [key: string]: boolean } = {
       number: !card.type.includes('card'),
@@ -100,11 +103,8 @@ export default function CardsScreen() {
   const copyToClipboard = async (text: string, label: string) => {
     if (!text) return;
     await copyToClipboardWithAutoClear(text);
-    showAlert({
-      title: 'Copied',
-      message: `${label} copied to clipboard (auto-clears in 45s)`,
-      confirmText: 'OK',
-    });
+    triggerLightHaptic();
+    showToast(`${label} copied`);
   };
 
   const handleDeleteCard = (cardId: string) => {
@@ -569,8 +569,8 @@ export default function CardsScreen() {
 
           {cards.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: colors.card }]}>
-                <Ionicons name="wallet-outline" size={60} color={colors.mutedText} />
+              <View style={[styles.emptyIconCircle, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="wallet-outline" size={44} color={colors.primary} />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.text }]}>Your Wallet is Empty</Text>
               <Text style={[styles.emptySubtitle, { color: colors.mutedText }]}>
@@ -585,7 +585,7 @@ export default function CardsScreen() {
                   } as any)
                 }
               >
-                <Ionicons name="add-circle" size={22} color="#ffffff" />
+                <Ionicons name="add" size={20} color="#ffffff" />
                 <Text style={styles.createBtnText}>Add First Card</Text>
               </TouchableOpacity>
             </View>
@@ -595,29 +595,129 @@ export default function CardsScreen() {
               contentContainerStyle={styles.scrollContainer}
               showsVerticalScrollIndicator={false}
             >
-              {selectedCard ? (
-                // If a card is selected/expanded, show it on top centered, and show close details button
-                <View style={styles.expandedContainer}>
-                  {renderCardItem(selectedCard, 0, true)}
-                  <TouchableOpacity
-                    style={[styles.closeDetailBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    onPress={() => setSelectedCard(null)}
-                  >
-                    <Text style={[styles.closeDetailText, { color: colors.text }]}>Collapse Wallet Stack</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                // Normal peeking stack list
-                <View style={styles.stackContainer}>
-                  {cards.map((card, idx) => renderCardItem(card, idx, false))}
-                </View>
-              )}
+              <View style={styles.stackContainer}>
+                {cards.map((card, idx) => renderCardItem(card, idx, false))}
+              </View>
             </ScrollView>
           )}
         </View>
 
-        {/* Bottom Navigation Bar */}
-        <BottomNavBar activeTab="cards" />
+        {/* Apple Wallet-Style Card Detail Bottom Sheet */}
+        <Modal
+          visible={!!selectedCard}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setSelectedCard(null)}
+        >
+          {selectedCard ? (
+            <View style={styles.detailSheetOverlay}>
+              <TouchableOpacity
+                style={styles.detailSheetBackdrop}
+                activeOpacity={1}
+                onPress={() => setSelectedCard(null)}
+              />
+              <View
+                style={[
+                  styles.detailSheetContainer,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    borderWidth: colors.borderWidth,
+                  },
+                ]}
+              >
+                <View style={[styles.detailSheetDragHandle, { backgroundColor: colors.border }]} />
+
+                <View style={styles.detailSheetHeader}>
+                  <Text style={[styles.detailSheetTitle, { color: colors.text }]} numberOfLines={1}>
+                    {selectedCard.title}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.detailSheetCloseBtn, { backgroundColor: colors.inputBg }]}
+                    onPress={() => setSelectedCard(null)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityLabel="Close card details"
+                  >
+                    <Ionicons name="close" size={18} color={colors.mutedText} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+                  <LinearGradient colors={selectedCard.gradient} style={styles.cardFace}>
+                    {renderCardFaceContent(selectedCard, false, undefined, true, false)}
+                  </LinearGradient>
+
+                  {selectedCard.fields.length > 0 && (
+                    <View
+                      style={[
+                        styles.expandedDetails,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: colors.border,
+                          borderWidth: colors.borderWidth,
+                        },
+                      ]}
+                    >
+                      {selectedCard.fields.map((field, fIdx) => {
+                        const fKey = `${selectedCard.id}_field_${fIdx}`;
+                        const isRevealed = !field.isSensitive || revealedFields[fKey];
+                        const isLast = fIdx === selectedCard.fields.length - 1;
+
+                        return (
+                          <View
+                            key={fIdx}
+                            style={[
+                              styles.detailItem,
+                              {
+                                borderBottomColor: colors.border,
+                                borderBottomWidth: isLast ? 0 : 1,
+                              },
+                            ]}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.detailLabel, { color: colors.mutedText }]}>{field.label}</Text>
+                              <TouchableOpacity
+                                disabled={!field.isSensitive}
+                                onPress={() => toggleFieldReveal(fKey)}
+                                activeOpacity={0.7}
+                              >
+                                <Text
+                                  style={[
+                                    styles.detailValue,
+                                    { color: colors.text },
+                                    field.isSensitive && !isRevealed && styles.blurredText,
+                                  ]}
+                                >
+                                  {field.isSensitive && !isRevealed ? '••••••••' : field.value}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                            <View style={styles.detailActions}>
+                              {field.isSensitive && (
+                                <TouchableOpacity
+                                  style={styles.detailActionBtn}
+                                  onPress={() => toggleFieldReveal(fKey)}
+                                >
+                                  <Ionicons name={isRevealed ? 'eye-off' : 'eye'} size={18} color={colors.mutedText} />
+                                </TouchableOpacity>
+                              )}
+                              <TouchableOpacity
+                                style={styles.detailActionBtn}
+                                onPress={() => copyToClipboard(field.value, field.label)}
+                              >
+                                <Ionicons name="copy-outline" size={18} color={colors.mutedText} />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            </View>
+          ) : null}
+        </Modal>
 
         {/* Share Config Modal */}
         <Modal
@@ -755,12 +855,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  headerTitle: { fontSize: 28, fontWeight: '900' },
+  headerTitle: { fontSize: 28, fontWeight: '700', letterSpacing: -0.4 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   iconBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -768,7 +868,7 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
@@ -897,10 +997,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   expandedDetails: {
-    marginTop: 8,
+    marginTop: 14,
     borderWidth: 1,
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
   },
   detailItem: {
     flexDirection: 'row',
@@ -910,12 +1011,61 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
+  },
+  detailSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  detailSheetBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  detailSheetContainer: {
+    width: '100%',
+    maxHeight: '88%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  detailSheetDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  detailSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    gap: 12,
+  },
+  detailSheetTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  detailSheetCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   blurredText: {
     opacity: 0.25,
@@ -953,40 +1103,41 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingHorizontal: 32,
+    paddingBottom: 90,
   },
   emptyIconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
+    letterSpacing: -0.3,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   createBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 999,
   },
   createBtnText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

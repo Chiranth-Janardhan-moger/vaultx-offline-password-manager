@@ -22,7 +22,7 @@ export default function WorkspacesScreen() {
   const fromLogin = params.fromLogin === '1';
 
   const { unlocked, vault, vaultKey, setVault, activeWorkspace, setActiveWorkspace } = useSession();
-  const { colors, resolved } = useTheme();
+  const { colors, showBorders, resolved } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
 
   React.useEffect(() => {
@@ -33,6 +33,7 @@ export default function WorkspacesScreen() {
 
   // Light-gray / clean card tokens for dialogs matching webstack
   const dullCardBg = resolved === 'dark' ? '#1c2027' : '#FFFFFF';
+  const actionTileBg = resolved === 'dark' ? 'rgba(255, 255, 255, 0.06)' : '#F5F5F7';
   const dullCardBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
   const dullInputBg = resolved === 'dark' ? '#13161c' : '#F9FAFB';
   const dullInputBorder = resolved === 'dark' ? '#2e3440' : '#E5E7EB';
@@ -465,7 +466,7 @@ export default function WorkspacesScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={[styles.sheetCloseBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  style={[styles.sheetCloseBtn, { backgroundColor: actionTileBg, borderColor: colors.border }]}
                   onPress={() => setShowActionSheet(false)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
@@ -475,41 +476,44 @@ export default function WorkspacesScreen() {
 
               <View style={[styles.sheetDivider, { backgroundColor: colors.border }]} />
 
-              {/* Edit Option */}
-              <TouchableOpacity
-                style={[styles.sheetActionRow, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-                onPress={handleStartEdit}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.sheetActionIconWrap, { backgroundColor: colors.primary + '18' }]}>
-                  <Ionicons name="pencil" size={18} color={colors.primary} />
-                </View>
-                <View style={styles.sheetActionTextWrap}>
-                  <Text style={[styles.sheetActionTitle, { color: colors.text }]}>Edit Name</Text>
-                  <Text style={[styles.sheetActionSubtitle, { color: colors.mutedText }]}>
-                    Rename this workspace
+              {/* 1 row 2 columns: Rename & Delete */}
+              <View style={styles.m3ActionRow2Col}>
+                <TouchableOpacity
+                  style={[
+                    styles.m3ActionColCard,
+                    { backgroundColor: actionTileBg, borderColor: colors.border, borderWidth: colors.borderWidth },
+                  ]}
+                  onPress={handleStartEdit}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: colors.primary + '18' }]}>
+                    <Ionicons name="pencil" size={18} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: colors.text }]} numberOfLines={1}>
+                    Rename
                   </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.mutedText} />
-              </TouchableOpacity>
+                </TouchableOpacity>
 
-              {/* Delete Option */}
-              <TouchableOpacity
-                style={[styles.sheetActionRow, { backgroundColor: '#ef444412', borderColor: '#ef444430' }]}
-                onPress={handleConfirmDelete}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.sheetActionIconWrap, { backgroundColor: '#ef444420' }]}>
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                </View>
-                <View style={styles.sheetActionTextWrap}>
-                  <Text style={[styles.sheetActionTitle, { color: '#ef4444' }]}>Delete Workspace</Text>
-                  <Text style={[styles.sheetActionSubtitle, { color: '#ef4444aa' }]}>
-                    Accounts will move to Personal
+                <TouchableOpacity
+                  style={[
+                    styles.m3ActionColCard,
+                    {
+                      backgroundColor: '#ef444410',
+                      borderColor: showBorders ? colors.border : '#ef444430',
+                      borderWidth: colors.borderWidth,
+                    },
+                  ]}
+                  onPress={handleConfirmDelete}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.m3ActionColIconWrap, { backgroundColor: '#ef444420' }]}>
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </View>
+                  <Text style={[styles.m3ActionColTitle, { color: '#ef4444' }]} numberOfLines={1}>
+                    Delete
                   </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#ef4444" />
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -666,7 +670,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   skipBtn: {
     paddingVertical: 6,
@@ -691,7 +696,7 @@ const styles = StyleSheet.create({
   squareCard: {
     flex: 1,
     aspectRatio: 1.08,
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 14,
     justifyContent: 'space-between',
   },
@@ -810,32 +815,32 @@ const styles = StyleSheet.create({
     height: 1,
     marginBottom: 14,
   },
-  sheetActionRow: {
+  m3ActionRow2Col: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
+    gap: 10,
     marginBottom: 10,
   },
-  sheetActionIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  m3ActionColCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+  },
+  m3ActionColIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
-  sheetActionTextWrap: {
-    flex: 1,
-  },
-  sheetActionTitle: {
-    fontSize: 15,
+  m3ActionColTitle: {
+    fontSize: 14.5,
     fontWeight: '600',
-  },
-  sheetActionSubtitle: {
-    fontSize: 12,
-    marginTop: 1,
+    flexShrink: 1,
   },
   /* Modal */
   modalOverlay: {

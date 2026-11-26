@@ -1,4 +1,3 @@
-import BottomNavBar from '@/components/BottomNavBar';
 import { useCustomAlert } from '@/components/CustomAlert';
 import Screen from '@/components/Screen';
 import ToggleSwitch from '@/components/ToggleSwitch';
@@ -442,8 +441,6 @@ export default function GeneratePassword() {
             </View>
           </View>
         </ScrollView>
-
-        <BottomNavBar activeTab="generator" />
       </View>
 
       <AlertComponent />
@@ -458,28 +455,29 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: '700',
+    letterSpacing: -0.4,
   },
   card: {
     borderWidth: 0.6,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.04,
         shadowRadius: 8,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
         shadowColor: '#000000',
       },
     }),
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   passwordCard: {
     minHeight: 188,
@@ -492,7 +490,7 @@ const styles = StyleSheet.create({
   },
   passwordLabel: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -523,14 +521,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 999,
   },
   copyBtnText: {
     color: '#fff',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   strengthContainer: {
     marginTop: 2,

@@ -1,14 +1,27 @@
 import '@/lib/crypto-shim';
 import { SessionProvider } from "@/context/SessionProvider";
 import { ThemeProvider } from "@/context/ThemeProvider";
+import { ToastProvider } from "@/context/ToastProvider";
+import BottomNavBar, { type TabKey } from '@/components/BottomNavBar';
 import { BLOCK_SCREENSHOTS_KEY, setScreenshotBlocking, shouldBlockScreenshotsByDefault } from '@/lib/screen-security';
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
+  const pathname = usePathname();
+  const activeTab: TabKey | null =
+    pathname === '/dashboard'
+      ? 'vault'
+      : pathname === '/cards'
+        ? 'cards'
+        : pathname === '/generate-password'
+          ? 'generator'
+          : pathname === '/settings'
+            ? 'settings'
+            : null;
   // Apply screenshot blocking setting on app start
   React.useEffect(() => {
     (async () => {
@@ -26,7 +39,8 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider style={{ flex: 1 }}>
       <ThemeProvider>
-        <SessionProvider>
+        <ToastProvider>
+          <SessionProvider>
           <Stack 
             screenOptions={{ 
               headerShown: false,
@@ -45,32 +59,34 @@ export default function RootLayout() {
               name="dashboard" 
               options={{ 
                 animation: 'fade',
-                animationDuration: 180,
+                animationDuration: 120,
               }} 
             />
             <Stack.Screen 
               name="cards" 
               options={{ 
                 animation: 'fade',
-                animationDuration: 180,
+                animationDuration: 120,
               }} 
             />
             <Stack.Screen 
               name="generate-password" 
               options={{ 
                 animation: 'fade',
-                animationDuration: 180,
+                animationDuration: 120,
               }} 
             />
             <Stack.Screen 
               name="settings/index" 
               options={{ 
                 animation: 'fade',
-                animationDuration: 180,
+                animationDuration: 120,
               }} 
             />
           </Stack>
-        </SessionProvider>
+          {activeTab ? <BottomNavBar activeTab={activeTab} /> : null}
+          </SessionProvider>
+        </ToastProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
